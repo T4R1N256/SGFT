@@ -10,6 +10,21 @@ Esta guía te lleva desde cero hasta tener el proyecto corriendo en tu computado
 - tu propio `.env`;
 - una base de datos PostgreSQL local;
 - `python manage.py test` en verde;
+
+# Guía: acceso al repositorio y ambiente de desarrollo del SGFT
+
+**Para:** todo el equipo · **Mantiene:** Diego Galindo (dueño de `docs/`), revisa Alejandro Tarín · **Última revisión:** 24-sep-2026
+
+Esta guía te lleva desde cero hasta tener el proyecto corriendo en tu computadora, con las pruebas en verde y listo para abrir tu primer Pull Request. Asume que el esqueleto de Django (paquete 3.1.1) ya está fusionado en `main`.
+
+**Al terminar tendrás:**
+
+- acceso de escritura al repositorio;
+- el proyecto clonado;
+- Python con sus dependencias en un entorno virtual;
+- tu propio `.env`;
+- una base de datos PostgreSQL local;
+- `python manage.py test` en verde;
 - el sitio abriendo en `http://127.0.0.1:8000/admin/`.
 
 Tiempo estimado: 30 a 45 minutos la primera vez.
@@ -39,7 +54,7 @@ El repositorio está en la cuenta de Tarín y es **público**: cualquiera puede 
 | Alejandro Tarín | `T4R1N256` (dueño del repositorio) |
 | Diego Galindo   | `Diego-Galindo98`                  |
 | Jesús Hernández | `EduardGarrido`                    |
-| Jared Beltrán   | `JBeltran16`                       |
+| Jared Beltrán   | `JBeltra16`                        |
 | Yahir Enríquez  | `CodigaBorealis`                   |
 
 1. **Acepta la invitación.** Tarín te invita como colaborador. Te llega por correo y también aparece en tus notificaciones de GitHub. Sin aceptarla no podrás subir cambios.
@@ -100,7 +115,7 @@ git clone git@github.com:T4R1N256/SGFT.git
 cd SGFT
 ```
 
-La carpeta que se crea es la **raíz del proyecto**: ahí están `manage.py`, `CLAUDE.md` y `requirements.txt`. Todos los comandos siguientes se corren desde ahí.
+La carpeta que se crea es la **raíz del proyecto**: ahí están `manage.py`, `CLAUDE.md` y `requirements-dev.txt`. Todos los comandos siguientes se corren desde ahí.
 
 ## 4. Entorno virtual y dependencias
 
@@ -110,7 +125,7 @@ El entorno virtual (`venv`) aísla las librerías del proyecto de las de tu sist
 python3 -m venv venv              # Windows: python -m venv venv   ·   macOS: python3.12 -m venv venv
 source venv/bin/activate          # Windows (Git Bash): source venv/Scripts/activate
 python -m pip install --upgrade pip
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 ```
 
 Cuando el entorno está activo, la terminal muestra **`(venv)`** al inicio de la línea. **Actívalo cada vez que abras una terminal nueva**; si no aparece `(venv)`, `pip` instalaría las librerías fuera del proyecto.
@@ -208,24 +223,24 @@ Usa como `<tu-nombre>` uno de estos: `diego`, `jesus`, `jared`, `tarin` o `yahir
 ```bash
 git switch main
 git pull
-pip install -r requirements.txt     # por si alguien agregó una dependencia
+pip install -r requirements-dev.txt     # por si alguien agregó una dependencia
 python manage.py migrate            # por si Jesús subió una migración
 ```
 
 **Para trabajar en una tarea:**
 
 ```bash
-git switch -c feat/RF-nn-descripcion-corta     # sin RF (infraestructura): feat/WBS-x.y.z-descripcion
+git switch -c <tu-nombre>/<tema>               # ejemplo: diego/login
 # ... programas ...
 python manage.py test
 git add .
 git status                                     # revisa que no aparezcan .env, venv/ ni db.sqlite3
 python .claude/skills/sgft-organizacion-entregables/scripts/dueno_de_ruta.py --revisar $(git diff --cached --name-only)
-git commit -m "feat(RF-nn): qué hace el cambio"
-git push -u origin feat/RF-nn-descripcion-corta
+git commit -m "qué hace el cambio"                # mensaje libre
+git push -u origin <tu-nombre>/<tema>
 ```
 
-Luego abre el Pull Request en GitHub y llena la plantilla. **Tarín aprueba y fusiona todos los PR.** Si el PR es de Tarín, lo aprueba otra persona de la ruta. El dueño de cada archivo tocado recibe la solicitud de revisión automáticamente.
+Luego abre el Pull Request en GitHub con el título `WBS-x.y.z: descripción` (el paquete de la WBS de tu tarea) y llena la plantilla. Tarín lo fusiona con _Squash and merge_: a `main` llega un solo commit con ese título, y GitHub borra la rama. **Tarín aprueba y fusiona todos los PR.** Si el PR es de Tarín, lo aprueba otra persona de la ruta. El dueño de cada archivo tocado recibe la solicitud de revisión automáticamente.
 
 **Reglas que no se rompen:**
 
@@ -257,7 +272,7 @@ Si algo no aparece aquí, avisa en el canal del equipo con el mensaje de error c
 - [ ] Acepté la invitación y `ssh -T git@github.com` me saluda por mi usuario.
 - [ ] `python3 --version` (o `python --version`) dice 3.12.
 - [ ] Clonado el repositorio y la terminal muestra `(venv)` dentro de la carpeta del proyecto.
-- [ ] `pip install -r requirements.txt` terminó sin errores.
+- [ ] `pip install -r requirements-dev.txt` terminó sin errores.
 - [ ] Tengo `.env` con mi propia `DJANGO_SECRET_KEY`, y `git status` no lo muestra.
 - [ ] `psql "postgres://sgft:sgft@localhost:5432/sgft" -c "SELECT 1;"` responde.
 - [ ] `python manage.py test` termina en `OK`.
