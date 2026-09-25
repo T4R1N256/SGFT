@@ -1,53 +1,64 @@
+# CODEOWNERS — SGFT
+# GENERADO con: python scripts/dueno_de_ruta.py --codeowners
+# No editar a mano: modificar assets/ownership.json de la skill y regenerar.
+# Los usuarios de GitHub se definen en assets/ownership.json (campo "github" de cada integrante).
+# Si ves @TODO_<nombre>, complétalo AHÍ y regenera; si lo editas aquí, la próxima generación lo borra.
+# GitHub aplica la ÚLTIMA regla que coincide; las reglas están ordenadas de general a específica.
+# main protegido con dos rulesets (DEC-16). El integrador (Tarín) figura en TODAS las rutas:
+# su aprobación basta para cualquier archivo y es el único que fusiona (DEC-18). Sus propios
+# PR los aprueba otro de los listados, porque GitHub no deja aprobar el PR propio.
+# Cada ruta lista además al menos otra persona, para que los PR del integrador puedan aprobarse.
+
 *                                                    @T4R1N256 @Diego-Galindo98
 /docs/**                                             @Diego-Galindo98 @T4R1N256
-/config/**                                           @EduardGarrido @JBeltran16 @T4R1N256
-/manage.py                                           @EduardGarrido @JBeltran16 @T4R1N256
+/config/**                                           @EduardGarrido @JBeltra16 @T4R1N256
+/manage.py                                           @EduardGarrido @JBeltra16 @T4R1N256
 /CLAUDE.md                                           @Diego-Galindo98 @EduardGarrido @T4R1N256
-/apps/pos/**                                         @JBeltran16 @EduardGarrido @T4R1N256
-/.gitignore                                          @EduardGarrido @JBeltran16 @T4R1N256
-/apps/core/**                                        @EduardGarrido @JBeltran16 @T4R1N256
-/tests_e2e/**                                        @CodigaBorealis @JBeltran16 @T4R1N256
+/apps/pos/**                                         @JBeltra16 @EduardGarrido @T4R1N256
+/.gitignore                                          @EduardGarrido @JBeltra16 @T4R1N256
+/apps/core/**                                        @EduardGarrido @JBeltra16 @T4R1N256
+/tests_e2e/**                                        @CodigaBorealis @JBeltra16 @T4R1N256
 /static/pos/**                                       @T4R1N256 @CodigaBorealis
 /docs/SRS.md                                         @Diego-Galindo98 @EduardGarrido @T4R1N256
-/.env.example                                        @EduardGarrido @JBeltran16 @T4R1N256
+/.env.example                                        @EduardGarrido @JBeltra16 @T4R1N256
 /static/core/**                                      @T4R1N256 @CodigaBorealis
-/apps/catalog/**                                     @Diego-Galindo98 @JBeltran16 @T4R1N256
-/apps/reports/**                                     @JBeltran16 @EduardGarrido @T4R1N256
+/apps/catalog/**                                     @Diego-Galindo98 @JBeltra16 @T4R1N256
+/apps/reports/**                                     @JBeltra16 @EduardGarrido @T4R1N256
 /docs/calidad/**                                     @EduardGarrido @Diego-Galindo98 @T4R1N256
 /apps/accounts/**                                    @Diego-Galindo98 @EduardGarrido @T4R1N256
 /docs/entregas/**                                    @Diego-Galindo98 @T4R1N256
 /.claude/skills/**                                   @T4R1N256 @Diego-Galindo98
-/apps/inventory/**                                   @Diego-Galindo98 @JBeltran16 @T4R1N256
+/apps/inventory/**                                   @Diego-Galindo98 @JBeltra16 @T4R1N256
 /tests_fixtures/**                                   @EduardGarrido @T4R1N256
 /docs/diagramas/**                                   @EduardGarrido @Diego-Galindo98 @T4R1N256
-/requirements.txt                                    @EduardGarrido @JBeltran16 @T4R1N256
-/apps/__init__.py                                    @EduardGarrido @JBeltran16 @T4R1N256
+/requirements.txt                                    @EduardGarrido @JBeltra16 @T4R1N256
+/apps/__init__.py                                    @EduardGarrido @JBeltra16 @T4R1N256
 /static/pos/sw.js                                    @T4R1N256 @CodigaBorealis
-/static/pos/db.js                                    @T4R1N256 @CodigaBorealis @JBeltran16
+/static/pos/db.js                                    @T4R1N256 @CodigaBorealis @JBeltra16
 /docs/decisiones/**                                  @Diego-Galindo98 @EduardGarrido @T4R1N256
-/apps/pos/views.py                                   @JBeltran16 @EduardGarrido @T4R1N256
-/apps/pos/tests.py                                   @JBeltran16 @EduardGarrido @T4R1N256
+/apps/pos/views.py                                   @JBeltra16 @EduardGarrido @T4R1N256
+/apps/pos/tests.py                                   @JBeltra16 @EduardGarrido @T4R1N256
 /tests_e2e/parity/**                                 @T4R1N256 @EduardGarrido
-/.github/workflows/**                                @JBeltran16 @EduardGarrido @T4R1N256
+/.github/workflows/**                                @JBeltra16 @EduardGarrido @T4R1N256
 /.github/CODEOWNERS                                  @T4R1N256 @Diego-Galindo98
 /apps/core/mixins.py                                 @EduardGarrido @Diego-Galindo98 @T4R1N256
 /apps/pos/templates/**                               @T4R1N256 @CodigaBorealis
 /apps/core/templates/**                              @T4R1N256 @CodigaBorealis
-/apps/pos/services.py                                @EduardGarrido @JBeltran16 @T4R1N256
-/apps/reports/tests.py                               @JBeltran16 @EduardGarrido @T4R1N256
+/apps/pos/services.py                                @EduardGarrido @JBeltra16 @T4R1N256
+/apps/reports/tests.py                               @JBeltra16 @EduardGarrido @T4R1N256
 /static/pos/pricing.js                               @T4R1N256 @CodigaBorealis @EduardGarrido
 /docs/manual-usuario.md                              @Diego-Galindo98 @T4R1N256 @CodigaBorealis
 /apps/core/templatetags/**                           @T4R1N256 @EduardGarrido
-/apps/inventory/tests.py                             @Diego-Galindo98 @JBeltran16 @T4R1N256
+/apps/inventory/tests.py                             @Diego-Galindo98 @JBeltra16 @T4R1N256
 /apps/reports/templates/**                           @CodigaBorealis @T4R1N256
 /apps/accounts/templates/**                          @CodigaBorealis @T4R1N256
-/apps/reports/services.py                            @JBeltran16 @EduardGarrido @T4R1N256
+/apps/reports/services.py                            @JBeltra16 @EduardGarrido @T4R1N256
 /static/pos/manifest.json                            @T4R1N256 @CodigaBorealis
 /docs/diagramas/procesos/**                          @Diego-Galindo98 @EduardGarrido @T4R1N256
 /apps/inventory/templates/**                         @CodigaBorealis @T4R1N256
 /docs/prototipos/rep-caja/**                         @CodigaBorealis @T4R1N256
-/docs/calidad/cobertura*.md                          @JBeltran16 @CodigaBorealis @T4R1N256
-/apps/inventory/services.py                          @Diego-Galindo98 @JBeltran16 @T4R1N256
+/docs/calidad/cobertura*.md                          @JBeltra16 @CodigaBorealis @T4R1N256
+/apps/inventory/services.py                          @Diego-Galindo98 @JBeltra16 @T4R1N256
 /docs/prototipos/pdv-venta/**                        @T4R1N256 @CodigaBorealis
 /docs/prototipos/usr-acceso/**                       @CodigaBorealis @T4R1N256
 /apps/pos/services_pricing.py                        @EduardGarrido @T4R1N256
@@ -55,13 +66,13 @@
 /apps/pos/templates/pos/review/**                    @CodigaBorealis @T4R1N256
 /.github/pull_request_template.md                    @T4R1N256 @Diego-Galindo98
 /apps/pos/services_cash_session.py                   @EduardGarrido @T4R1N256
-/docs/decisiones/spike-offline-*.md                  @T4R1N256 @JBeltran16
-/docs/decisiones/contrato-sync-pdv.md                @EduardGarrido @JBeltran16 @T4R1N256
+/docs/decisiones/spike-offline-*.md                  @T4R1N256 @JBeltra16
+/docs/decisiones/contrato-sync-pdv.md                @EduardGarrido @JBeltra16 @T4R1N256
 /apps/pos/templates/pos/kitchen_queue.html           @T4R1N256 @CodigaBorealis
 /docs/decisiones/nombres-modulo-precios.md           @EduardGarrido @T4R1N256
 /docs/decisiones/organizacion-repositorio.md         @T4R1N256 @Diego-Galindo98
 /apps/pos/templates/pos/cash_session_close.html      @CodigaBorealis @T4R1N256
-/docs/decisiones/convencion-htmx-alpine-SGFT.md      @T4R1N256 @JBeltran16
+/docs/decisiones/convencion-htmx-alpine-SGFT.md      @T4R1N256 @JBeltra16
 /apps/pos/templates/pos/partials/kitchen_order.html  @T4R1N256 @CodigaBorealis
 /apps/*/models.py                                    @EduardGarrido @Diego-Galindo98 @T4R1N256
 /apps/*/fixtures/**                                  @CodigaBorealis @EduardGarrido @T4R1N256
