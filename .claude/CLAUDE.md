@@ -1,6 +1,6 @@
 # CLAUDE.md — Sistema de Gestión de Food Truck (SGFT)
 
-> Contexto y reglas de trabajo para agentes y personas. Actualizado el 24-sep-2026 (DEC-01 a DEC-22).
+> Contexto y reglas de trabajo para agentes y personas. Actualizado el 24-sep-2026 (DEC-01 a DEC-23).
 > Dónde va cada archivo y de quién es: skill `.claude/skills/sgft-organizacion-entregables/`, que se consulta con `scripts/dueno_de_ruta.py <ruta>`. Las decisiones `DEC-nn` están registradas en `references/decisiones-y-pendientes.md` de la misma skill.
 >
 > **No modifiques este archivo sin comentarlo antes con el usuario** y sin su aprobación explícita.
@@ -137,8 +137,9 @@ tests_fixtures/    pricing_cases.json          tests_e2e/   Playwright + parity/
 
 ## 8. Flujo de trabajo
 
-- **Ramas:** `feat/RF-nn-descripcion` o `fix/RF-nn-…`. Sin RF, se usa el código de la WBS: `feat/WBS-5.1-…`.
-- **Commits:** `feat(RF-nn): qué hace`. El identificador liga cada cambio con su requisito (`RF`, `RNF`, `OBJ`, `SUP`, `RES`, `EX`).
+- **Ramas:** `nombre/tema`, donde `nombre` es tu clave (`diego`, `jesus`, `jared`, `tarin`, `yahir`) y `tema` son 2 a 4 palabras: `diego/login`, `jesus/modelo-venta`. Minúsculas y guiones, sin acentos, `ñ` ni espacios. Una rama por tarea; se borra al fusionar.
+- **Título del PR:** lleva el paquete de la WBS, que es lo que liga el cambio con su requisito: `WBS-3.1.2: inicio de sesión con usuario y contraseña`.
+- **Commits dentro de la rama:** libres. Los PR se fusionan con _Squash and merge_: a `main` llega un solo commit con el título del PR en la primera línea y los commits, incluido `Co-authored-by`, en el cuerpo.
 - **Pull Requests:**
   - nunca push a `main`;
   - `CODEOWNERS` avisa al dueño de cada archivo;
@@ -183,7 +184,7 @@ tests_fixtures/    pricing_cases.json          tests_e2e/   Playwright + parity/
 
 1. **Antes de escribir código:**
    - identifica al desarrollador con `git config user.name`;
-   - ubica el requisito (`RF-nn`) o el paquete de la WBS; si no lo conoces, pregunta;
+   - ubica el paquete de la WBS de la tarea (y su `RF-nn`); si no lo conoces, pregunta;
    - consulta el dueño y la ruta de cada archivo con el script;
    - trabaja en una rama.
 2. **No hagas:**

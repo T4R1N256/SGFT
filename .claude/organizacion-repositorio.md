@@ -1,4 +1,4 @@
-# Organización del repositorio y del trabajo por capas (DEC-07 a DEC-18)
+# Organización del repositorio y del trabajo por capas (DEC-07 a DEC-23)
 
 **Fecha:** 24 de septiembre de 2026 · **Estado:** aprobada · **Dueño:** Alejandro Tarín (integrador), con Diego Galindo como segundo aprobador · **WBS:** 4.2
 
@@ -12,12 +12,12 @@ El equipo se reorganizó por capas: Alejandro Tarín y Yahir Enríquez en fronte
 
 Se dan de alta cuatro funciones que estaban dentro del alcance (`CLAUDE.md` §3 y §5) pero sin paquete. Los códigos existentes **no se renumeran**, para no invalidar ramas ni commits que ya los citen.
 
-| Código | Paquete | Fuente |
-|---|---|---|
-| 3.3.7 | Consulta de pedidos en cocina — pasó a evaluación (DEC-15) | RF-17; `CLAUDE.md` §4 |
-| 3.3.8 | Ajuste y cancelación de venta | Regla 11 |
-| 3.4.9 | Bandeja de revisión del Administrador (cuarentena, existencias negativas, diferencias de precio) | Reglas 9 y 10; DEC-02 |
-| 3.5.7 | Cerrar turno de caja | Reglas 5 y 13; `estructura-y-flujo-datos` §5-bis |
+| Código | Paquete                                                                                          | Fuente                                           |
+| ------ | ------------------------------------------------------------------------------------------------ | ------------------------------------------------ |
+| 3.3.7  | Consulta de pedidos en cocina — pasó a evaluación (DEC-15)                                       | RF-17; `CLAUDE.md` §4                            |
+| 3.3.8  | Ajuste y cancelación de venta                                                                    | Regla 11                                         |
+| 3.4.9  | Bandeja de revisión del Administrador (cuarentena, existencias negativas, diferencias de precio) | Reglas 9 y 10; DEC-02                            |
+| 3.5.7  | Cerrar turno de caja                                                                             | Reglas 5 y 13; `estructura-y-flujo-datos` §5-bis |
 
 3.4.7 se renombra a "Apertura de turno de caja offline", porque el cierre es solo en línea y ahora tiene su propio paquete.
 
@@ -38,12 +38,7 @@ Se aprueban las ubicaciones que la estructura base no definía:
 - archivo del proveedor de despliegue en la raíz;
 - `apps/pos/templates/pos/review/` y `cash_session_close.html`.
 
-Mientras no exista el catálogo de requisitos (WBS 1.3.1):
-
-- rama `feat/WBS-3.3.1-seleccion-platillos` o `fix/WBS-3.3.4-redondeo-extras`;
-- commit `feat(WBS-3.3.1): lista platillos activos`.
-
-Cuando existan los RF-nn, las ramas nuevas usan `feat/RF-nn-…` (`CLAUDE.md` §8).
+La convención de ramas y commits que se aprobó aquí fue sustituida por **DEC-23**.
 
 ### DEC-10 — CODEOWNERS y protección de `main`
 
@@ -79,18 +74,21 @@ Por separado, la selección sería un paquete demasiado pequeño para estimarse 
 Por definición del equipo, 3.5.5 exporta las ventas de una jornada a un documento PDF. Ya no cubre el reporte por periodo ni el de productos más vendidos.
 
 **Contenido:**
+
 - encabezado: fecha, turno, quién lo generó y cuándo;
 - detalle de cada venta: hora del dispositivo, platillos y cantidades, método de pago, importe;
 - ajustes y cancelaciones con su motivo;
 - totales por método de pago y total general.
 
 **Reglas que hereda:**
+
 - atribución al día por la marca de tiempo del dispositivo (regla 7);
 - se niega a generarse mientras haya operaciones pendientes de sincronizar y muestra cuántas faltan, igual que el corte (regla 5);
 - solo el Administrador, como el resto de M-REP;
 - solo en línea.
 
 **Implementación:**
+
 - backend: `export_daily_sales_pdf()` en `apps/reports/services.py`, a cargo de Jared;
 - frontend: botón en la vista de reportes, a cargo de Yahir;
 - dependencias del paquete: 3.3.5, 3.3.8 y 3.5.1.
@@ -107,7 +105,7 @@ A1 se abriría solo si se agrega una tercera actividad con salida propia, como l
 
 ### DEC-15 — Vista de cocina en evaluación
 
-La consulta de pedidos pendientes en cocina (3.3.7) es una sección más de la aplicación, al mismo nivel que Punto de venta o Inventario, donde el Cocinero ve los pedidos con sus personalizaciones y los marca como preparados. El equipo aún no decide si la implementará, así que queda **en evaluación, fuera de la línea base**:
+La consulta de pedidos pendientes en cocina (3.3.7) es una sección más de la aplicación, al mismo nivel que Punto de venta o Inventario, donde se ven los pedidos pendientes con sus personalizaciones y se marcan como preparados. El equipo aún no decide si la implementará, así que queda **en evaluación, fuera de la línea base**:
 
 - prioridad candidata "Debería" (SRS 1.1.3);
 - rutas y responsables reservados (Jesús en el modelo, Jared en las vistas, Tarín en las pantallas con Yahir en pareja para la parte offline);
@@ -115,12 +113,7 @@ La consulta de pedidos pendientes en cocina (3.3.7) es una sección más de la a
 
 Si se implementa, sigue lo decidido en ADR-02: se usa en el mismo dispositivo del cajero y también funciona sin conexión, leyendo la cola local.
 
-**Qué implica no implementarla.** RF-17 y el rol de Cocinero están hoy en el alcance aprobado (`CLAUDE.md` §3 y §4). Sin esta vista, el Cocinero no tendría ninguna función en el sistema, así que la decisión no es solo del equipo:
-
-- al redactar el catálogo de requisitos (1.3.1), RF-17 se clasifica como "Debería";
-- si se descarta, se tramita como cambio de alcance autorizado por el cliente (SRS 1.1.2), y ese cambio decide si el rol de Cocinero se elimina. Eso afecta a 3.1.1, 3.1.3, 1.2.3 y 1.7.
-
-**Recomendación:** decidirlo al redactar 1.3.1, antes de implementar el modelo de usuario (3.1.1), para que los roles se definan correctamente desde el inicio.
+**Roles (DEC-21, 24-sep-2026).** El sistema tiene solo dos roles: Administrador y Cajero. El rol de Cocinero se eliminó del modelo `User`, del `CLAUDE.md` y de la WBS. Si la vista de cocina se aprueba, la usan esos mismos roles desde el dispositivo del punto de venta. Si se descarta, RF-17 se reclasifica o se retira con autorización del cliente (SRS 1.1.2).
 
 ### DEC-16 — Tarín es el integrador (la aprobación de contenido cambió en DEC-18)
 
@@ -132,6 +125,7 @@ Alejandro Tarín valida que las rutas de cada PR estén en la estructura aprobad
 Tarín **no** se agrega como code owner de todos los archivos. Como GitHub se conforma con la aprobación de cualquiera de los listados, su aprobación bastaría para cualquier archivo y se perdería la revisión del dueño.
 
 **Cambios de dueño.** Pasan de Diego a Tarín:
+
 - la estructura del repositorio: `.github/CODEOWNERS`, `.github/pull_request_template.md`, la skill versionada en `.claude/skills/`, este documento y toda ruta sin regla;
 - las acciones de configuración P1 a P3.
 
@@ -139,29 +133,30 @@ Diego queda como segundo aprobador de esos cambios, porque alteran los responsab
 
 **Usuarios de GitHub:**
 
-| Integrante | Usuario |
-|---|---|
-| Alejandro Tarín | `T4R1N256` |
-| Diego Galindo | `Diego-Galindo98` |
-| Jesús Hernández | `EduardGarrido` |
-| Jared Beltrán | `JBeltra16` |
-| Yahir Enríquez | `CodigaBorealis` |
+| Integrante      | Usuario           |
+| --------------- | ----------------- |
+| Alejandro Tarín | `T4R1N256`        |
+| Diego Galindo   | `Diego-Galindo98` |
+| Jesús Hernández | `EduardGarrido`   |
+| Jared Beltrán   | `JBeltra16`       |
+| Yahir Enríquez  | `CodigaBorealis`  |
 
 **Protección de `main` con dos rulesets** (Settings → Rules → Rulesets):
 
 1. **"main — solo el integrador fusiona":**
-   - reglas *Restrict updates*, *Restrict deletions* y *Block force pushes*;
-   - lista de excepciones: *Repository admin*, en modo *For pull requests only*.
+   - reglas _Restrict updates_, _Restrict deletions_ y _Block force pushes_;
+   - lista de excepciones: _Repository admin_, en modo _For pull requests only_.
 
-   Con *Restrict updates* solo quien está en la lista de excepciones puede actualizar la rama, así que nadie más puede fusionar. El modo *For pull requests only* obliga al integrador a pasar siempre por un PR.
+   Con _Restrict updates_ solo quien está en la lista de excepciones puede actualizar la rama, así que nadie más puede fusionar. El modo _For pull requests only_ obliga al integrador a pasar siempre por un PR.
+
 2. **"main — requisitos del PR":**
-   - *Require a pull request before merging* con 1 aprobación, *Require review from Code Owners* y descarte de aprobaciones cuando lleguen commits nuevos;
-   - *Require status checks to pass*: el CI de 5.1 y la revisión de rutas;
+   - _Require a pull request before merging_ con 1 aprobación, _Require review from Code Owners_ y descarte de aprobaciones cuando lleguen commits nuevos;
+   - _Require status checks to pass_: el CI de 5.1 y la revisión de rutas;
    - **sin lista de excepciones.**
 
 Se separan en dos porque la excepción de un ruleset lo cubre completo. Si fuera uno solo, el integrador podría fusionar sin la aprobación del dueño ni el CI en verde.
 
-**Condición:** Tarín debe ser el **único administrador** del repositorio; el esquema se apoya en el rol *Repository admin*. Lo más simple es que el repositorio esté en su cuenta. Los demás integrantes necesitan permiso de escritura.
+**Condición:** Tarín debe ser el **único administrador** del repositorio; el esquema se apoya en el rol _Repository admin_. Lo más simple es que el repositorio esté en su cuenta. Los demás integrantes necesitan permiso de escritura.
 
 **Revisión de rutas en CI** (la agrega Jared al workflow de 5.1):
 
@@ -176,7 +171,8 @@ Se separan en dos porque la excepción de un ruleset lo cubre completo. Si fuera
 
 **Alcance.** Los nombres de archivos y carpetas de **código y pruebas** van en inglés. La documentación (`docs/`) y la skill conservan sus nombres, y su contenido sigue en español.
 
-La app `pdv` se renombra a **`pos`** (*point of sale*):
+La app `pdv` se renombra a **`pos`** (_point of sale_):
+
 - carpetas: `apps/pos/`, `static/pos/`, `apps/pos/templates/pos/`;
 - URLs: prefijo `/pos/` y endpoint de sincronización `POST /pos/sync/` (contrato v1 actualizado);
 - nombres de URL: `pos:add_item`, `pos:confirm_sale`…;
@@ -186,6 +182,7 @@ La app `pdv` se renombra a **`pos`** (*point of sale*):
 **Por qué ahora.** La app todavía no tiene modelos ni migraciones. Después de la primera migración, el nombre de la app queda como prefijo de las tablas (`pos_sale`, `pos_order`…) y dentro de las migraciones, y renombrarla sería costoso.
 
 **Qué no cambia:**
+
 - el código del módulo en el SRS y la WBS (M-PDV) y los textos de la interfaz ("Punto de venta");
 - los identificadores en español del módulo de precios (DEC-01), porque son contenido de los archivos, no nombres.
 
@@ -194,18 +191,36 @@ La app `pdv` se renombra a **`pos`** (*point of sale*):
 Tarín es quien aprueba los PR, no solo quien los fusiona. Para que GitHub cuente su aprobación, figura en **todas las rutas** de `CODEOWNERS`. En el mapa de la skill se declara una sola vez, con el campo `aprobador_general`, y el generador lo agrega a cada línea.
 
 **Efectos:**
+
 - La aprobación de Tarín cumple por sí sola el requisito de code owners del ruleset "main — requisitos del PR", sobre cualquier archivo.
 - Los dueños de cada ruta siguen recibiendo la solicitud de revisión automáticamente, pero su aprobación ya no se exige.
 - Los PR que abre Tarín los aprueba otra de las personas listadas en la ruta, porque GitHub no permite aprobar el PR propio. El mapa garantiza que cada ruta tenga al menos otra persona.
 - Sigue vigente de DEC-16: solo Tarín fusiona, y `main` se protege con dos rulesets.
 
 **Alternativas consideradas:**
-- *Mantener DEC-16*, en la que el dueño aprueba el contenido y Tarín valida y fusiona.
-- *Esquema mixto*, en el que la aprobación de Jesús o Jared seguiría siendo obligatoria en modelos, migraciones y sincronización.
+
+- _Mantener DEC-16_, en la que el dueño aprueba el contenido y Tarín valida y fusiona.
+- _Esquema mixto_, en el que la aprobación de Jesús o Jared seguiría siendo obligatoria en modelos, migraciones y sincronización.
 
 El equipo eligió que la aprobación sea siempre de Tarín.
 
 **Riesgo aceptado:** un cambio al esquema de datos o a la lógica transaccional podría fusionarse sin que lo apruebe quien lo mantiene, y una migración aplicada no se deshace. Mitigación recomendada, no obligatoria: en PR que toquen `models.py`, `migrations/`, `services*.py` de `pos` o `sync_operations()`, esperar el comentario de Jesús antes de aprobar.
+
+### DEC-21 — Solo dos roles
+
+Administrador (`admin`) y Cajero (`cashier`). El rol de Cocinero se elimina. La migración inicial del modelo `User` se regeneró antes de fusionar el esqueleto. Las bases locales que ya aplicaron la versión anterior no necesitan cambios, porque las opciones de un campo no se guardan en la base de datos.
+
+### DEC-23 — Ramas `nombre/tema` y paquete de la WBS en el título del PR
+
+La convención anterior (`feat/RF-nn-…`, `feat/WBS-x.y.z-…`, commits `feat(RF-nn): …`) resultaba compleja de recordar. Se reemplaza por:
+
+- **Rama:** `nombre/tema`, con la clave del integrante (`diego`, `jesus`, `jared`, `tarin`, `yahir`) y de 2 a 4 palabras. Por ejemplo, `diego/login` o `jesus/modelo-venta`. Minúsculas y guiones, sin acentos, `ñ` ni espacios.
+- **Título del PR:** `WBS-x.y.z: descripción`, por ejemplo `WBS-3.1.2: inicio de sesión con usuario y contraseña`. El paquete de la WBS liga el cambio con su requisito.
+- **Commits dentro de la rama:** libres.
+- **Fusión:** solo _Squash and merge_, con el mensaje por defecto _Pull request title and commit details_. A `main` llega un commit por tarea, con el título del PR en la primera línea. Con esa opción se conservan en el cuerpo los `Co-authored-by` de la programación en pareja; con _solo el título_ se perderían.
+- **Limpieza:** _Automatically delete head branches_ borra la rama al fusionar.
+
+La trazabilidad no depende del nombre de la rama. Nada de lo configurado (CI, `--revisar`, rulesets) depende del nombre de la rama.
 
 ## Alternativas consideradas
 
