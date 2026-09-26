@@ -1,12 +1,10 @@
 Convención de uso — Django + HTMX + Alpine.js (SGFT)
 
-Relacionado con: ADR-01 (Arquitectura y stack), acción pendiente 5. Fecha: 5 de septiembre de 2026
-
 Esta guía fija cómo se integran HTMX y Alpine.js en el proyecto Django, para que las peticiones parciales sean predecibles y nadie tenga que "adivinar" cómo funciona el módulo de otra persona.
 
-1. Instalación — nada de npm
+1. Instalación (sin npm)
 
-En templates/base.html, dentro de <head>, dos líneas y ya:
+En templates/base.html, dentro de <head>:
 
 html
 <script src="https://unpkg.com/htmx.org@2"></script>
