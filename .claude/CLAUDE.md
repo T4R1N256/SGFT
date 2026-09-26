@@ -16,7 +16,7 @@ Aplicación web responsiva (PWA) para el food truck **"El Pardo"** (Ciudad Juár
 | --------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | Diego Galindo   | `Diego-Galindo98` | Product Owner · back-end (usuarios, inventario)                                                                          |
 | Jesús Hernández | `EduardGarrido`   | Back-end y BD (modelos, migraciones, servicios transaccionales, despliegue)                                              |
-| Jared Beltrán   | `JBeltra16`       | Back-end (vistas del punto de venta, reportes, CI)                                                                       |
+| Jared Beltrán   | `JBeltran16`      | Back-end (vistas del punto de venta, reportes, CI)                                                                       |
 | Alejandro Tarín | `T4R1N256`        | Scrum Master · front-end (base visual, punto de venta, cliente offline) · **integrador: aprueba y fusiona todos los PR** |
 | Yahir Enríquez  | `CodigaBorealis`  | Front-end (usuarios, inventario, reportes) · pruebas E2E                                                                 |
 

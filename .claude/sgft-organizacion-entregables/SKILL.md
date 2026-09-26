@@ -189,7 +189,7 @@ La plantilla completa está en `assets/repo/.github/pull_request_template.md` y 
 Acciones P1 a P3 de `references/decisiones-y-pendientes.md`, a cargo de Tarín como integrador:
 
 1. **Copiar el kit.** Copiar `assets/repo/` sobre la raíz del repositorio (`.github/CODEOWNERS`, `.github/pull_request_template.md`, `docs/decisiones/`) y la carpeta completa de la skill en `.claude/skills/sgft-organizacion-entregables/`.
-2. **Permisos.** Los usuarios de GitHub ya están en `assets/ownership.json`: T4R1N256, Diego-Galindo98, EduardGarrido, JBeltra16 y CodigaBorealis. Los cinco necesitan permiso de escritura. **Tarín debe ser el único administrador**; la vía más simple es que el repositorio esté en su cuenta.
+2. **Permisos.** Los usuarios de GitHub ya están en `assets/ownership.json`: T4R1N256, Diego-Galindo98, EduardGarrido, JBeltran16 y CodigaBorealis. Los cinco necesitan permiso de escritura. **Tarín debe ser el único administrador**; la vía más simple es que el repositorio esté en su cuenta.
 3. **Proteger `main` con dos rulesets** (Settings → Rules → Rulesets, DEC-16):
    - **"main — solo el integrador fusiona":** reglas _Restrict updates_, _Restrict deletions_ y _Block force pushes_; en la lista de excepciones, _Repository admin_ en modo _For pull requests only_.
    - **"main — requisitos del PR":** _Require a pull request_ con 1 aprobación, _Require review from Code Owners_, descartar aprobaciones viejas, y _Require status checks_ (CI de 5.1 y la revisión de rutas); **sin excepciones**, para que el integrador también las cumpla. Como Tarín figura en todas las rutas (DEC-18), su aprobación cumple el requisito de code owners.

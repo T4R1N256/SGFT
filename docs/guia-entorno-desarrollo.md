@@ -54,7 +54,7 @@ El repositorio está en la cuenta de Tarín y es **público**: cualquiera puede 
 | Alejandro Tarín | `T4R1N256` (dueño del repositorio) |
 | Diego Galindo   | `Diego-Galindo98`                  |
 | Jesús Hernández | `EduardGarrido`                    |
-| Jared Beltrán   | `JBeltra16`                        |
+| Jared Beltrán   | `JBeltran16`                       |
 | Yahir Enríquez  | `CodigaBorealis`                   |
 
 1. **Acepta la invitación.** Tarín te invita como colaborador. Te llega por correo y también aparece en tus notificaciones de GitHub. Sin aceptarla no podrás subir cambios.

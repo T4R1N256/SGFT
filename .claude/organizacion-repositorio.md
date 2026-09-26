@@ -138,7 +138,7 @@ Diego queda como segundo aprobador de esos cambios, porque alteran los responsab
 | Alejandro Tarín | `T4R1N256`        |
 | Diego Galindo   | `Diego-Galindo98` |
 | Jesús Hernández | `EduardGarrido`   |
-| Jared Beltrán   | `JBeltra16`       |
+| Jared Beltrán   | `JBeltran16`      |
 | Yahir Enríquez  | `CodigaBorealis`  |
 
 **Protección de `main` con dos rulesets** (Settings → Rules → Rulesets):
