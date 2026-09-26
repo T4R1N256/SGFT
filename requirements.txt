@@ -1,0 +1,7 @@
+Django==5.2.17              
+django-htmx==1.29.0         # request.htmx: one view serves full page or HTMX fragment (convencion-htmx-alpine §3)
+dj-database-url==3.1.2      # builds DATABASES from the DATABASE_URL given by Neon/Supabase (WBS 5.2)
+python-dotenv==1.2.3        # loads .env in development; production reads the host's environment
+psycopg[binary]==3.3.6      # PostgreSQL driver
+gunicorn==26.2.0            # WSGI server on Render/Railway (WBS 5.3)
+whitenoise==6.12.0          # serves static files from Gunicorn, no extra service (WBS 5.3)

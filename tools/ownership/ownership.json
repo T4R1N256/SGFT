@@ -1,0 +1,625 @@
+{
+  "version": "2.0",
+  "fecha": "2026-09-24",
+  "fuentes": [
+    "estructura-y-flujo-datos-SGFT.md (árbol de directorios, rev. 11-sep-2026)",
+    "WBS-SGFT.md (Revisión 3, 24-sep-2026)",
+    "convencion-htmx-alpine-SGFT.md (5-sep-2026)"
+  ],
+  "integrantes": {
+    "diego": {
+      "nombre": "Diego Galindo",
+      "capa": "Backend",
+      "rol_scrum": "Product Owner / analista",
+      "github": "@Diego-Galindo98"
+    },
+    "jesus": {
+      "nombre": "Jesús Hernández",
+      "capa": "Backend + Base de datos",
+      "rol_scrum": "Desarrollo",
+      "github": "@EduardGarrido"
+    },
+    "jared": {
+      "nombre": "Jared Beltrán",
+      "capa": "Backend",
+      "rol_scrum": "Desarrollo",
+      "github": "@JBeltran16"
+    },
+    "tarin": {
+      "nombre": "Alejandro Tarín",
+      "capa": "Frontend",
+      "rol_scrum": "Scrum Master · integrador (aprueba y fusiona todos los PR)",
+      "github": "@T4R1N256"
+    },
+    "yahir": {
+      "nombre": "Yahir Enríquez",
+      "capa": "Frontend",
+      "rol_scrum": "Desarrollo",
+      "github": "@CodigaBorealis"
+    }
+  },
+  "aprobador_general": "tarin",
+  "reglas": [
+    {
+      "patron": "**",
+      "dueno": "tarin",
+      "wbs": [],
+      "nota": "Regla por omisión. Si una ruta cae aquí, está FUERA de la estructura aprobada: no crear el archivo hasta que el integrador (Tarín) le asigne ubicación y dueño en assets/ownership.json.",
+      "revisor": ["diego"]
+    },
+    {
+      "patron": "manage.py",
+      "dueno": "jesus",
+      "wbs": [],
+      "nota": "Punto de entrada de Django. No se edita salvo cambio de configuración global.",
+      "revisor": ["jared"]
+    },
+    {
+      "patron": "requirements.txt",
+      "dueno": "jesus",
+      "wbs": [],
+      "nota": "Toda dependencia nueva se justifica en el PR (CLAUDE.md §11). Pendiente: biblioteca de PDF para 3.5.5 (recomendada ReportLab, BSD, sin dependencias del sistema).",
+      "revisor": ["jared"]
+    },
+    {
+      "patron": ".env.example",
+      "dueno": "jesus",
+      "wbs": ["5.2"],
+      "nota": "Solo nombres de variables, nunca valores reales.",
+      "revisor": ["jared"]
+    },
+    {
+      "patron": ".gitignore",
+      "dueno": "jesus",
+      "wbs": [],
+      "nota": ".env debe permanecer ignorado.",
+      "revisor": ["jared"]
+    },
+    {
+      "patron": "CLAUDE.md",
+      "dueno": "diego",
+      "wbs": [],
+      "nota": "Contexto persistente del proyecto; lo mantiene el PO.",
+      "revisor": ["jesus"]
+    },
+    {
+      "patron": "config/**",
+      "dueno": "jesus",
+      "wbs": ["5.2"],
+      "nota": "Configuración global (settings, urls raíz, wsgi, asgi). Sin lógica de negocio.",
+      "revisor": ["jared"]
+    },
+    {
+      "patron": ".claude/skills/**",
+      "dueno": "tarin",
+      "revisor": ["diego"],
+      "wbs": ["4.2"],
+      "nota": "Skill sgft-organizacion-entregables versionada en el repo (fuente única del mapa de propiedad). La mantiene el integrador (Tarín); Diego revisa los cambios que afectan responsables del WBS. Tras fusionar, se vuelve a subir a Claude."
+    },
+    {
+      "patron": ".github/workflows/**",
+      "dueno": "jared",
+      "revisor": ["jesus"],
+      "wbs": ["5.1", "3.4.5", "4.6"],
+      "nota": "Pipeline de CI: manage.py test + node --test en cada PR; job de Playwright (4.6) lo aporta Yahir."
+    },
+    {
+      "patron": ".github/CODEOWNERS",
+      "dueno": "tarin",
+      "wbs": ["4.2"],
+      "nota": "Se GENERA con scripts/dueno_de_ruta.py --codeowners --salida; no editar a mano. Lo mantiene el integrador (Tarín); Diego revisa cuando cambian responsables del WBS.",
+      "revisor": ["diego"]
+    },
+    {
+      "patron": ".github/pull_request_template.md",
+      "dueno": "tarin",
+      "wbs": ["4.2"],
+      "nota": "Checklist del autor y del integrador (DEC-16).",
+      "revisor": ["diego"]
+    },
+    {
+      "patron": "apps/__init__.py",
+      "dueno": "jesus",
+      "revisor": ["jared"],
+      "wbs": ["3.1.1"],
+      "nota": "Paquete raíz de las apps. Obligatorio: sin él, manage.py test no descubre ninguna prueba (corre 0 y termina sin error, el CI quedaría en verde sin probar nada)."
+    },
+    {
+      "patron": "apps/core/**",
+      "dueno": "jesus",
+      "wbs": [],
+      "nota": "Infraestructura compartida sin RF propio. Python de core (apps.py, utilidades) → Jesús.",
+      "revisor": ["jared"]
+    },
+    {
+      "patron": "apps/core/mixins.py",
+      "dueno": "jesus",
+      "wbs": ["3.1.3"],
+      "nota": "RoleRequiredMixin y decoradores de permiso. Cada dueño de views.py lo APLICA en sus vistas; solo Jesús lo MODIFICA.",
+      "revisor": ["diego"]
+    },
+    {
+      "patron": "apps/core/templates/**",
+      "dueno": "tarin",
+      "revisor": ["yahir"],
+      "wbs": ["2.1"],
+      "nota": "base.html: Bootstrap/HTMX/Alpine por CDN + hx-headers con CSRF en <body>. Referencia visual para todas las plantillas."
+    },
+    {
+      "patron": "apps/core/templatetags/**",
+      "dueno": "tarin",
+      "revisor": ["jesus"],
+      "wbs": ["2.1"],
+      "nota": "Filtros de presentación (p. ej. formato de dinero). Solo formatean; nunca calculan importes."
+    },
+    {
+      "patron": "apps/*/models.py",
+      "dueno": "jesus",
+      "wbs": [
+        "3.1.1",
+        "3.2.1",
+        "3.2.2",
+        "3.2.3",
+        "3.2.4",
+        "3.3.3",
+        "3.4.7",
+        "3.3.7",
+        "3.3.8",
+        "3.4.9"
+      ],
+      "nota": "Esquema de datos con un solo dueño: SOLO Jesús abre PR que toquen models.py; los demás lo piden por issue. Diego figura como segundo code owner únicamente para poder aprobar los PR de Jesús. Dinero: DecimalField(max_digits=10, decimal_places=2).",
+      "prioridad": 1,
+      "revisor": ["diego"]
+    },
+    {
+      "patron": "apps/*/migrations/**",
+      "dueno": "jesus",
+      "wbs": ["3.1.1"],
+      "nota": "Solo Jesús ejecuta makemigrations y sube migraciones; Diego aprueba. Nunca modificar una migración ya aplicada: crear una nueva.",
+      "prioridad": 1,
+      "revisor": ["diego"]
+    },
+    {
+      "patron": "apps/*/fixtures/**",
+      "dueno": "yahir",
+      "revisor": ["jesus"],
+      "wbs": ["4.5"],
+      "nota": "Datos demo ficticios coherentes con el menú real (burritos, guisados, bebidas); el repositorio es PÚBLICO: nunca datos reales del negocio. Ubicación aprobada el 24-sep-2026 (DEC-09). No confundir con tests_fixtures/.",
+      "prioridad": 1
+    },
+    {
+      "patron": "apps/accounts/**",
+      "dueno": "diego",
+      "revisor": ["jesus"],
+      "wbs": ["3.1.2", "3.1.4", "3.1.5"],
+      "nota": "Backend de M-USR: services.py (create_user, change_role, desactivación — 3.1.5), views.py (login/logout y administración de cuentas), urls.py, admin.py, tests.py."
+    },
+    {
+      "patron": "apps/accounts/templates/**",
+      "dueno": "yahir",
+      "wbs": ["3.1.2", "2.2.2", "3.1.5"],
+      "nota": "login.html (página completa, 3.1.2) y partials/ de administración de cuentas (3.1.5).",
+      "revisor": ["tarin"]
+    },
+    {
+      "patron": "apps/catalog/**",
+      "dueno": "diego",
+      "wbs": ["3.2.1", "3.2.2", "3.2.3", "3.2.9"],
+      "nota": "admin.py (CRUD de platillos, precios, insumos y recetas vía Django Admin) y tests.py. catalog NO tiene vistas ni plantillas propias.",
+      "revisor": ["jared"]
+    },
+    {
+      "patron": "apps/inventory/**",
+      "dueno": "diego",
+      "wbs": ["3.2.5", "3.2.7", "3.2.8", "3.2.9"],
+      "nota": "Backend de M-INV (views.py, urls.py, tests.py). inventory NUNCA importa de pos.",
+      "revisor": ["jared"]
+    },
+    {
+      "patron": "apps/inventory/services.py",
+      "dueno": "diego",
+      "revisor": ["jared"],
+      "wbs": ["3.2.5", "3.2.6", "3.2.7", "3.2.8"],
+      "nota": "register_purchase(), register_waste(), check_min_stock() → Diego (revisa Jared). Si el cambio toca deduct_for_sale(), revisa Diego como dueño.",
+      "funciones_con_otro_autor": [
+        {
+          "funcion": "deduct_for_sale()",
+          "autor": "jesus",
+          "wbs": "3.2.6",
+          "motivo": "Corre dentro de la transaction.atomic() de la venta (en línea y al sincronizar)."
+        }
+      ]
+    },
+    {
+      "patron": "apps/inventory/tests.py",
+      "dueno": "diego",
+      "wbs": ["3.2.9"],
+      "nota": "Pruebas de compra, merma y alerta → Diego.",
+      "funciones_con_otro_autor": [
+        {
+          "funcion": "clases de prueba de deduct_for_sale()",
+          "autor": "jesus",
+          "wbs": "3.2.6",
+          "motivo": "Quien implementa el servicio escribe su prueba unitaria."
+        }
+      ],
+      "revisor": ["jared"]
+    },
+    {
+      "patron": "apps/inventory/templates/**",
+      "dueno": "yahir",
+      "wbs": ["3.2.5", "3.2.7", "3.2.8", "2.2.3"],
+      "nota": "Incluye partials/stock_alert_badge.html (alerta visual, no bloquea la venta).",
+      "revisor": ["tarin"]
+    },
+    {
+      "patron": "apps/pos/**",
+      "dueno": "jared",
+      "revisor": ["jesus"],
+      "wbs": ["3.3.1", "3.3.3", "3.3.5", "3.3.6"],
+      "nota": "Backend HTTP de M-PDV: urls.py, admin.py y demás Python no transaccional."
+    },
+    {
+      "patron": "apps/pos/views.py",
+      "dueno": "jared",
+      "revisor": ["jesus"],
+      "wbs": [
+        "3.3.1",
+        "3.3.3",
+        "3.3.5",
+        "3.5.1",
+        "3.4.6",
+        "3.3.7",
+        "3.3.8",
+        "3.4.9",
+        "3.5.7"
+      ],
+      "nota": "dish_list, order_builder, add_item, remove_item, modificadores, confirm_sale, cancel/adjust (3.3.8), kitchen_queue y mark_prepared (3.3.7, ⏸ en evaluación: solo si se aprueba), bandeja de revisión (3.4.9), open/close de turno (3.5.1, 3.5.7) → Jared. Las vistas solo hacen HTTP: validan rol, eligen plantilla (request.htmx) y llaman al servicio.",
+      "funciones_con_otro_autor": [
+        {
+          "funcion": "sync_operations() — POST /pos/sync/",
+          "autor": "jesus + jared (pareja obligatoria)",
+          "wbs": "3.4.6",
+          "motivo": "Frontera dispositivo-servidor de ADR-02: UUID, transacción atómica, cuarentena."
+        }
+      ]
+    },
+    {
+      "patron": "apps/pos/services.py",
+      "dueno": "jesus",
+      "revisor": ["jared"],
+      "wbs": ["3.3.5", "3.3.8", "3.4.9"],
+      "nota": "confirm_sale(), cancel_sale() y adjust_sale() con motivo (3.3.8, regla 11), resolución de cuarentena y de revisiones (3.4.9, regla 9): todo lo que abre transaction.atomic()."
+    },
+    {
+      "patron": "apps/pos/services_pricing.py",
+      "dueno": "jesus",
+      "revisor": ["tarin"],
+      "wbs": ["3.3.4", "3.4.5"],
+      "nota": "calcular_total(pedido) -> int (centavos). Espejo de calcularTotal() en static/pos/pricing.js. Llaves en español por excepción aprobada (DEC-01). Cambia SIEMPRE en el mismo PR que pricing.js y tests_fixtures/pricing_cases.json."
+    },
+    {
+      "patron": "apps/pos/services_cash_session.py",
+      "dueno": "jesus",
+      "colaboradores": ["tarin"],
+      "wbs": ["3.5.1", "3.4.7", "3.5.7"],
+      "nota": "open_session(), close_session() (3.5.7: se niega a cerrar con operaciones pendientes; registra cash_difference sin bloquear), current_session(). La apertura offline se trabaja en pareja con Tarín."
+    },
+    {
+      "patron": "apps/pos/tests.py",
+      "dueno": "jared",
+      "wbs": ["3.3.6", "3.3.7", "3.3.8", "3.4.9", "3.5.7"],
+      "nota": "Pruebas de vistas y flujo de pedido → Jared.",
+      "funciones_con_otro_autor": [
+        {
+          "funcion": "PricingParityTest y pruebas de confirm_sale()/services_cash_session",
+          "autor": "jesus",
+          "wbs": "3.4.5 / 3.3.5 / 3.5.1",
+          "motivo": "Quien implementa el servicio escribe su prueba unitaria."
+        }
+      ],
+      "revisor": ["jesus"]
+    },
+    {
+      "patron": "apps/pos/templates/**",
+      "dueno": "tarin",
+      "colaboradores": ["yahir"],
+      "wbs": [
+        "3.3.1",
+        "3.3.3",
+        "3.3.5",
+        "3.4.4",
+        "3.5.1",
+        "2.2.1",
+        "3.3.7",
+        "3.3.8"
+      ],
+      "nota": "order_builder.html, partials/dish_list.html, partials/order_summary.html (incluye control de ajuste/cancelación, 3.3.8), partials/cash_session_banner.html, kitchen_queue.html + partials/kitchen_order.html (3.3.7, ⏸ en evaluación). Las plantillas con x-data offline (3.4.4, cocina sin red) se programan en pareja con Yahir.",
+      "revisor": ["yahir"]
+    },
+    {
+      "patron": "apps/pos/templates/pos/review/**",
+      "dueno": "yahir",
+      "revisor": ["tarin"],
+      "wbs": ["3.4.9"],
+      "nota": "Bandeja de revisión del Administrador (en línea): ventas y aperturas en cuarentena con sus tres salidas, insumos en negativo y ventas con diferencia de precio."
+    },
+    {
+      "patron": "apps/pos/templates/pos/cash_session_close.html",
+      "dueno": "yahir",
+      "revisor": ["tarin"],
+      "wbs": ["3.5.7"],
+      "nota": "Pantalla de cierre de turno (solo en línea): efectivo final contado, esperado, diferencia; muestra cuántas operaciones faltan por sincronizar si las hay."
+    },
+    {
+      "patron": "apps/pos/templates/pos/partials/kitchen_order.html",
+      "dueno": "tarin",
+      "colaboradores": ["yahir"],
+      "wbs": ["3.3.7"],
+      "en_evaluacion": true,
+      "nota": "⏸ EN EVALUACIÓN (3.3.7, vista de cocina, prioridad candidata 'Debería', fuera de la línea base — DEC-15). No crear hasta que el equipo lo apruebe. Si se aprueba: mismo dispositivo del cajero, también sin conexión leyendo la cola local (pareja con Yahir)."
+    },
+    {
+      "patron": "apps/pos/templates/pos/kitchen_queue.html",
+      "dueno": "tarin",
+      "colaboradores": ["yahir"],
+      "wbs": ["3.3.7"],
+      "en_evaluacion": true,
+      "nota": "⏸ EN EVALUACIÓN (3.3.7, vista de cocina, prioridad candidata 'Debería', fuera de la línea base — DEC-15). No crear hasta que el equipo lo apruebe. Si se aprueba: mismo dispositivo del cajero, también sin conexión leyendo la cola local (pareja con Yahir)."
+    },
+    {
+      "patron": "apps/reports/**",
+      "dueno": "jared",
+      "wbs": ["3.5.3", "3.5.4", "3.5.5", "3.5.6"],
+      "nota": "Backend de M-REP (views.py, urls.py). reports es de SOLO LECTURA: nunca escribe en tablas de pos ni inventory.",
+      "revisor": ["jesus"]
+    },
+    {
+      "patron": "apps/reports/services.py",
+      "dueno": "jared",
+      "revisor": ["jesus"],
+      "wbs": ["3.5.2", "3.5.3", "3.5.4", "3.5.5"],
+      "nota": "sales_by_period(), top_dishes() y export_daily_sales_pdf() (3.5.5: ventas del día a PDF; se niega con operaciones pendientes de sincronizar) → Jared.",
+      "funciones_con_otro_autor": [
+        {
+          "funcion": "cash_close(session)",
+          "autor": "jesus",
+          "wbs": "3.5.2",
+          "motivo": "Depende de CashRegisterSession y de la cola de sincronización vacía (regla 5)."
+        }
+      ]
+    },
+    {
+      "patron": "apps/reports/tests.py",
+      "dueno": "jared",
+      "wbs": ["3.5.6"],
+      "nota": "Pruebas de reportes y exportación → Jared.",
+      "funciones_con_otro_autor": [
+        {
+          "funcion": "pruebas de cash_close() y descuadre",
+          "autor": "jesus",
+          "wbs": "3.5.2",
+          "motivo": "Quien implementa el servicio escribe su prueba unitaria."
+        }
+      ],
+      "revisor": ["jesus"]
+    },
+    {
+      "patron": "apps/reports/templates/**",
+      "dueno": "yahir",
+      "wbs": ["3.5.2", "3.5.3", "3.5.4", "3.5.5", "2.2.4"],
+      "nota": "reports/cash_close.html (carga completa, no HTMX), vistas de reportes y botón \"Exportar ventas del día (PDF)\" (3.5.5).",
+      "revisor": ["tarin"]
+    },
+    {
+      "patron": "static/core/**",
+      "dueno": "tarin",
+      "wbs": ["2.1"],
+      "nota": "Ubicación aprobada el 24-sep-2026 (DEC-09) para CSS propio global. Preferir clases de Bootstrap antes que CSS propio.",
+      "revisor": ["yahir"]
+    },
+    {
+      "patron": "static/pos/**",
+      "dueno": "tarin",
+      "colaboradores": ["yahir"],
+      "wbs": ["3.4.1", "3.4.2", "3.4.3", "3.4.4"],
+      "pareja_obligatoria": true,
+      "nota": "Shell offline de M-PDV (ADR-02). Ningún archivo con un solo autor. Leer ADR-02 completo antes de tocar."
+    },
+    {
+      "patron": "static/pos/manifest.json",
+      "dueno": "tarin",
+      "colaboradores": ["yahir"],
+      "wbs": ["3.4.1"],
+      "pareja_obligatoria": true,
+      "nota": "Manifiesto de la PWA."
+    },
+    {
+      "patron": "static/pos/sw.js",
+      "dueno": "tarin",
+      "colaboradores": ["yahir"],
+      "wbs": ["3.4.1", "3.4.2"],
+      "pareja_obligatoria": true,
+      "nota": "Service worker con Workbox por CDN (importScripts). Sin npm."
+    },
+    {
+      "patron": "static/pos/db.js",
+      "dueno": "tarin",
+      "colaboradores": ["yahir"],
+      "revisor": ["jared"],
+      "wbs": ["3.4.3", "3.4.7", "3.3.7"],
+      "pareja_obligatoria": true,
+      "nota": "Dexie: catálogo, cola única de operaciones (ventas y aperturas, campo tipo), estado de turno y, si se aprueba 3.3.7, lectura de la cola para la vista de cocina. Envía el lote según docs/decisiones/contrato-sync-pdv.md v1 (DEC-03 a DEC-06) → revisa Jared."
+    },
+    {
+      "patron": "static/pos/pricing.js",
+      "dueno": "tarin",
+      "colaboradores": ["yahir"],
+      "revisor": ["jesus"],
+      "wbs": ["3.4.4", "3.4.5"],
+      "pareja_obligatoria": true,
+      "nota": "calcularTotal(pedido) en enteros de centavos, llaves en español (DEC-01). Única excepción a \"Alpine no calcula dinero\": solo opera sin conexión y el servidor recalcula al sincronizar."
+    },
+    {
+      "patron": "tests_fixtures/**",
+      "dueno": "jesus",
+      "colaboradores": ["tarin"],
+      "wbs": ["3.4.5"],
+      "nota": "pricing_cases.json: casos con llaves en español (nombre, pedido.lineas[].platillo_id, precio_base_centavos, cantidad, modificadores[].tipo/ajuste_centavos, total_esperado_centavos). Solo para paridad; los datos demo van en apps/*/fixtures/. Todo cambio requiere aprobación de Jesús Y de Tarín."
+    },
+    {
+      "patron": "tests_e2e/**",
+      "dueno": "yahir",
+      "colaboradores": ["jared"],
+      "wbs": ["3.4.8", "4.6"],
+      "nota": "Playwright solo para los flujos críticos: venta PDV (con y sin conexión), apertura de caja, corte de caja."
+    },
+    {
+      "patron": "tests_e2e/parity/**",
+      "dueno": "tarin",
+      "revisor": ["jesus"],
+      "wbs": ["3.4.5"],
+      "nota": "test_pricing.mjs corre con node --test contra tests_fixtures/pricing_cases.json."
+    },
+    {
+      "patron": "docs/**",
+      "dueno": "diego",
+      "wbs": [],
+      "nota": "Documentación en Markdown. Los .docx NO viven en el repositorio (CLAUDE.md §7).",
+      "revisor": ["tarin"]
+    },
+    {
+      "patron": "docs/SRS.md",
+      "dueno": "diego",
+      "colaboradores": ["jesus"],
+      "wbs": [
+        "1.1.1",
+        "1.1.2",
+        "1.2.1",
+        "1.2.2",
+        "1.2.3",
+        "1.2.4",
+        "1.2.5",
+        "1.3.1",
+        "4.3"
+      ],
+      "nota": "Fuente de verdad de requisitos. Si el código se aparta del SRS, se actualiza en el MISMO PR. Jesús coautor de 1.3.1 y dueño de la matriz 4.3 (apéndice)."
+    },
+    {
+      "patron": "docs/decisiones/**",
+      "dueno": "diego",
+      "wbs": [],
+      "nota": "Una decisión por archivo (fecha, contexto, alternativas, razón). La redacta quien propone la decisión; Diego la integra.",
+      "revisor": ["jesus"]
+    },
+    {
+      "patron": "docs/decisiones/convencion-htmx-alpine-SGFT.md",
+      "dueno": "tarin",
+      "revisor": ["jared"],
+      "wbs": ["2.1"],
+      "nota": "Convención de integración HTMX/Alpine."
+    },
+    {
+      "patron": "docs/decisiones/contrato-sync-pdv.md",
+      "dueno": "jesus",
+      "colaboradores": ["jared", "tarin"],
+      "wbs": ["3.4.6"],
+      "nota": "APROBADO 24-sep-2026 (versión 1): lote único con campo tipo, llaves en español, 200 con estado por UUID, 401 conserva la cola. Cualquier cambio sube la versión del contrato y requiere a los tres."
+    },
+    {
+      "patron": "docs/decisiones/nombres-modulo-precios.md",
+      "dueno": "jesus",
+      "revisor": ["tarin"],
+      "wbs": ["3.3.4", "3.4.5"],
+      "nota": "DEC-01: excepción aprobada a CLAUDE.md §9 — nombres y llaves en español en el módulo de precios y en el lote de sincronización."
+    },
+    {
+      "patron": "docs/decisiones/organizacion-repositorio.md",
+      "dueno": "tarin",
+      "revisor": ["diego"],
+      "wbs": ["4.2"],
+      "nota": "DEC-07 a DEC-16: propiedad por capas, pruebas, ramas, CODEOWNERS, integrador y rulesets de main, WBS Rev. 4 y sus ajustes."
+    },
+    {
+      "patron": "docs/decisiones/spike-offline-*.md",
+      "dueno": "tarin",
+      "colaboradores": ["jared"],
+      "wbs": ["5.4"],
+      "nota": "Resultado documentado del spike de Sprint 1 (5.4). El código del spike vive en la rama spike/offline-workbox, que no se fusiona a main."
+    },
+    {
+      "patron": "docs/diagramas/**",
+      "dueno": "jesus",
+      "wbs": ["1.5.1", "1.6.1"],
+      "nota": "Láminas SADT/IDEF0 (.drawio + PNG/PDF) y modelo de datos (ER).",
+      "revisor": ["diego"]
+    },
+    {
+      "patron": "docs/diagramas/procesos/**",
+      "dueno": "diego",
+      "wbs": ["1.4.1"],
+      "nota": "Apéndice A — diagrama de procesos propuesto. Ubicación aprobada (DEC-09).",
+      "revisor": ["jesus"]
+    },
+    {
+      "patron": "docs/prototipos/pdv-venta/**",
+      "dueno": "tarin",
+      "wbs": ["2.2.1"],
+      "nota": "Prototipo desechable HTML/CSS/JS.",
+      "revisor": ["yahir"]
+    },
+    {
+      "patron": "docs/prototipos/usr-acceso/**",
+      "dueno": "yahir",
+      "revisor": ["tarin"],
+      "wbs": ["2.2.2"],
+      "nota": "Prototipo desechable. Tarín revisa coherencia visual con base.html."
+    },
+    {
+      "patron": "docs/prototipos/inv-catalogo/**",
+      "dueno": "yahir",
+      "revisor": ["tarin"],
+      "wbs": ["2.2.3"],
+      "nota": "Prototipo desechable."
+    },
+    {
+      "patron": "docs/prototipos/rep-caja/**",
+      "dueno": "yahir",
+      "revisor": ["tarin"],
+      "wbs": ["2.2.4"],
+      "nota": "Prototipo desechable. Las pantallas de apertura/cierre de turno se coordinan con Tarín porque su código vive en apps/pos/."
+    },
+    {
+      "patron": "docs/entregas/**",
+      "dueno": "diego",
+      "wbs": [],
+      "nota": "PDF de fases entregadas. Inmutables: nunca se editan después de entregarse.",
+      "revisor": ["tarin"]
+    },
+    {
+      "patron": "docs/manual-usuario.md",
+      "dueno": "diego",
+      "colaboradores": ["tarin", "yahir"],
+      "wbs": ["1.7"],
+      "nota": "Si el manual se redacta en Word, va al espacio compartido del equipo, no al repositorio."
+    },
+    {
+      "patron": "docs/calidad/**",
+      "dueno": "jesus",
+      "wbs": ["4.4"],
+      "nota": "Ubicación aprobada (DEC-09) para evidencias de calidad. checklist-seguridad.md (4.4) → Jesús.",
+      "revisor": ["diego"]
+    },
+    {
+      "patron": "docs/calidad/cobertura*.md",
+      "dueno": "jared",
+      "colaboradores": ["yahir"],
+      "wbs": ["4.1"],
+      "nota": "Resumen de cobertura por módulo y por Sprint (4.1). El reporte detallado es un artefacto del job de CI."
+    }
+  ],
+  "decisiones": "Registro completo en references/decisiones-y-pendientes.md (DEC-01 a DEC-18, 24-sep-2026).",
+  "paquetes_en_evaluacion": {
+    "3.3.7": "Vista de cocina (pedidos pendientes) — DEC-15. Fuera de la línea base; no crear sus archivos hasta que el equipo lo apruebe."
+  }
+}

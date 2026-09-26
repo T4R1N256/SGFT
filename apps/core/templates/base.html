@@ -1,0 +1,52 @@
+{% load static %}<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}El Pardo{% endblock %} · SGFT</title>
+
+  {# htmx 2 no intercambia 4xx por defecto; 403/409/422 traen fragmento con mensaje en español #}
+  <meta name="htmx-config" content='{"responseHandling":[{"code":"204","swap":false},{"code":"[23]..","swap":true},{"code":"(403|409|422)","swap":true,"error":true},{"code":"[45]..","swap":false,"error":true}]}'>
+
+  {# Tailwind v4 genera el CSS en el navegador y observa el DOM, así que también cubre los fragmentos que HTMX inserta #}
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.4/dist/htmx.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+
+  {# Evita el parpadeo de elementos con x-cloak antes de que Alpine arranque #}
+  <style>[x-cloak] { display: none !important; }</style>
+
+  {# Páginas del punto de venta agregan aquí manifest.json y el service worker (static/pos/) #}
+  {% block head_extra %}{% endblock %}
+</head>
+
+{# hx-headers se hereda: toda petición HTMX manda el token CSRF #}
+<body class="min-h-screen bg-gray-100 text-gray-900" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+  <nav class="flex items-center justify-between gap-3 bg-gray-900 px-4 py-2 text-white">
+    <span class="text-lg font-semibold">El Pardo</span>
+    <span x-data="{ online: navigator.onLine }" x-cloak
+          @online.window="online = true" @offline.window="online = false"
+          class="rounded px-2 py-0.5 text-xs font-medium"
+          :class="online ? 'bg-green-600 text-white' : 'bg-amber-400 text-gray-900'"
+          x-text="online ? 'En línea' : 'Sin conexión'"></span>
+    {% if user.is_authenticated %}
+      <span class="text-sm text-gray-300">{{ user }} · {{ user.get_role_display }}</span>
+    {% endif %}
+  </nav>
+
+  <main class="px-4 py-3">
+    <div id="messages" class="space-y-2">
+      {% for message in messages %}
+        <div role="alert" class="rounded border px-3 py-2 text-sm
+          {% if message.tags == 'error' %}border-red-300 bg-red-50 text-red-800
+          {% elif message.tags == 'success' %}border-green-300 bg-green-50 text-green-800
+          {% elif message.tags == 'warning' %}border-amber-300 bg-amber-50 text-amber-800
+          {% else %}border-blue-300 bg-blue-50 text-blue-800{% endif %}">{{ message }}</div>
+      {% endfor %}
+    </div>
+    {% block content %}{% endblock %}
+  </main>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>
