@@ -1,0 +1,509 @@
+{% load static %}
+<!DOCTYPE html> <html lang="es"> <head> <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>PuntoVenta - Reportes</title>
+
+<link
+    rel="stylesheet"
+    href="{% static 'pos/reportes/css/style.css' %}"
+>
+
+<link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+>
+
+</head> <body>
+
+<!-- Top Navigation Header -->
+<header class="header">
+
+    <div class="header-left">
+
+        <button class="btn-icon" type="button">
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+            </svg>
+        </button>
+
+        <div class="logo-box">
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14
+                         c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2
+                         10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/>
+            </svg>
+        </div>
+
+        <div>
+            <div class="brand-title">PuntoVenta</div>
+            <div class="brand-subtitle">El Pardo · SGFT</div>
+        </div>
+
+    </div>
+
+
+    <!-- Search -->
+    <div class="search-bar">
+
+        <svg width="16" height="16" fill="#8c827a" viewBox="0 0 24 24">
+            <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11
+                     16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5
+                     5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57
+                     l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6
+                     0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5
+                     14 7.01 14 9.5 11.99 14 9.5 14z"/>
+        </svg>
+
+        <input
+            type="text"
+            name="search"
+            placeholder="Buscar..."
+        >
+
+    </div>
+
+
+    <!-- Header Right -->
+    <div class="header-right">
+
+        <div class="status-badge">
+            <span class="dot"></span>
+
+            <span>
+                {% if caja_abierta %}
+                    Caja abierta
+                {% else %}
+                    Caja cerrada
+                {% endif %}
+            </span>
+        </div>
+
+        <div class="session-total">
+            <span>Total Sesión:</span>
+
+            <span class="highlight">
+                ${{ total_sesion|default:"0.00" }}
+            </span>
+        </div>
+    </div>
+
+</header>
+
+
+<!-- Page Main Title -->
+<div class="page-title-container">
+
+    <div>
+
+        <h1>Reportes</h1>
+
+        <p class="subtitle">
+            {{ periodo_texto|default:"Semana del 21 al 27 de septiembre de 2026" }}
+            · {{ tipo_reporte|default:"Corte semanal" }}
+        </p>
+
+    </div>
+
+    <button class="btn-export" type="button">
+
+        <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+        </svg>
+
+        Exportar PDF
+
+    </button>
+
+</div>
+
+
+<!-- Main Grid Content -->
+<main class="reports-grid">
+
+
+    <!-- Card 1: Insumos usados -->
+
+    <section class="report-card">
+
+        <div class="card-header">
+            <div class="card-icon"></div>
+            <h2 class="card-title">Insumos usados</h2>
+        </div>
+
+        <p class="card-subtitle">
+            Consumo calculado por receta (insumo × cantidad)
+        </p>
+
+
+        <div class="insumos-list">
+
+            {% for insumo in insumos_usados %}
+
+                <div class="insumo-item">
+
+                    <div class="insumo-info">
+
+                        <span class="emoji-bg">
+                            {{ insumo.emoji|default:"" }}
+                        </span>
+
+                        <div>
+
+                            <span class="insumo-name">
+                                {{ insumo.nombre }}
+                            </span>
+
+                            <span class="insumo-cost">
+                                Costo ${{ insumo.costo|floatformat:2 }}
+                            </span>
+
+                        </div>
+
+                    </div>
+
+                    <span class="insumo-qty">
+                        {{ insumo.cantidad }}
+                        {{ insumo.unidad }}
+                    </span>
+
+                </div>
+
+            {% empty %}
+
+                <p>No hay información de insumos para este periodo.</p>
+
+            {% endfor %}
+
+        </div>
+
+
+        <div class="card-footer">
+
+            <span>
+                Costo de insumos
+                {% if insumos_usados|length %}
+                    (top {{ insumos_usados|length }})
+                {% endif %}
+            </span>
+
+            <span class="card-footer-total">
+                ${{ costo_total_insumos|default:"0.00"}}
+            </span>
+
+        </div>
+
+    </section>
+
+
+    <!-- Card 2: Productos vendidos-->
+
+    <section class="report-card">
+
+        <div class="card-header">
+            <div class="card-icon"></div>
+            <h2 class="card-title">Productos vendidos</h2>
+        </div>
+
+        <p class="card-subtitle">
+            Top {{ productos_vendidos|length }} de la semana, en unidades
+        </p>
+
+
+        <div class="top-products-list">
+
+            {% for producto in productos_vendidos %}
+
+                <div class="product-rank-item">
+
+                    <div class="product-rank-row">
+
+                        <div class="rank-left">
+
+                            <span class="rank-badge
+                                {% if producto.posicion > 3 %}
+                                    outline
+                                {% endif %}
+                            ">
+                                {{ producto.posicion }}
+                            </span>
+
+                            <span class="product-name">
+                                {{ producto.nombre }}
+                            </span>
+
+                        </div>
+
+                        <span class="product-uds">
+                            {{ producto.unidades }} uds.
+                        </span>
+
+                    </div>
+
+
+                    {% if producto.porcentaje %}
+
+                        <div class="progress-track">
+
+                            <div
+                                class="progress-fill"
+                                style="width: {{ producto.porcentaje }}%;"
+                            ></div>
+
+                        </div>
+
+                    {% endif %}
+
+                </div>
+
+            {% empty %}
+
+                <p>No hay productos vendidos en este periodo.</p>
+
+            {% endfor %}
+
+        </div>
+
+
+        <div class="card-footer">
+
+            <span>
+                Total vendido
+                {% if productos_vendidos|length %}
+                    (top {{ productos_vendidos|length }})
+                {% endif %}
+            </span>
+
+            <span class="card-footer-total">
+                {{ total_productos_vendidos }} uds.
+            </span>
+
+        </div>
+
+    </section>
+
+
+    <!-- Card 3: Ventas -->
+
+    <section class="report-card">
+
+        <div class="card-header">
+            <div class="card-icon"></div>
+            <h2 class="card-title">Ventas</h2>
+        </div>
+
+
+        <div class="big-stat">
+            ${{ ventas_total|default:"0.00" }}
+        </div>
+
+
+        <div>
+
+            <span class="trend-badge">
+                ↗ {{ ventas_variacion|default:"+0.0%" }}
+                vs semana anterior
+            </span>
+
+        </div>
+
+
+        <!-- Sales Chart -->
+        <div class="chart-container">
+
+            {% if venta_dia_seleccionado %}
+                <div class="chart-tooltip">
+                    ${{ venta_dia_seleccionado }}
+                </div>
+            {% endif %}
+
+
+            <div class="chart-bars">
+
+                {% for dia in ventas_por_dia %}
+
+                    <div class="bar-col">
+
+                        <div
+                            class="bar {% if dia.activo %}active{% endif %}"
+                            style="height: {{ dia.altura }}px;"
+                        ></div>
+
+                        <span class="bar-label">
+                            {{ dia.nombre }}
+                        </span>
+
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+        </div>
+
+
+        <!-- Sales Breakdown -->
+        <div class="sales-breakdown">
+
+            {% for metodo in ventas_por_metodo %}
+
+                <div class="breakdown-row">
+
+                    <span class="breakdown-label">
+                        {{ metodo.nombre }}
+                    </span>
+
+                    <span class="breakdown-value">
+                        ${{ metodo.total|floatformat:2 }}
+                    </span>
+
+                </div>
+
+            {% endfor %}
+
+
+            <div class="breakdown-row">
+
+                <span class="breakdown-label">
+                    Tickets: {{ total_tickets }}
+                </span>
+
+                <span class="breakdown-value">
+                    Promedio ${{ ticket_promedio|floatformat:2 }}
+                </span>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- Card 4: Mermas -->
+    <section class="report-card">
+
+        <div class="header-with-badge">
+
+            <div
+                class="card-header"
+                style="margin-bottom:0;"
+            >
+                <div class="card-icon"></div>
+                <h2 class="card-title">Mermas</h2>
+            </div>
+
+            <span class="badge-red">
+                {{ merma_porcentaje|default:"0" }}% de ventas
+            </span>
+
+        </div>
+
+
+        <div
+            class="big-stat"
+            style="color: #c62828; margin-top: 10px;"
+        >
+            ${{ mermas_total|default:"0.00" }}
+        </div>
+
+
+        <div class="mermas-list">
+
+            {% for merma in mermas %}
+
+                <div class="merma-item">
+
+                    <div>
+
+                        <span class="merma-title">
+                            {{ merma.nombre }}
+                        </span>
+
+                        <span class="merma-reason">
+                            {{ merma.motivo }}
+                        </span>
+
+                    </div>
+
+                    <span class="merma-cost">
+                        ${{ merma.costo|floatformat:2 }}
+                    </span>
+
+                </div>
+
+            {% empty %}
+
+                <p>No hay mermas registradas para este periodo.</p>
+
+            {% endfor %}
+
+        </div>
+
+
+        <p class="merma-note">
+            Cada merma se registra con motivo y se descuenta del inventario.
+        </p>
+
+    </section>
+
+</main>
+
+
+<!-- Bottom Date Bar & Filters -->
+<footer class="footer-controls">
+
+    <div class="date-picker-group">
+
+        <span class="date-label">
+            Fecha
+        </span>
+
+
+        <button
+            class="date-selector-btn"
+            type="button"
+        >
+            {{ fecha_inicio|date:"d/m/Y" }}
+            –
+            {{ fecha_fin|date:"d/m/Y" }}
+            ▾
+        </button>
+
+
+        <div class="toggle-group">
+
+            <button
+                class="toggle-btn {% if periodo == 'hoy' %}active{% endif %}"
+                type="button"
+            >
+                Hoy
+            </button>
+
+            <button
+                class="toggle-btn {% if periodo == 'semana' %}active{% endif %}"
+                type="button"
+            >
+                Semana
+            </button>
+
+            <button
+                class="toggle-btn {% if periodo == 'mes' %}active{% endif %}"
+                type="button"
+            >
+                Mes
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <button
+        class="btn-calendar"
+        type="button"
+    >
+        Calendario
+    </button>
+
+</footer>
+
+</body> </html>
