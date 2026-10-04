@@ -186,6 +186,20 @@ def imprimir_wbs(codigo, mapa):
         print("  Sin rutas registradas. Revisar references/matriz-wbs-responsables.md (puede ser un entregable fuera del repositorio).")
 
 
+def code_owners(regla, mapa):
+    """Code owners de la ruta: dueño, colaboradores y el aprobador general (DEC-35). Los revisores
+    no entran: el aprobador general fusiona sus propios PR sin otra aprobación."""
+    claves = [regla["dueno"]] + regla.get("colaboradores", [])
+    general = mapa.get("aprobador_general")
+    if general:
+        claves.append(general)
+    vistos = []
+    for c in claves:
+        if c not in vistos:
+            vistos.append(c)
+    return vistos
+
+
 def generar_codeowners(mapa):
     lineas = [
         "# CODEOWNERS — SGFT",
@@ -194,15 +208,15 @@ def generar_codeowners(mapa):
         "# Los usuarios de GitHub se definen en assets/ownership.json (campo \"github\" de cada integrante).",
         "# Si ves @TODO_<nombre>, complétalo AHÍ y regenera; si lo editas aquí, la próxima generación lo borra.",
         "# GitHub aplica la ÚLTIMA regla que coincide; las reglas están ordenadas de general a específica.",
-        "# main protegido con dos rulesets (DEC-16). El integrador (Tarín) figura en TODAS las rutas:",
-        "# su aprobación basta para cualquier archivo y es el único que fusiona (DEC-18). Sus propios",
-        "# PR los aprueba otro de los listados, porque GitHub no deja aprobar el PR propio.",
-        "# Cada ruta lista además al menos otra persona, para que los PR del integrador puedan aprobarse.",
+        "# Cada ruta lista a su dueño, a sus colaboradores y al integrador (Tarín), que figura en TODAS:",
+        "# su aprobación basta para cualquier archivo y es el único que fusiona. Es la máxima autoridad",
+        "# (DEC-35): sus propios PR no requieren otra aprobación y los fusiona como administrador.",
+        "# Los revisores del mapa no son code owners; se piden a mano cuando hacen falta.",
         "",
     ]
     ordenadas = sorted(enumerate(mapa["reglas"]), key=lambda t: clave_orden(*t))
     for _, r in ordenadas:
-        cuentas = " ".join(mapa["integrantes"][c]["github"] for c in aprobadores(r, mapa))
+        cuentas = " ".join(mapa["integrantes"][c]["github"] for c in code_owners(r, mapa))
         patron = "*" if r["patron"] == "**" else "/" + r["patron"]
         lineas.append(f"{patron:<52} {cuentas}")
     return "\n".join(lineas) + "\n"
@@ -335,9 +349,6 @@ def verificar(mapa):
             for c in [r["dueno"]] + r.get(campo, []):
                 if c not in claves:
                     errores.append(f"{r['patron']}: persona desconocida '{c}'")
-        personas = {r["dueno"], *r.get("colaboradores", []), *r.get("revisor", [])}
-        if len(personas) < 2:
-            errores.append(f"{r['patron']}: solo una persona; con revisión obligatoria bloquearía sus propios PR")
         if r["dueno"] in r.get("revisor", []):
             errores.append(f"{r['patron']}: el dueño no puede ser su propio revisor")
         if r.get("pareja_obligatoria") and not r.get("colaboradores"):
