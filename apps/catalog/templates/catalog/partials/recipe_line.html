@@ -1,0 +1,34 @@
+{% comment %}
+catalog/partials/recipe_line.html — Una fila de la receta (id «recipe-line-<n>»)
+Vistas: catalog:recipe_edit (cada fila) y catalog:add_recipe_line (fila nueva; con oob agrega el botón con el índice
+siguiente y quita el aviso de receta vacía). Envía ingredient_<n> y quantity_<n>.
+Alpine solo muestra la unidad de la opción elegida y quita la fila del formulario; el servidor valida al guardar.
+{% endcomment %}
+<div id="recipe-line-{{ line.index }}" data-line class="flex flex-col gap-[4px]" x-data="{ unit: '{{ line.unit|escapejs }}' }">
+  <div class="flex items-center gap-sm">
+    <label class="sgft-field h-[48px] min-w-0 flex-1{% if line.error %} border-estado-peligro{% endif %}">
+      <span class="sr-only">Insumo</span>
+      <select name="ingredient_{{ line.index }}" required class="h-full min-w-0 flex-1 bg-transparent sgft-texto-cuerpo-base text-texto-primario outline-none"
+              @change="unit = $event.target.selectedOptions[0]?.dataset.unit || ''"{% if line.error %} aria-invalid="true"{% endif %}>
+        <option value="">Elige un insumo</option>
+        {% for ingredient in ingredients %}
+          <option value="{{ ingredient.value }}" data-unit="{{ ingredient.unit }}"{% if ingredient.value|stringformat:"s" == line.ingredient|stringformat:"s" %} selected{% endif %}>{{ ingredient.label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="sgft-field h-[48px] w-[132px] flex-none{% if line.error %} border-estado-peligro{% endif %}">
+      <span class="sr-only">Cantidad</span>
+      <input name="quantity_{{ line.index }}" type="text" inputmode="decimal" required placeholder="0" value="{{ line.quantity }}" class="sgft-texto-cuerpo-base"{% if line.error %} aria-invalid="true"{% endif %}>
+      <span class="sgft-texto-cuerpo-pequeno-medio text-texto-secundario" x-text="unit">{{ line.unit }}</span>
+    </label>
+    <button type="button" class="sgft-icon-btn sgft-icon-btn--peligro sgft-icon-btn--compacto" aria-label="Quitar insumo de la receta"
+            @click="$el.closest('[data-line]').remove()">
+      {% include "components/icons/minus.html" with size=20 only %}
+    </button>
+  </div>
+  {% if line.error %}<p class="sgft-texto-cuerpo-nota text-estado-peligro" role="alert">{{ line.error }}</p>{% endif %}
+</div>
+{% if oob %}
+  {% include "catalog/partials/recipe_add_button.html" with oob=True %}
+  <div id="recipe-empty" hx-swap-oob="delete"></div>
+{% endif %}

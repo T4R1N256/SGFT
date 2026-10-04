@@ -1,0 +1,6 @@
+{% comment %}
+catalog/partials/recipe_saved.html — Respuesta al guardar la receta (catalog:recipe_edit, POST válido)
+Se inserta al inicio de #messages y cierra el diálogo fuera de banda.
+{% endcomment %}
+{% include "components/alert.html" with message="Receta de "|add:dish.name|add:" guardada." variant="exito" only %}
+<div id="dialog" hx-swap-oob="true"></div>

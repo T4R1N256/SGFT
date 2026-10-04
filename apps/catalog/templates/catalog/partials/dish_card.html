@@ -1,0 +1,6 @@
+{% comment %}
+catalog/partials/dish_card.html — Una tarjeta del catálogo (id «catalog-dish-<id>»)
+Vistas: catalog:dish_catalog (dentro de la rejilla) y catalog:dish_edit (tras guardar, con close_dialog).
+{% endcomment %}
+{% include "components/dish_catalog_card.html" with dish=dish recipe_url=dish.recipe_url edit_url=dish.edit_url only %}
+{% if close_dialog %}<div id="dialog" hx-swap-oob="true"></div>{% endif %}

@@ -1,0 +1,8 @@
+{% comment %}
+catalog/partials/recipe_add_button.html — Botón «Agregar insumo» de la receta (id «add-recipe-line»)
+Lleva el índice de la fila siguiente, que decide el servidor; catalog:add_recipe_line lo devuelve fuera de banda.
+{% endcomment %}
+<button type="button" id="add-recipe-line"{% if oob %} hx-swap-oob="true"{% endif %} class="sgft-btn sgft-btn--secundario self-start"
+        hx-get="{{ add_line_url }}?index={{ next_index }}" hx-target="#recipe-lines" hx-swap="beforeend">
+  <span class="sgft-btn__icon inline-flex">{% include "components/icons/plus.html" with size=20 only %}</span>Agregar insumo
+</button>

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% comment %}
+catalog/products.html — Productos (Figma 03 · Productos, 2046:788, rev. 1.1; DEC-25)
+Vista: catalog:dish_catalog. Solo Administrador, con PIN. La página solo incluye fragmentos; el contrato está en
+el docstring de la vista. Sin «Ordenar» ni «Filtros» (acordado: se quitaron de todas las pantallas); en su lugar,
+«Agregar platillo» a la derecha del encabezado (acordado: sustituye al tile punteado de la rejilla).
+{% endcomment %}
+{% block title %}Productos{% endblock %}
+{% block content %}
+  <section class="flex flex-col gap-[26px]" aria-labelledby="products-title">
+    <header class="flex flex-wrap items-center justify-between gap-md">
+      <div class="flex flex-col gap-[4px]">
+        <h1 id="products-title" class="sgft-texto-titulo-h1 text-texto-primario">Productos</h1>
+        <p class="sgft-texto-cuerpo-pequeno text-texto-secundario">Catálogo del menú · {{ active_count }} platillo{{ active_count|pluralize }} activo{{ active_count|pluralize }} · La edición requiere PIN de administrador</p>
+      </div>
+      {% if create_url %}
+        {% include "components/button.html" with text="Agregar platillo" icon="plus" hx_get=create_url hx_target="#dialog" hx_swap="innerHTML" only %}
+      {% endif %}
+    </header>
+    {% include "catalog/partials/dish_grid.html" %}
+  </section>
+{% endblock %}
