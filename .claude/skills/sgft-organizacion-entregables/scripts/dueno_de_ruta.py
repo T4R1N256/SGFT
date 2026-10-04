@@ -274,6 +274,7 @@ CASOS_ESPERADOS = [
     ("apps/accounts/views.py", "yahir"),
     ("apps/accounts/templates/accounts/activate_device.html", "yahir"),
     (".claude/CLAUDE.md", "tarin"),
+    (".claude/WBS-SGFT.md", "tarin"),
     ("apps/catalog/admin.py", "diego"),
     ("apps/inventory/services.py", "diego"),
     ("apps/inventory/templates/inventory/partials/stock_alert_badge.html", "yahir"),

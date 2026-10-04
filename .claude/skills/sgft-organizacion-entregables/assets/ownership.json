@@ -108,6 +108,15 @@
       ]
     },
     {
+      "patron": ".claude/WBS-SGFT.md",
+      "dueno": "tarin",
+      "revisor": [
+        "diego"
+      ],
+      "wbs": [],
+      "nota": "WBS del proyecto (revisión 5, reconstruida del diagrama del equipo). La mantiene Tarín; Diego revisa los cambios de paquetes o responsables."
+    },
+    {
       "patron": ".claude/CLAUDE.md",
       "dueno": "tarin",
       "revisor": [

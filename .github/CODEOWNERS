@@ -43,6 +43,7 @@
 /tests_e2e/parity/**                                 @T4R1N256 @EduardGarrido
 /.github/workflows/**                                @JBeltra16 @EduardGarrido @T4R1N256
 /.github/CODEOWNERS                                  @T4R1N256 @Diego-Galindo98
+/.claude/WBS-SGFT.md                                 @T4R1N256 @Diego-Galindo98
 /apps/core/mixins.py                                 @EduardGarrido @Diego-Galindo98 @T4R1N256
 /apps/pos/templates/**                               @T4R1N256 @CodigaBorealis
 /apps/core/templates/**                              @T4R1N256 @CodigaBorealis

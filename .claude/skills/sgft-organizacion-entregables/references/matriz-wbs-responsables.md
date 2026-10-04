@@ -53,7 +53,7 @@ Los paquetes de documentación no forman parte de la división backend/frontend;
 | WBS | Paquete | Ubicación del entregable | Dueño | Pareja / colabora | Revisor | Cambio |
 |---|---|---|---|---|---|---|
 | 2.1 | Estructura base del sistema (app) | `apps/core/templates/base.html`, `docs/decisiones/convencion-htmx-alpine-SGFT.md` | Tarín | — | Yahir | Δ `apps/core/mixins.py` sale de 2.1 y queda solo en 3.1.3 (Jesús) |
-| 2.2.1 | Interfaz de acceso con PIN (diálogo del PIN de Administrador, módulos con candado, activación del dispositivo) | `apps/core/templates/components/pin_*.html`, `pin_required.html`; `apps/accounts/templates/accounts/` | Tarín | Yahir (vistas y plantilla de `accounts`) | — | Δ DEC-35 (antes Mockup M-PDV) |
+| 2.2.1 | Interfaz de acceso con PIN (diálogo del PIN de Administrador, módulos con candado, activación del dispositivo) | `apps/core/templates/components/pin_*.html`, `pin_required.html` | Tarín | — | — | Δ DEC-35 (antes Mockup M-PDV); Tarín es el único colaborador |
 | 2.2.2 | Interfaz del punto de venta (Nueva Venta, abrir y cerrar caja) | `apps/pos/templates/pos/`, `apps/pos/views.py` | Tarín | — | — | Δ DEC-35 (antes Mockup M-USR) |
 | 2.2.3 | Interfaz de Productos e Inventario | `apps/catalog/templates/catalog/`, `apps/catalog/views.py` (Tarín); `apps/inventory/templates/inventory/` (Yahir) | Tarín y Yahir | — | Tarín | Δ DEC-35 (antes Mockup M-INV); Δ antes Tarín |
 | 2.2.4 | Mockup M-REP (caja/reportes) | `docs/prototipos/rep-caja/index.html` | Yahir | Tarín (pantallas de turno) | Tarín | Δ antes Tarín |
