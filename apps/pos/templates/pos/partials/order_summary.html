@@ -1,0 +1,89 @@
+{% comment %}
+pos/partials/order_summary.html — Ticket en curso (id «order-summary»; Figma 2045:2316)
+Vistas: pos:order_builder, pos:add_item, pos:remove_item, pos:remove_dish, pos:set_payment_method, pos:confirm_sale.
+Importes, cantidades y can_confirm los decide el servidor; la plantilla solo los muestra.
+Ticket vacío: mensaje centrado y método de pago y «Confirmar compra» deshabilitados, para que el panel no cambie
+de tamaño (DEC-30).
+En el teléfono el ticket es un acordeón (acordado el 4-oct-2026): plegado muestra el encabezado y la venta (total,
+método de pago, «Confirmar compra»); abierto, también las líneas y el subtotal. Alpine guarda si está abierto en
+sessionStorage para que sobreviva al reemplazo de HTMX. En escritorio el chevrón no aparece y todo se ve siempre.
+Fuera de banda: dish_oob (la tarjeta del platillo tocado) y, tras confirmar (oob_after_sale), el total de la
+sesión, el aviso de stock y la rejilla sin contadores.
+{% endcomment %}
+<aside id="order-summary" class="sgft-card sgft-card--media gap-sm xl:sticky xl:top-md xl:min-h-[756px]" aria-label="Ticket en curso"
+       x-data="{ open: sessionStorage.getItem('sgft-ticket-open') === '1' }"
+       x-effect="sessionStorage.setItem('sgft-ticket-open', open ? '1' : '0')" :data-open="open ? 'true' : 'false'">
+  <div class="sgft-ticket-header flex items-center gap-sm" @click="open = !open">
+    <div class="min-w-0 flex-1">
+  {% if order.item_count == 1 %}
+    {% include "components/card_header.html" with title="Ticket" icon="receipt-sheet" compact=True badge_text="1 artículo" badge_variant="marca" only %}
+  {% elif order.item_count %}
+    {% include "components/card_header.html" with title="Ticket" icon="receipt-sheet" compact=True badge_text=order.item_count|stringformat:"d"|add:" artículos" badge_variant="marca" only %}
+  {% else %}
+    {% include "components/card_header.html" with title="Ticket" icon="receipt-sheet" compact=True only %}
+  {% endif %}
+    </div>
+    <button type="button" class="sgft-ticket-toggle sgft-icon-btn sgft-icon-btn--neutro sgft-icon-btn--compacto"
+            :aria-label="open ? 'Ocultar líneas del ticket' : 'Mostrar líneas del ticket'" :aria-expanded="open"
+            aria-controls="ticket-lines" @click.stop="open = !open">
+      {% include "components/icons/chevron-down.html" with size=20 only %}
+    </button>
+  </div>
+
+  <div id="ticket-lines" class="sgft-ticket-body flex min-h-0 flex-1 flex-col gap-sm">
+  <div class="h-px bg-borde-sutil"></div>
+
+  <div class="sgft-ticket-lines flex flex-1 flex-col gap-[2px]">
+    {% for line in order.lines %}
+      {% include "components/ticket_line.html" with line=line remove_url=line.remove_url hx_target="#order-summary" hx_swap="outerHTML" only %}
+    {% empty %}
+      {% include "components/empty_state.html" with icon="receipt-sheet" message="Toca un platillo para agregarlo" only %}
+    {% endfor %}
+  </div>
+
+  <div class="h-px bg-borde-sutil"></div>
+  <div class="flex items-center justify-between">
+    <span class="sgft-texto-cuerpo-pequeno text-texto-secundario">Subtotal ({{ order.item_count }} artículo{{ order.item_count|pluralize }})</span>
+    <span class="sgft-texto-numero-importe text-texto-primario">${{ order.subtotal|floatformat:"2g" }}</span>
+  </div>
+  </div>
+  <div class="flex items-end justify-between gap-sm">
+    <span class="sgft-texto-titulo-h2 text-texto-primario">Total</span>
+    <span class="sgft-texto-display-indicador text-marca-primario-oscuro">${{ order.total|floatformat:"2g" }}</span>
+  </div>
+
+  <p class="sgft-texto-etiqueta-mayusculas text-texto-secundario">Método de pago</p>
+  <div class="flex gap-[10px]" role="group" aria-label="Método de pago">
+    {% for method in payment_methods %}
+      <div class="flex-1">
+        {% if not order.lines %}
+          {% include "components/button.html" with text=method.label icon=method.icon variant="contorno" full=True disabled=True only %}
+        {% elif method.value == order.payment_method %}
+          {% include "components/button.html" with text=method.label icon=method.icon selected=True full=True name="method" value=method.value hx_post=payment_url hx_target="#order-summary" hx_swap="outerHTML" only %}
+        {% else %}
+          {% include "components/button.html" with text=method.label icon=method.icon variant="contorno" full=True name="method" value=method.value hx_post=payment_url hx_target="#order-summary" hx_swap="outerHTML" only %}
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+
+  {% if order.can_confirm %}
+    {% include "components/button.html" with text="Confirmar compra" icon="circle-check" size="grande" full=True hx_post=confirm_url hx_target="#order-summary" hx_swap="outerHTML" disable_on_request=True only %}
+  {% else %}
+    {% include "components/button.html" with text="Confirmar compra" icon="circle-check" size="grande" full=True disabled=True only %}
+  {% endif %}
+</aside>
+
+{% if dish_oob %}
+  {% include "components/dish_card.html" with dish=dish_oob quantity=dish_oob.quantity add_url=dish_oob.add_url remove_url=dish_oob.remove_url hx_target="#order-summary" hx_swap="outerHTML" oob=True only %}
+{% endif %}
+{% if oob_after_sale %}
+  {% include "components/session_total.html" with total=session_total oob=True only %}
+  <div id="stock-notice-top" class="sgft-app__stock" hx-swap-oob="true">
+    {% if stock_notice %}{% include "components/stock_notice.html" with detail=stock_notice.detail url=stock_notice.url only %}{% endif %}
+  </div>
+  <div id="stock-notice" hx-swap-oob="true">
+    {% if stock_notice %}{% include "components/stock_notice.html" with detail=stock_notice.detail url=stock_notice.url only %}{% endif %}
+  </div>
+  {% include "pos/partials/dish_list.html" with oob_dish_list=True oob_chips=False %}
+{% endif %}
