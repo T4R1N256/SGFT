@@ -1,0 +1,16 @@
+{% comment %}
+components/cash_status.html — Estado de caja (Figma «Estado de caja», 2043:1845, rev. 1.1)
+Parámetros:
+  open   True si hay turno abierto; lo decide el servidor (o el turno guardado en el dispositivo sin red, regla 12)
+  oob    True: se devuelve fuera de banda (hx-swap-oob) al abrir o cerrar la caja
+Va en la barra superior de todas las pantallas. Muestra solo «Caja» con el indicador (acordado el 4-oct-2026); el
+estado completo («abierta», «cerrada») queda para lectores de pantalla. El texto va en texto/primario por contraste AA.
+Incluir siempre con «only».
+{% endcomment %}
+<span id="cash-status"{% if oob %} hx-swap-oob="true"{% endif %} class="inline-flex h-[54px] flex-none items-center gap-[10px] rounded-campo px-[18px] sgft-texto-cuerpo-pequeno-medio text-texto-primario {% if open %}bg-estado-exito-fondo{% else %}bg-estado-peligro-fondo{% endif %}">
+  {% if open %}
+    <span class="size-[10px] flex-none rounded-full bg-indicador-en-linea" aria-hidden="true"></span>Caja<span class="sr-only"> abierta</span>
+  {% else %}
+    <span class="flex-none text-estado-peligro">{% include "components/icons/lock.html" with size=18 only %}</span>Caja<span class="sr-only"> cerrada</span>
+  {% endif %}
+</span>

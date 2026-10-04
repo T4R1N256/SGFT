@@ -1,0 +1,19 @@
+{% comment %}
+components/cash_closed_notice.html — Aviso de caja cerrada (Figma 2044:2095, rev. 1.1)
+Bloquea Nueva Venta sin turno abierto (regla 12). La página pone el contenido detrás con opacidad 35 % e «inert»;
+el menú y la barra superior siguen activos.
+Parámetros:
+  open_url    vista que devuelve el Diálogo · Abrir caja (hx-get); si no viene, no se muestra el botón
+  hx_target   dónde se inserta el diálogo (por ejemplo, #dialog)
+Solo el Administrador abre la caja (DEC-27). Incluir siempre con «only».
+{% endcomment %}
+<section class="mx-auto flex w-full max-w-[520px] flex-col items-center gap-md rounded-xl border border-borde-sutil bg-superficie-tarjeta p-[40px] text-center shadow-tarjeta" aria-labelledby="cash-closed-title">
+  <span class="grid size-[72px] place-items-center rounded-lg bg-marca-durazno-200 text-marca-primario-oscuro">{% include "components/icons/lock.html" with size=36 only %}</span>
+  <h2 id="cash-closed-title" class="sgft-texto-titulo-h1 text-texto-primario">La caja está cerrada</h2>
+  <p class="sgft-texto-cuerpo-grande text-texto-secundario">Necesitas abrir la caja para iniciar las ventas.</p>
+  {% if open_url %}
+    <div class="h-[4px]" aria-hidden="true"></div>
+    {% include "components/button.html" with text="Abrir caja" icon="lock" size="grande" hx_get=open_url hx_target=hx_target hx_swap="innerHTML" only %}
+    <p class="sgft-texto-cuerpo-nota text-texto-secundario">Requiere PIN de administrador</p>
+  {% endif %}
+</section>

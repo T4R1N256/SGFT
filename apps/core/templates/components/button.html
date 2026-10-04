@@ -1,0 +1,28 @@
+{% comment %}
+components/button.html — Botón (Figma «Botón», 5:22)
+Parámetros:
+  text       texto visible, ya en español (obligatorio)
+  variant    primario|secundario|contorno|oscuro (por omisión: primario). Una sola acción primaria por vista.
+  size       normal (48) | grande (56) | compacto (40)   (por omisión: normal)
+  full       True: ocupa todo el ancho
+  selected   True: opción elegida de un grupo (método de pago); ignora variant
+  icon       nombre de una plantilla de components/icons/ sin «.html» (opcional)
+  type       button|submit (por omisión: button)
+  name, value  para formularios (opcionales)
+  hx_get, hx_post, hx_target, hx_swap, hx_include  atributos HTMX (opcionales)
+  disable_on_request  True: hx-disabled-elt="this", para confirmar y cobrar sin doble envío
+  disabled   True: deshabilitado (lo decide el servidor, por ejemplo con el ticket vacío)
+  url        si viene, se dibuja como enlace <a> en lugar de <button>
+No lee nada fuera de sus parámetros: incluir siempre con «only».
+{% endcomment %}
+{% with v=variant|default:"primario" s=size|default:"normal" %}
+{% if url %}<a href="{{ url }}"{% else %}<button type="{{ type|default:'button' }}"{% if name %} name="{{ name }}" value="{{ value }}"{% endif %}{% endif %}
+  class="sgft-btn {% if selected %}sgft-btn--seleccionado{% else %}sgft-btn--{{ v }}{% endif %}{% if s != 'normal' %} sgft-btn--{{ s }}{% endif %}{% if full %} sgft-btn--full{% endif %}"
+  {% if selected %}aria-pressed="true"{% endif %}
+  {% if hx_get %}hx-get="{{ hx_get }}"{% endif %}{% if hx_post %}hx-post="{{ hx_post }}"{% endif %}
+  {% if hx_target %}hx-target="{{ hx_target }}"{% endif %}{% if hx_swap %}hx-swap="{{ hx_swap }}"{% endif %}
+  {% if hx_include %}hx-include="{{ hx_include }}"{% endif %}{% if disable_on_request %}hx-disabled-elt="this"{% endif %}{% if disabled %} disabled aria-disabled="true"{% endif %}>
+  {% if icon %}<span class="sgft-btn__icon inline-flex">{% if s == "compacto" %}{% include "components/icons/"|add:icon|add:".html" with size=16 only %}{% else %}{% include "components/icons/"|add:icon|add:".html" with size=20 only %}{% endif %}</span>{% endif %}
+  {{ text }}
+{% if url %}</a>{% else %}</button>{% endif %}
+{% endwith %}

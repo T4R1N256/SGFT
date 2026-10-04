@@ -37,7 +37,6 @@
 /static/pos/sw.js                                    @T4R1N256 @CodigaBorealis
 /static/pos/db.js                                    @T4R1N256 @CodigaBorealis @JBeltra16
 /docs/decisiones/**                                  @Diego-Galindo98 @EduardGarrido @T4R1N256
-/.claude/CLAUDE.md                                   @T4R1N256 @Diego-Galindo98
 /apps/pos/views.py                                   @T4R1N256 @CodigaBorealis
 /apps/pos/tests.py                                   @JBeltra16 @EduardGarrido @T4R1N256
 /tests_e2e/parity/**                                 @T4R1N256 @EduardGarrido

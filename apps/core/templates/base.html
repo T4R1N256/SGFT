@@ -2,14 +2,15 @@
 <html lang="es-MX">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {# viewport-fit=cover: en el iPhone la página llega a los bordes y components.css respeta las zonas seguras #}
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>{% block title %}El Pardo{% endblock %} · SGFT</title>
 
   {# htmx 2 no intercambia 4xx por defecto; 403/409/422 traen fragmento con mensaje en español #}
   <meta name="htmx-config" content='{"responseHandling":[{"code":"204","swap":false},{"code":"[23]..","swap":true},{"code":"(403|409|422)","swap":true,"error":true},{"code":"[45]..","swap":false,"error":true}]}'>
 
-  {# Tailwind v4 genera el CSS en el navegador y observa el DOM, así que también cubre los fragmentos que HTMX inserta #}
-  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"></script>
+  {# Tailwind compilado por el CLI desde static/core/css/input.css; también cubre las clases de partials/ #}
+  <link rel="stylesheet" href="{% static 'core/css/app.css' %}">
   <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.4/dist/htmx.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
 
@@ -21,31 +22,51 @@
 </head>
 
 {# hx-headers se hereda: toda petición HTMX manda el token CSRF #}
-<body class="min-h-screen bg-gray-100 text-gray-900" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
-  <nav class="flex items-center justify-between gap-3 bg-gray-900 px-4 py-2 text-white">
-    <span class="text-lg font-semibold">El Pardo</span>
-    <span x-data="{ online: navigator.onLine }" x-cloak
-          @online.window="online = true" @offline.window="online = false"
-          class="rounded px-2 py-0.5 text-xs font-medium"
-          :class="online ? 'bg-green-600 text-white' : 'bg-amber-400 text-gray-900'"
-          x-text="online ? 'En línea' : 'Sin conexión'"></span>
-    {% if user.is_authenticated %}
-      <span class="text-sm text-gray-300">{{ user }} · {{ user.get_role_display }}</span>
-    {% endif %}
+{% comment %}
+  .sgft-app (components.css): barra superior y contenido a todo lo ancho (Figma rev. 1.1).
+  El menú lateral es una capa: lo abre el botón «Menú» de la barra superior y se cierra con «Cerrar menú»,
+  tocando el velo, con Escape o al navegar. Alpine solo guarda si está abierto (`menu`).
+  Contexto que usan el menú y la barra (lo arma el servidor; pendiente un procesador de contexto en core):
+    nav_modules [{key, label, icon, url, requires_pin}] · active_module · sync_pending · sync_url · admin_mode_url
+    user_initials · logout_url · search_placeholder · search_url · search_target · cash_session_open
+    session_total (Decimal o None) · has_notifications · stock_notice (Nueva Venta)
+{% endcomment %}
+<body class="sgft-app bg-superficie-fondo font-sans text-texto-primario" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+      x-data="{ menu: false }" @keydown.escape.window="menu = false">
+  <div class="sgft-velo" x-show="menu" x-transition.opacity x-cloak @click="menu = false"></div>
+  <nav id="app-menu" class="sgft-sidebar" aria-label="Módulos" x-show="menu" x-cloak
+       x-transition:enter="transition-transform duration-200 ease-out" x-transition:enter-start="-translate-x-full"
+       x-transition:leave="transition-transform duration-150 ease-in" x-transition:leave-end="-translate-x-full">
+    <button type="button" class="sgft-icon-btn sgft-icon-btn--oscuro sgft-icon-btn--compacto relative z-10 self-end"
+            aria-label="Cerrar menú" @click="menu = false">
+      {% include "components/icons/x.html" with size=20 only %}
+    </button>
+    {% block sidebar %}
+      {% include "components/sidebar.html" with modules=nav_modules active=active_module sync_pending=sync_pending sync_url=sync_url admin_mode_url=admin_mode_url user_name=user.get_full_name|default:user.username user_detail=user.get_role_display user_initials=user_initials logout_url=logout_url only %}
+    {% endblock %}
   </nav>
 
-  <main class="px-4 py-3">
+  <header class="sgft-app__top">
+    {% block top_bar %}
+      {% include "components/top_bar.html" with search_placeholder=search_placeholder search_url=search_url search_target=search_target cash_open=cash_session_open session_total=session_total has_notifications=has_notifications stock_notice=stock_notice only %}
+    {% endblock %}
+  </header>
+
+  <main class="sgft-app__main">
     <div id="messages" class="space-y-2">
       {% for message in messages %}
-        <div role="alert" class="rounded border px-3 py-2 text-sm
-          {% if message.tags == 'error' %}border-red-300 bg-red-50 text-red-800
-          {% elif message.tags == 'success' %}border-green-300 bg-green-50 text-green-800
-          {% elif message.tags == 'warning' %}border-amber-300 bg-amber-50 text-amber-800
-          {% else %}border-blue-300 bg-blue-50 text-blue-800{% endif %}">{{ message }}</div>
+        <div role="alert" class="rounded-sm border px-3 py-2 text-sm
+          {% if message.tags == 'error' %}border-estado-peligro bg-estado-peligro-fondo text-estado-peligro
+          {% elif message.tags == 'success' %}border-estado-exito bg-estado-exito-fondo text-estado-exito
+          {% elif message.tags == 'warning' %}border-estado-alerta bg-estado-alerta-fondo text-estado-alerta
+          {% else %}border-borde-sutil bg-superficie-tarjeta text-texto-primario{% endif %}">{{ message }}</div>
       {% endfor %}
     </div>
     {% block content %}{% endblock %}
   </main>
+
+  {# Diálogos de cualquier pantalla (formularios, Abrir caja, PIN de administrador) #}
+  <div id="dialog">{% block dialog %}{% endblock %}</div>
 
   {% block scripts %}{% endblock %}
 </body>

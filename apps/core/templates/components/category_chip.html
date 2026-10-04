@@ -1,0 +1,12 @@
+{% comment %}
+components/category_chip.html — Chip de categoría (Figma «Chip de categoría», 5:55)
+Parámetros:
+  text     texto visible (obligatorio)
+  active   True si es el chip activo; lo decide el servidor (exactamente uno por grupo)
+  hx_get, hx_target, hx_swap  filtro por HTMX (opcionales)
+Incluir siempre con «only».
+{% endcomment %}
+<button type="button" class="sgft-chip sgft-texto-cuerpo-pequeno-medio" aria-pressed="{% if active %}true{% else %}false{% endif %}"
+  {% if hx_get %}hx-get="{{ hx_get }}"{% endif %}{% if hx_target %} hx-target="{{ hx_target }}"{% endif %}{% if hx_swap %} hx-swap="{{ hx_swap }}"{% endif %}>
+  {{ text }}
+</button>

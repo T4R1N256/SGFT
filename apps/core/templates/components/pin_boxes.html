@@ -1,0 +1,18 @@
+{% comment %}
+components/pin_boxes.html — Las 6 casillas del PIN de administrador (Figma «Diálogo · Abrir caja», 2044:2111; DEC-28)
+Parámetros:
+  legend etiqueta de las casillas (por omisión «PIN de administrador», como en «Abrir caja» de Figma)
+  error  mensaje en español si el PIN no es válido (opcional)
+  note   texto de apoyo bajo las casillas (opcional)
+Envía 6 valores «pin». Alpine solo mueve el foco entre casillas; el PIN lo valida el servidor (o static/pos/ sin red,
+Fase 6). Incluir siempre con «only».
+{% endcomment %}
+<fieldset class="flex min-w-0 flex-col gap-xs">
+  <legend class="mb-xs sgft-texto-cuerpo-pequeno-medio text-texto-primario">{{ legend|default:"PIN de administrador" }}</legend>
+  <div class="flex gap-xs" @input="if ($event.target.value && $event.target.nextElementSibling) $event.target.nextElementSibling.focus()"
+       @keydown.backspace="if (!$event.target.value && $event.target.previousElementSibling) $event.target.previousElementSibling.focus()">
+    {% for _ in "123456" %}<input name="pin" class="sgft-pin-box w-full" type="text" inputmode="numeric" pattern="[0-9]" maxlength="1" autocomplete="off" required aria-label="Dígito {{ forloop.counter }} de 6"{% if error %} aria-invalid="true"{% endif %}>{% endfor %}
+  </div>
+  {% if error %}<p class="sgft-texto-cuerpo-nota text-estado-peligro" role="alert">{{ error }}</p>{% endif %}
+  {% if note %}<p class="sgft-texto-cuerpo-nota text-texto-secundario">{{ note }}</p>{% endif %}
+</fieldset>

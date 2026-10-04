@@ -1,0 +1,16 @@
+{% comment %}
+components/stock_notice.html — Aviso de stock (Figma 2044:2084, rev. 1.1)
+Solo se incluye si el servidor reporta insumos en estado Bajo o Crítico (regla 3: es visual, no bloquea la venta).
+Parámetros:
+  detail  texto de apoyo, por ejemplo «3 insumos bajos · Ver inventario» (lo arma el servidor)
+  url     destino: Inventario (que pide PIN de administrador)
+Incluir siempre con «only».
+{% endcomment %}
+<a href="{{ url }}" class="inline-flex items-center gap-sm rounded-campo border-[1.5px] border-estado-alerta bg-superficie-tarjeta py-[10px] pl-[10px] pr-md text-texto-primario no-underline shadow-tarjeta focus-visible:shadow-foco-anillo focus-visible:outline-none">
+  <span class="grid size-[40px] flex-none place-items-center rounded-chip bg-estado-alerta-fondo text-estado-alerta">{% include "components/icons/triangle-alert.html" with size=22 only %}</span>
+  <span class="flex flex-col">
+    <span class="sgft-texto-cuerpo-medio">Alerta stock</span>
+    <span class="sgft-texto-cuerpo-descripcion text-texto-secundario">{{ detail }}</span>
+  </span>
+  <span class="text-texto-secundario">{% include "components/icons/chevron-right.html" with size=20 only %}</span>
+</a>

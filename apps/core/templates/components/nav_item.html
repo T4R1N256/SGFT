@@ -1,0 +1,17 @@
+{% comment %}
+components/nav_item.html — Elemento de navegación (Figma «Elemento de navegación», 6:36)
+Parámetros:
+  text          nombre del módulo (obligatorio)
+  icon          nombre de una plantilla de components/icons/ (obligatorio)
+  url           destino del enlace (obligatorio)
+  active        True en el módulo actual (aria-current="page")
+  requires_pin  True: muestra el candado. Es informativo; el servidor valida el PIN.
+  pin_url       si viene, el elemento es un botón que abre el diálogo del PIN en #dialog (y cierra el menú) en lugar
+                de navegar; el servidor lo manda solo mientras el módulo siga bloqueado.
+Incluir siempre con «only».
+{% endcomment %}
+{% if pin_url %}<button type="button" class="sgft-nav-item w-full text-left" hx-get="{{ pin_url }}" hx-target="#dialog" hx-swap="innerHTML" @click="menu = false"{% if active %} aria-current="page"{% endif %}>{% else %}<a href="{{ url }}" class="sgft-nav-item"{% if active %} aria-current="page"{% endif %}>{% endif %}
+  <span class="sgft-nav-item__icon">{% include "components/icons/"|add:icon|add:".html" with size=22 only %}</span>
+  <span class="flex-1">{{ text }}</span>
+  {% if requires_pin %}<span class="text-sidebar-icono" title="Requiere PIN de administrador">{% include "components/icons/lock.html" with size=16 only %}<span class="sr-only">Requiere PIN de administrador</span></span>{% endif %}
+{% if pin_url %}</button>{% else %}</a>{% endif %}

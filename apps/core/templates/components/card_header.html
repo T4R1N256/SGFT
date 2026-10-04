@@ -1,0 +1,16 @@
+{% comment %}
+components/card_header.html — Encabezado de tarjeta (Figma «Encabezado de tarjeta», 7:431)
+Parámetros:
+  title         título de la tarjeta (obligatorio)
+  icon          nombre de una plantilla de components/icons/ (obligatorio)
+  compact       True: gap 14 y título Título/H2 compacto (tarjetas de 200 a 580 de alto)
+  badge_text, badge_variant   insignia a la derecha (opcional)
+Toda tarjeta de pantalla empieza con este encabezado. Incluir siempre con «only».
+{% endcomment %}
+<div class="flex items-center justify-between gap-sm">
+  <div class="sgft-card-header{% if compact %} gap-[14px]{% endif %}">
+    <span class="sgft-card-header__icon">{% include "components/icons/"|add:icon|add:".html" with size=28 only %}</span>
+    <h2 class="{% if compact %}sgft-texto-titulo-h2-compacto{% else %}sgft-texto-titulo-h2{% endif %} text-texto-primario">{{ title }}</h2>
+  </div>
+  {% if badge_text %}{% include "components/badge.html" with text=badge_text variant=badge_variant only %}{% endif %}
+</div>

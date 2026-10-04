@@ -1,0 +1,66 @@
+{% load static %}{% comment %}
+components/sidebar.html — Contenido del menú lateral (Figma «Sidebar», 6:540, rev. 1.1)
+Va dentro de la capa <nav id="app-menu"> de base.html, que ya trae «Cerrar menú».
+Parámetros:
+  modules        lista de {key, label, icon, url, requires_pin, pin_url}; la arma el servidor (qué módulos, con qué
+                 candado y, mientras sigan bloqueados, la vista del PIN en pin_url)
+  active         key del módulo actual
+  sync_pending   operaciones sin sincronizar (entero; sin red lo actualiza static/pos/ en la Fase 6)
+  sync_url       destino de «Sincronizar» (opcional)
+  admin_mode_url destino de «Activar modo admin» (opcional; si no viene, no se muestra)
+  user_name, user_detail, user_initials, logout_url   datos del pie (opcionales)
+El estado «En línea / Sin conexión» es visual y lo lleva Alpine. Incluir siempre con «only».
+{% endcomment %}
+<div class="pointer-events-none absolute inset-x-0 top-[470px] h-[320px]" aria-hidden="true">
+  <img src="{% static 'core/img/sidebar-waves.svg' %}" alt="" class="size-full">
+</div>
+
+<div class="relative -mt-[40px] flex items-center gap-[14px] pl-[6px] pr-[48px]">
+  <span class="grid size-[50px] flex-none place-items-center rounded-md bg-gradiente-logotipo text-texto-inverso shadow-boton-primario">
+    {% include "components/icons/store.html" with size=28 only %}
+  </span>
+  <span class="flex flex-col">
+    <span class="sgft-texto-titulo-h2 text-sidebar-texto">PuntoVenta</span>
+    <span class="text-[13px] font-medium text-sidebar-icono">El Pardo · SGFT</span>
+  </span>
+</div>
+
+<div class="relative flex flex-col gap-[4px] pt-[34px]">
+  {% for module in modules %}
+    {% if module.key == active %}
+      {% include "components/nav_item.html" with text=module.label icon=module.icon url=module.url requires_pin=module.requires_pin pin_url=module.pin_url active=True only %}
+    {% else %}
+      {% include "components/nav_item.html" with text=module.label icon=module.icon url=module.url requires_pin=module.requires_pin pin_url=module.pin_url only %}
+    {% endif %}
+  {% endfor %}
+</div>
+
+<div class="relative py-[14px]"><div class="h-px bg-sidebar-texto opacity-20"></div></div>
+
+<div class="relative">
+  {% include "components/nav_item.html" with text="Sincronizar" icon="refresh-cw" url=sync_url|default:"#" only %}
+  <p class="flex items-center gap-xs pl-[56px] sgft-texto-etiqueta-chip text-sidebar-icono"
+     x-data="{ online: navigator.onLine }" @online.window="online = true" @offline.window="online = false">
+    <span class="size-[8px] rounded-full" :class="online ? 'bg-indicador-en-linea' : 'bg-estado-alerta'" aria-hidden="true"></span>
+    <span x-text="online ? 'En línea' : 'Sin conexión'">En línea</span> · {{ sync_pending|default:0 }} pendientes
+  </p>
+</div>
+
+<div class="flex-1"></div>
+
+{% if admin_mode_url %}
+  <div class="relative pb-md">
+    {% include "components/button.html" with text="Activar modo admin" variant="oscuro" icon="shield-check" url=admin_mode_url full=True only %}
+  </div>
+{% endif %}
+
+{% if user_name %}
+  <div class="relative -mx-[22px] flex h-[120px] flex-none items-center gap-[10px] border-t border-sidebar-texto/20 bg-sidebar-pie px-[20px]">
+    <span class="grid size-[44px] flex-none place-items-center rounded-full bg-marca-durazno-200 sgft-texto-cuerpo-pequeno-medio text-marca-primario-oscuro">{{ user_initials }}</span>
+    <span class="flex min-w-0 flex-1 flex-col gap-[2px]">
+      <span class="truncate text-[13px] font-semibold text-sidebar-texto">{{ user_name }}</span>
+      <span class="truncate text-[12px] font-medium text-sidebar-icono">{{ user_detail }}</span>
+    </span>
+    {% if logout_url %}<a href="{{ logout_url }}" class="text-sidebar-icono" aria-label="Cerrar sesión">{% include "components/icons/log-out.html" with size=22 only %}</a>{% endif %}
+  </div>
+{% endif %}
