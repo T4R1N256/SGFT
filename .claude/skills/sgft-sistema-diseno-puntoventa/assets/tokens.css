@@ -1,0 +1,165 @@
+/* Generado por scripts/tokens.py css desde assets/tokens.json — no editar a mano. */
+/* Sistema de diseño PuntoVenta · El Pardo · SGFT */
+:root {
+  /* Color (variables Figma 'SGFT · Tokens', modo Claro) */
+  --sgft-color-marca-primario: #EE7023;
+  --sgft-color-marca-primario-oscuro: #E0621D;
+  --sgft-color-marca-primario-claro: #F59A4E;
+  --sgft-color-marca-durazno-100: #FBE6D1;
+  --sgft-color-marca-durazno-200: #FCDEC2;
+  --sgft-color-marca-anillo: #F8DCC6;
+  --sgft-color-sidebar-fondo: #3A2718;
+  --sgft-color-sidebar-pie: #2F1F13;
+  --sgft-color-sidebar-texto: #F3E6DA;
+  --sgft-color-sidebar-icono: #E6D2C0;
+  --sgft-color-sidebar-onda: #8A4A1E;
+  --sgft-color-superficie-fondo: #F9F1E8;
+  --sgft-color-superficie-tarjeta: #FDF8F2;
+  --sgft-color-superficie-campo: #FFFBF7;
+  --sgft-color-superficie-pista: #EFE6DD;
+  --sgft-color-borde-sutil: #EFE4D9;
+  --sgft-color-texto-primario: #2B1A10;
+  --sgft-color-texto-secundario: #7A695D;
+  --sgft-color-texto-terciario: #A89A90;
+  --sgft-color-texto-inverso: #FFFFFF;
+  --sgft-color-estado-exito-fondo: #E4EFDE;
+  --sgft-color-estado-exito: #2F7D3A;
+  --sgft-color-estado-alerta-fondo: #FDF0D2;
+  --sgft-color-estado-alerta: #B7791F;
+  --sgft-color-estado-peligro-fondo: #FBE3DE;
+  --sgft-color-estado-peligro: #C23B22;
+  --sgft-color-superficie-oscura: #2B1A10;
+  --sgft-color-superficie-velo-oscuro: rgba(43, 26, 16, 0.45);
+  --sgft-color-estado-peligro-solido: #C23B22;
+  --sgft-color-indicador-en-linea: #6BC47A;
+  --sgft-color-boton-oscuro-fondo: rgba(255, 255, 255, 0.07);
+  /* Color documentado sin variable en Figma */
+  --sgft-nivel-normal: #5FAE6B;
+  --sgft-nivel-bajo: #E0A030;
+  --sgft-nivel-critico: #D2472C;
+  --sgft-boton-oscuro-borde: rgba(238, 112, 35, 0.45);
+  --sgft-perfil-fondo: #F2E6DA;
+  --sgft-categoria-foto-fondo: rgba(255, 255, 255, 0.85);
+  /* Medidas (variables Figma 'SGFT · Medidas') */
+  --sgft-radio-sm: 10px;
+  --sgft-radio-md: 14px;
+  --sgft-radio-lg: 20px;
+  --sgft-radio-pill: 999px;
+  --sgft-radio-xs: 8px;
+  --sgft-radio-chip: 12px;
+  --sgft-radio-campo: 16px;
+  --sgft-radio-tarjeta: 22px;
+  --sgft-radio-xl: 24px;
+  --sgft-espacio-xs: 8px;
+  --sgft-espacio-sm: 12px;
+  --sgft-espacio-md: 16px;
+  --sgft-espacio-lg: 24px;
+  --sgft-espacio-xl: 32px;
+  --sgft-espacio-canal: 20px;
+  --sgft-espacio-margen: 28px;
+  /* Sombras (estilos de efecto) */
+  --sgft-sombra-tarjeta: 0 8px 28px 0 rgba(138, 89, 43, 0.07);
+  --sgft-sombra-boton-primario: 0 8px 18px -4px rgba(237, 112, 36, 0.28);
+  --sgft-foco-anillo: 0 0 0 2px var(--sgft-color-superficie-fondo), 0 0 0 4px var(--sgft-color-marca-primario-oscuro);
+  /* Gradientes */
+  --sgft-gradiente-accion: linear-gradient(90deg, #F58A3C 0%, #E9661F 100%);
+  --sgft-gradiente-accion-nav: linear-gradient(90deg, #F58A3C 0%, #EC6C24 100%);
+  --sgft-gradiente-logotipo: linear-gradient(90deg, #F68B3E 0%, #E9661F 100%);
+  --sgft-gradiente-dato: linear-gradient(90deg, #F59A4E 0%, #E0621D 100%);
+  --sgft-gradiente-miniatura: linear-gradient(180deg, #FCE3CC 0%, #F8CBA4 100%);
+  --sgft-gradiente-imagen-catalogo: linear-gradient(180deg, #FDE9D6 0%, #F7C79E 100%);
+  --sgft-fuente: 'Outfit', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+/* Tema de Tailwind v4: bg-marca-primario, text-texto-secundario, rounded-md, p-lg, shadow-tarjeta… */
+@theme inline {
+  --color-*: initial;  /* sin la paleta de Tailwind: solo existen los colores del sistema */
+  --color-marca-primario: var(--sgft-color-marca-primario);
+  --color-marca-primario-oscuro: var(--sgft-color-marca-primario-oscuro);
+  --color-marca-primario-claro: var(--sgft-color-marca-primario-claro);
+  --color-marca-durazno-100: var(--sgft-color-marca-durazno-100);
+  --color-marca-durazno-200: var(--sgft-color-marca-durazno-200);
+  --color-marca-anillo: var(--sgft-color-marca-anillo);
+  --color-sidebar-fondo: var(--sgft-color-sidebar-fondo);
+  --color-sidebar-pie: var(--sgft-color-sidebar-pie);
+  --color-sidebar-texto: var(--sgft-color-sidebar-texto);
+  --color-sidebar-icono: var(--sgft-color-sidebar-icono);
+  --color-sidebar-onda: var(--sgft-color-sidebar-onda);
+  --color-superficie-fondo: var(--sgft-color-superficie-fondo);
+  --color-superficie-tarjeta: var(--sgft-color-superficie-tarjeta);
+  --color-superficie-campo: var(--sgft-color-superficie-campo);
+  --color-superficie-pista: var(--sgft-color-superficie-pista);
+  --color-borde-sutil: var(--sgft-color-borde-sutil);
+  --color-texto-primario: var(--sgft-color-texto-primario);
+  --color-texto-secundario: var(--sgft-color-texto-secundario);
+  --color-texto-terciario: var(--sgft-color-texto-terciario);
+  --color-texto-inverso: var(--sgft-color-texto-inverso);
+  --color-estado-exito-fondo: var(--sgft-color-estado-exito-fondo);
+  --color-estado-exito: var(--sgft-color-estado-exito);
+  --color-estado-alerta-fondo: var(--sgft-color-estado-alerta-fondo);
+  --color-estado-alerta: var(--sgft-color-estado-alerta);
+  --color-estado-peligro-fondo: var(--sgft-color-estado-peligro-fondo);
+  --color-estado-peligro: var(--sgft-color-estado-peligro);
+  --color-superficie-oscura: var(--sgft-color-superficie-oscura);
+  --color-superficie-velo-oscuro: var(--sgft-color-superficie-velo-oscuro);
+  --color-estado-peligro-solido: var(--sgft-color-estado-peligro-solido);
+  --color-indicador-en-linea: var(--sgft-color-indicador-en-linea);
+  --color-boton-oscuro-fondo: var(--sgft-color-boton-oscuro-fondo);
+  --color-nivel-normal: var(--sgft-nivel-normal);
+  --color-nivel-bajo: var(--sgft-nivel-bajo);
+  --color-nivel-critico: var(--sgft-nivel-critico);
+  --color-boton-oscuro-borde: var(--sgft-boton-oscuro-borde);
+  --color-perfil-fondo: var(--sgft-perfil-fondo);
+  --color-categoria-foto-fondo: var(--sgft-categoria-foto-fondo);
+  --radius-sm: var(--sgft-radio-sm);
+  --radius-md: var(--sgft-radio-md);
+  --radius-lg: var(--sgft-radio-lg);
+  --radius-pill: var(--sgft-radio-pill);
+  --radius-xs: var(--sgft-radio-xs);
+  --radius-chip: var(--sgft-radio-chip);
+  --radius-campo: var(--sgft-radio-campo);
+  --radius-tarjeta: var(--sgft-radio-tarjeta);
+  --radius-xl: var(--sgft-radio-xl);
+  --spacing-xs: var(--sgft-espacio-xs);
+  --spacing-sm: var(--sgft-espacio-sm);
+  --spacing-md: var(--sgft-espacio-md);
+  --spacing-lg: var(--sgft-espacio-lg);
+  --spacing-xl: var(--sgft-espacio-xl);
+  --spacing-canal: var(--sgft-espacio-canal);
+  --spacing-margen: var(--sgft-espacio-margen);
+  --shadow-tarjeta: var(--sgft-sombra-tarjeta);
+  --shadow-boton-primario: var(--sgft-sombra-boton-primario);
+  --shadow-foco-anillo: var(--sgft-foco-anillo);
+  --font-sans: var(--sgft-fuente);
+}
+
+/* Gradientes: Tailwind no tiene tema para ellos, así que cada uno es una utilidad bg-gradiente-* */
+@utility bg-gradiente-accion { background-image: var(--sgft-gradiente-accion); }
+@utility bg-gradiente-accion-nav { background-image: var(--sgft-gradiente-accion-nav); }
+@utility bg-gradiente-logotipo { background-image: var(--sgft-gradiente-logotipo); }
+@utility bg-gradiente-dato { background-image: var(--sgft-gradiente-dato); }
+@utility bg-gradiente-miniatura { background-image: var(--sgft-gradiente-miniatura); }
+@utility bg-gradiente-imagen-catalogo { background-image: var(--sgft-gradiente-imagen-catalogo); }
+
+/* Estilos de texto (equivalen 1:1 a los estilos de Figma) */
+@layer components {
+  .sgft-texto-display-monto-xl { font-family: var(--sgft-fuente); font-weight: 700; font-size: 46px; line-height: 1.20; letter-spacing: -1.0px; }
+  .sgft-texto-display-indicador { font-family: var(--sgft-fuente); font-weight: 700; font-size: 34px; line-height: 1.20; letter-spacing: -0.5px; }
+  .sgft-texto-titulo-h1 { font-family: var(--sgft-fuente); font-weight: 600; font-size: 28px; line-height: 1.20; letter-spacing: -0.3px; }
+  .sgft-texto-titulo-h2 { font-family: var(--sgft-fuente); font-weight: 600; font-size: 22px; line-height: 1.40; letter-spacing: -0.2px; }
+  .sgft-texto-titulo-h3 { font-family: var(--sgft-fuente); font-weight: 600; font-size: 18px; line-height: 1.40; letter-spacing: 0px; }
+  .sgft-texto-cuerpo-base { font-family: var(--sgft-fuente); font-weight: 400; font-size: 16px; line-height: 1.40; letter-spacing: 0px; }
+  .sgft-texto-cuerpo-grande { font-family: var(--sgft-fuente); font-weight: 400; font-size: 18px; line-height: 1.40; letter-spacing: 0px; }
+  .sgft-texto-cuerpo-medio { font-family: var(--sgft-fuente); font-weight: 500; font-size: 16px; line-height: 1.40; letter-spacing: 0px; }
+  .sgft-texto-cuerpo-pequeno { font-family: var(--sgft-fuente); font-weight: 400; font-size: 14px; line-height: 1.40; letter-spacing: 0px; }
+  .sgft-texto-cuerpo-pequeno-medio { font-family: var(--sgft-fuente); font-weight: 500; font-size: 14px; line-height: 1.40; letter-spacing: 0px; }
+  .sgft-texto-etiqueta-mayusculas { font-family: var(--sgft-fuente); font-weight: 500; font-size: 12px; line-height: 1.40; letter-spacing: 1.0px; text-transform: uppercase; }
+  .sgft-texto-etiqueta-chip { font-family: var(--sgft-fuente); font-weight: 500; font-size: 13px; line-height: 1.40; letter-spacing: 0px; }
+  .sgft-texto-titulo-h2-compacto { font-family: var(--sgft-fuente); font-weight: 600; font-size: 19px; line-height: 1.40; letter-spacing: -0.2px; }
+  .sgft-texto-cuerpo-descripcion { font-family: var(--sgft-fuente); font-weight: 400; font-size: 13px; line-height: 1.40; letter-spacing: 0px; }
+  .sgft-texto-cuerpo-nota { font-family: var(--sgft-fuente); font-weight: 400; font-size: 12px; line-height: 1.40; letter-spacing: 0px; }
+  .sgft-texto-numero-precio { font-family: var(--sgft-fuente); font-weight: 600; font-size: 16px; line-height: 1.40; letter-spacing: 0px; }
+  .sgft-texto-numero-importe { font-family: var(--sgft-fuente); font-weight: 600; font-size: 14px; line-height: 1.40; letter-spacing: 0px; }
+  .sgft-texto-display-kpi { font-family: var(--sgft-fuente); font-weight: 700; font-size: 32px; line-height: 1.20; letter-spacing: -0.5px; }
+  .sgft-texto-etiqueta-mini { font-family: var(--sgft-fuente); font-weight: 600; font-size: 12px; line-height: 1.40; letter-spacing: 0px; }
+}

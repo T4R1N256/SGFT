@@ -1,0 +1,20 @@
+{% comment %}
+pos/partials/dish_list.html — Rejilla de platillos (id «dish-list»)
+Vistas: pos:order_builder, pos:dish_list (categoría, búsqueda, orden). pos:confirm_sale la devuelve fuera de
+banda (oob_dish_list) para quitar los contadores. Con oob_chips agrega los chips fuera de banda.
+Toque = +1 (pos:add_item); mantener presionado = Menú de cantidad. Sin platillos: mensaje centrado (acordado).
+Sin «Ordenar», «Filtros» ni «Mostrando N de M» (acordado el 4-oct-2026: se quitaron de todas las pantallas).
+{% endcomment %}
+<div id="dish-list"{% if oob_dish_list %} hx-swap-oob="true"{% endif %} class="flex flex-col gap-md">
+  {% if dishes %}
+    <div class="sgft-grid-platillos">
+      {% for dish in dishes %}
+        {% include "components/dish_card.html" with dish=dish quantity=dish.quantity add_url=dish.add_url remove_url=dish.remove_url hx_target="#order-summary" hx_swap="outerHTML" only %}
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="sgft-card">{% include "components/empty_state.html" with message="Agrega platillos para verlos" only %}</div>
+  {% endif %}
+
+</div>
+{% if oob_chips %}{% include "pos/partials/category_chips.html" %}{% endif %}

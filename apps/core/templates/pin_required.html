@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% comment %}
+pin_required.html — Página «Requiere PIN» (patrón de «Aviso de caja cerrada», Figma 2044:2095)
+La devuelve el servidor, con estado 403, cuando alguien entra directo a un módulo con candado sin haber dado el PIN.
+El diálogo del PIN ya viene abierto; si se cierra, el aviso permite volver a abrirlo.
+Contexto: module_label, pin_url (vista que devuelve el diálogo), pin_dialog (el diálogo ya renderizado) y el contexto
+común del menú y la barra superior.
+{% endcomment %}
+{% block title %}{{ module_label }}{% endblock %}
+{% block content %}
+  <section class="mx-auto mt-[120px] flex w-full max-w-[520px] flex-col items-center gap-md rounded-xl border border-borde-sutil bg-superficie-tarjeta p-[40px] text-center shadow-tarjeta" aria-labelledby="pin-required-title">
+    <span class="grid size-[72px] place-items-center rounded-lg bg-marca-durazno-200 text-marca-primario-oscuro">{% include "components/icons/lock.html" with size=36 only %}</span>
+    <h1 id="pin-required-title" class="sgft-texto-titulo-h1 text-texto-primario">{{ module_label }} requiere PIN</h1>
+    <p class="sgft-texto-cuerpo-grande text-texto-secundario">Pide a un administrador que escriba su PIN para continuar.</p>
+    <div class="h-[4px]" aria-hidden="true"></div>
+    {% include "components/button.html" with text="Escribir PIN" icon="lock" size="grande" hx_get=pin_url hx_target="#dialog" hx_swap="innerHTML" only %}
+  </section>
+{% endblock %}
+{% block dialog %}{{ pin_dialog }}{% endblock %}

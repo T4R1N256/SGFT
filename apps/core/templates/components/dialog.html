@@ -1,0 +1,47 @@
+{% comment %}
+components/dialog.html — Diálogo base (patrón de «Diálogo · Abrir caja», Figma 2044:2111, rev. 1.1)
+Cada formulario lo extiende: {% extends "components/dialog.html" %}, fija los bloques title, subtitle, icon y
+submit (o los recibe del contexto) y llena el bloque «fields».
+Variables del contexto del formulario:
+  dialog_id      id del título (obligatorio si hay varios diálogos en la página)
+  title          título en Título/H2; subtitle  texto de apoyo (opcional)
+  icon           ícono del encabezado (components/icons/)
+  post_url       vista que recibe el formulario (hx-post)
+  hx_target, hx_swap   destino de la respuesta
+  submit_text    texto del botón primario (por omisión «Guardar»); submit_icon  ícono (opcional)
+  form_error     error general en español (opcional; los de cada campo van en el campo)
+Se muestra centrado sobre superficie/velo-oscuro; si es más alto que la pantalla, empieza arriba y se desplaza
+completo (con place-items:center la parte de arriba quedaba fuera de alcance). Alpine solo lo abre y lo cierra; los datos los valida el servidor
+(422 con el mismo fragmento y los errores). Se inserta en #dialog con hx-get.
+{% endcomment %}
+<div x-data="{ open: true }" x-show="open" x-cloak @keydown.escape.window="open = false"
+     class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-superficie-velo-oscuro p-md">
+  <form hx-post="{{ post_url }}" hx-disabled-elt="find button[type=submit]"{% if hx_target %} hx-target="{{ hx_target }}"{% endif %}{% if hx_swap %} hx-swap="{{ hx_swap }}"{% endif %}
+        role="dialog" aria-modal="true" aria-labelledby="{{ dialog_id|default:'dialog-title' }}" @click.outside="open = false"
+        x-init="$nextTick(() => $el.querySelector('input:not([type=hidden]), select, textarea')?.focus())"
+        class="my-auto flex w-full max-w-[480px] flex-col gap-canal rounded-xl border border-borde-sutil bg-superficie-tarjeta p-lg shadow-tarjeta sm:p-xl">
+    <div class="flex items-center justify-between gap-sm">
+      <div class="flex min-w-0 items-center gap-md">
+        <span class="sgft-card-header__icon">{% block icon %}{% if icon %}{% include "components/icons/"|add:icon|add:".html" with size=28 only %}{% endif %}{% endblock %}</span>
+        <div class="flex min-w-0 flex-col gap-[2px]">
+          <h2 id="{{ dialog_id|default:'dialog-title' }}" class="truncate sgft-texto-titulo-h2 text-texto-primario">{% block title %}{{ title }}{% endblock %}</h2>
+          {% block subtitle %}{% if subtitle %}<p class="sgft-texto-cuerpo-pequeno text-texto-secundario">{{ subtitle }}</p>{% endif %}{% endblock %}
+        </div>
+      </div>
+      <button type="button" class="sgft-icon-btn sgft-icon-btn--neutro sgft-icon-btn--compacto" aria-label="Cerrar diálogo" @click="open = false">
+        {% include "components/icons/x.html" with size=20 only %}
+      </button>
+    </div>
+
+    {% if form_error %}<p class="rounded-md bg-estado-peligro-fondo px-md py-sm sgft-texto-cuerpo-pequeno text-estado-peligro" role="alert">{{ form_error }}</p>{% endif %}
+
+    {% block fields %}{% endblock %}
+
+    <div class="flex gap-sm">
+      <button type="button" class="sgft-btn sgft-btn--contorno sgft-btn--full" @click="open = false">Cancelar</button>
+      <button type="submit" class="sgft-btn sgft-btn--primario sgft-btn--full">
+        {% block submit %}{% if submit_icon %}<span class="inline-flex">{% include "components/icons/"|add:submit_icon|add:".html" with size=20 only %}</span>{% endif %}{{ submit_text|default:"Guardar" }}{% endblock %}
+      </button>
+    </div>
+  </form>
+</div>

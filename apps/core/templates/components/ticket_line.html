@@ -1,0 +1,23 @@
+{% comment %}
+components/ticket_line.html — Línea de ticket (Figma 7:446, rev. 1.1: sin pasos +/−)
+Parámetros:
+  line        {id, dish_name, emoji, modifiers: list[str], quantity: int, subtotal: Decimal}
+              El subtotal es cantidad × precio más recargos y lo calcula el servidor.
+  remove_url  vista que resta 1 y elimina la línea al llegar a 0 (hx-post)
+  hx_target, hx_swap  destino del fragmento que devuelve la vista
+  alpine      Fase 6: con True emitirá enlaces x-text sobre `linea` (formatoDinero de static/pos/) con la misma
+              estructura y clases. Hoy no hace nada.
+La cantidad va como contador sobre la esquina inferior derecha de la miniatura (acordado el 4-oct-2026), así la
+columna queda libre para el nombre; los lectores de pantalla oyen «N unidades».
+Incluir siempre con «only».
+{% endcomment %}
+<div class="sgft-ticket-line flex h-[60px] items-center gap-[14px]">
+  <span class="sgft-thumb relative size-[48px] rounded-md text-[26px]"><span aria-hidden="true">{{ line.emoji }}</span><span class="sgft-dish-card__qty sgft-dish-card__qty--line" aria-hidden="true">{{ line.quantity }}</span></span>
+  <span class="flex min-w-0 flex-1 flex-col gap-px">
+    <span class="truncate sgft-texto-cuerpo-medio text-texto-primario">{{ line.dish_name }}</span>
+    {% if line.modifiers %}<span class="truncate sgft-texto-cuerpo-descripcion text-texto-secundario">{{ line.modifiers|join:" · " }}</span>{% endif %}
+  </span>
+  <span class="sr-only">{{ line.quantity }} unidad{{ line.quantity|pluralize:"es" }}</span>
+  <span class="w-[76px] text-right sgft-texto-numero-precio text-texto-primario">${{ line.subtotal|floatformat:"2g" }}</span>
+  {% include "components/icon_button.html" with icon="minus" label="Quitar uno de "|add:line.dish_name variant="peligro" compact=True hx_post=remove_url hx_target=hx_target hx_swap=hx_swap only %}
+</div>

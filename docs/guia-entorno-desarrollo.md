@@ -108,6 +108,28 @@ git config --global user.email "tu-correo-de-github@ejemplo.com"
 
 Usa el mismo correo de tu cuenta de GitHub; así tus commits aparecen a tu nombre.
 
+### En todos los sistemas: Tailwind CLI (solo si tocas plantillas o CSS)
+
+Los estilos se escriben con clases de Tailwind y se compilan a `static/core/css/app.css` con el **CLI autónomo** de Tailwind: un solo ejecutable, sin npm ni Node. Usa la versión fija **v4.3.3**:
+
+```bash
+# Linux
+mkdir -p ~/.local/bin
+curl -sSL -o ~/.local/bin/tailwindcss https://github.com/tailwindlabs/tailwindcss/releases/download/v4.3.3/tailwindcss-linux-x64
+chmod +x ~/.local/bin/tailwindcss
+# macOS (Apple Silicon): mismo comando con tailwindcss-macos-arm64 (Intel: tailwindcss-macos-x64)
+# Windows (Git Bash): descarga tailwindcss-windows-x64.exe a ~/bin/tailwindcss.exe
+tailwindcss --help | head -1      # debe decir: tailwindcss v4.3.3
+```
+
+Después de cambiar clases en una plantilla, los tokens o `components.css`, compila y sube `app.css` en el mismo commit:
+
+```bash
+tailwindcss -i static/core/css/input.css -o static/core/css/app.css --minify   # agrega --watch mientras desarrollas
+```
+
+Si una clase no se ve en el navegador, casi siempre es porque no recompilaste. Los colores de Tailwind por defecto (`bg-gray-100`) no existen: usa los del sistema de diseño (`bg-superficie-fondo`).
+
 ## 3. Clonar el repositorio
 
 ```bash

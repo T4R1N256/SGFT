@@ -1,0 +1,13 @@
+{% comment %}
+components/empty_state.html — Estado vacío centrado (propuesta: Figma no lo dibuja)
+Parámetros:
+  message  texto en español, por ejemplo «Agrega platillos para verlos» o «Sin ventas para este periodo» (obligatorio)
+  icon     ícono en el cuadro durazno (opcional)
+  detail   texto de apoyo (opcional)
+Ocupa todo el espacio de la región y centra el mensaje. Incluir siempre con «only».
+{% endcomment %}
+<div class="flex min-h-[240px] w-full flex-1 flex-col items-center justify-center gap-sm p-lg text-center">
+  {% if icon %}<span class="grid size-[56px] place-items-center rounded-campo bg-marca-durazno-200 text-marca-primario-oscuro">{% include "components/icons/"|add:icon|add:".html" with size=28 only %}</span>{% endif %}
+  <p class="sgft-texto-titulo-h3 text-texto-primario">{{ message }}</p>
+  {% if detail %}<p class="sgft-texto-cuerpo-pequeno text-texto-secundario">{{ detail }}</p>{% endif %}
+</div>

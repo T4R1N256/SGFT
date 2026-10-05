@@ -1,0 +1,6 @@
+{% comment %}
+catalog/partials/ingredient_saved.html — Respuesta al dar de alta un insumo (catalog:ingredient_create, POST válido)
+Se inserta al inicio de #messages y cierra el diálogo fuera de banda; la vista agrega HX-Trigger «ingredient-created».
+{% endcomment %}
+{% include "components/alert.html" with message="Insumo «"|add:name|add:"» agregado." variant="exito" only %}
+<div id="dialog" hx-swap-oob="true"></div>

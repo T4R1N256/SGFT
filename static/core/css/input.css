@@ -1,0 +1,14 @@
+/* Entrada de Tailwind v4. No se sirve: base.html carga el resultado, app.css.
+   Compilar con el CLI autónomo (sin npm) después de cambiar clases en plantillas o tokens:
+     tailwindcss -i static/core/css/input.css -o static/core/css/app.css --minify
+   Mientras se desarrolla: el mismo comando con --watch. app.css se sube al repositorio. */
+
+/* source(none): solo se escanean las rutas de @source (si no, Tailwind recorrería venv/). */
+@import "tailwindcss" source(none);
+
+/* Generado por tokens.py desde la skill de diseño: variables --sgft-* y tema de Tailwind. No editar. */
+@import "./tokens.css";
+@import "./components.css";
+
+@source "../../../apps/**/templates/**/*.html";
+@source "../../pos/**/*.{html,js}";

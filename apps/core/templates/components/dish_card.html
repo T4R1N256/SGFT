@@ -1,0 +1,43 @@
+{% comment %}
+components/dish_card.html — Tarjeta de producto · Venta (Figma 2044:1956, rev. 1.1)
+Parámetros:
+  dish          {id, name, price: Decimal, category, emoji}
+  quantity      cantidad de ese platillo en el ticket (0 o vacío: estado Normal; > 0: En ticket). La decide el servidor.
+  add_url       vista que agrega 1 (hx-post); remove_url  vista que resta 1 (para el Menú de cantidad)
+  hx_target, hx_swap   destino del fragmento que devuelve la vista (por ejemplo, #order-summary)
+  alpine        Fase 6: con True emitirá enlaces x-text/x-bind sobre `platillo` en lugar de valores del contexto,
+                con la misma estructura y clases. Hoy no hace nada.
+Interacción (Alpine, solo estado visual):
+  - toque: dispara el evento «sgft:tap», que hace el hx-post de add_url;
+  - mantener presionado 0.5 s: abre el Menú de cantidad y no suma;
+  - teclado: Enter o Espacio suman 1; clic derecho o la tecla de menú abren el Menú de cantidad.
+  oob           True: se devuelve fuera de banda (hx-swap-oob) para refrescar solo esta tarjeta
+El contador del ticket va sobre la esquina inferior derecha de la miniatura y el Menú de cantidad es un modal de
+toda la pantalla (acordado el 4-oct-2026); se cierra con «Listo», tocando el velo o con Escape.
+Incluir siempre con «only».
+{% endcomment %}
+<div id="dish-{{ dish.id }}"{% if oob %} hx-swap-oob="true"{% endif %} class="relative" x-data="{ held: false, timer: null, menu: false }" @click.outside="menu = false" @keydown.escape.window="menu = false">
+  <button type="button" class="sgft-dish-card{% if quantity %} sgft-dish-card--en-ticket{% endif %}"
+    :class="held && 'sgft-dish-card--presionada'"
+    {% if add_url %}hx-post="{{ add_url }}" hx-trigger="sgft:tap"{% if hx_target %} hx-target="{{ hx_target }}"{% endif %}{% if hx_swap %} hx-swap="{{ hx_swap }}"{% endif %}{% endif %}
+    aria-label="Agregar {{ dish.name }}, ${{ dish.price|floatformat:'2g' }}{% if quantity %}. En el ticket: {{ quantity }}{% endif %}"
+    aria-haspopup="dialog" :aria-expanded="menu"
+    @pointerdown="held = true; timer = setTimeout(() => { timer = null; held = false; menu = true }, 500)"
+    @pointerup="if (timer) { clearTimeout(timer); timer = null; held = false; htmx.trigger($el, 'sgft:tap') }"
+    @pointerleave="clearTimeout(timer); timer = null; held = false"
+    @pointercancel="clearTimeout(timer); timer = null; held = false"
+    @click="if ($event.detail === 0) htmx.trigger($el, 'sgft:tap')"
+    @contextmenu.prevent="menu = true">
+    <span class="sgft-thumb relative size-[120px] rounded-[18px] text-[64px]"><span aria-hidden="true">{{ dish.emoji }}</span>{% if quantity %}<span class="sgft-dish-card__qty sgft-dish-card__qty--thumb" aria-hidden="true">{{ quantity }}</span>{% endif %}</span>
+    <span class="flex min-w-0 flex-1 flex-col gap-[6px]">
+      <span class="sgft-texto-etiqueta-mayusculas text-texto-secundario">{{ dish.category }}</span>
+      <span class="line-clamp-2 sgft-texto-titulo-h2-compacto text-texto-primario">{{ dish.name }}</span>
+      <span class="sgft-texto-titulo-h2 text-marca-primario-oscuro">${{ dish.price|floatformat:"2g" }}</span>
+    </span>
+  </button>
+
+  <div x-show="menu" x-cloak x-transition.opacity role="dialog" aria-modal="true" aria-label="Cantidad de {{ dish.name }}"
+       @click.self="menu = false" class="sgft-qty-modal">
+    {% include "components/quantity_menu.html" with name=dish.name emoji=dish.emoji quantity=quantity|default:0 increase_url=add_url decrease_url=remove_url hx_target=hx_target hx_swap=hx_swap only %}
+  </div>
+</div>

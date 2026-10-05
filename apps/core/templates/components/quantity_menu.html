@@ -1,0 +1,26 @@
+{% comment %}
+components/quantity_menu.html — Menú de cantidad (Figma 2044:1976, rev. 1.1)
+Se muestra dentro de dish_card.html, que declara la variable Alpine `menu`; «Listo» la pone en false.
+Parámetros:
+  name, emoji        del platillo
+  quantity           cantidad actual en el ticket (la decide el servidor)
+  increase_url       vista que suma 1 (hx-post); decrease_url  vista que resta 1 (hx-post)
+  hx_target, hx_swap destino del fragmento que devuelven las vistas
+Incluir siempre con «only».
+{% endcomment %}
+<div class="flex w-[300px] flex-col gap-md rounded-lg border border-borde-sutil bg-superficie-tarjeta p-canal shadow-tarjeta">
+  <div class="flex items-center gap-sm">
+    <span class="sgft-thumb size-[48px] rounded-md text-[26px]" aria-hidden="true">{{ emoji }}</span>
+    <span class="flex min-w-0 flex-1 flex-col">
+      <span class="truncate sgft-texto-titulo-h3 text-texto-primario">{{ name }}</span>
+      <span class="sgft-texto-cuerpo-nota text-texto-secundario">Cantidad en el ticket</span>
+    </span>
+  </div>
+  <div class="flex items-center justify-between">
+    {% include "components/icon_button.html" with icon="minus" label="Disminuir" variant="peligro" hx_post=decrease_url hx_target=hx_target hx_swap=hx_swap only %}
+    <span class="sgft-texto-display-kpi text-texto-primario" aria-live="polite">{{ quantity }}</span>
+    {% include "components/icon_button.html" with icon="plus" label="Aumentar" variant="primario" hx_post=increase_url hx_target=hx_target hx_swap=hx_swap only %}
+  </div>
+  <p class="text-center sgft-texto-cuerpo-nota text-texto-secundario">Toca el producto otra vez para sumar 1</p>
+  <button type="button" class="sgft-btn sgft-btn--secundario sgft-btn--full" @click="menu = false">Listo</button>
+</div>

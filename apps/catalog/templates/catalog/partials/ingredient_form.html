@@ -1,0 +1,48 @@
+{% extends "components/dialog.html" %}
+{% comment %}
+catalog/partials/ingredient_form.html — Diálogo «Agregar insumo» (pantallas-y-fragmentos.md §10.5)
+Vista: catalog:ingredient_create (GET y 422). Se abre desde el tile «Agregar insumo» de Inventario.
+La unidad elegida se muestra junto a la existencia inicial y al mínimo; Alpine solo la muestra (no calcula nada).
+{% endcomment %}
+{% block icon %}{% include "components/icons/clipboard-list.html" with size=28 only %}{% endblock %}
+{% block title %}Agregar insumo{% endblock %}
+{% block submit %}Agregar insumo{% endblock %}
+{% block fields %}
+<div class="flex flex-col gap-canal" x-data="{ unit: '{{ values.unit|escapejs }}' }">
+  {% include "components/field.html" with label="Nombre" name="name" value=values.name required=True maxlength=60 error=errors.name only %}
+
+  <label class="flex flex-col gap-xs">
+    <span class="sgft-texto-cuerpo-pequeno-medio text-texto-primario">Unidad de medida</span>
+    <span class="sgft-field h-[52px]{% if errors.unit %} border-estado-peligro{% endif %}">
+      <select name="unit" required x-model="unit" class="h-full flex-1 bg-transparent sgft-texto-cuerpo-base text-texto-primario outline-none"{% if errors.unit %} aria-invalid="true"{% endif %}>
+        <option value="">Elige una unidad</option>
+        {% for unit in units %}<option value="{{ unit.value }}"{% if unit.value == values.unit %} selected{% endif %}>{{ unit.label }}</option>{% endfor %}
+      </select>
+    </span>
+    {% if errors.unit %}<span class="sgft-texto-cuerpo-nota text-estado-peligro" role="alert">{{ errors.unit }}</span>
+    {% else %}<span class="sgft-texto-cuerpo-nota text-texto-secundario">Compras, mermas y recetas usan esta unidad.</span>{% endif %}
+  </label>
+
+  <label class="flex flex-col gap-xs">
+    <span class="sgft-texto-cuerpo-pequeno-medio text-texto-primario">Existencia inicial</span>
+    <span class="sgft-field h-[52px]{% if errors.initial_stock %} border-estado-peligro{% endif %}">
+      <input name="initial_stock" type="text" inputmode="decimal" placeholder="0" value="{{ values.initial_stock }}" class="sgft-texto-cuerpo-base"{% if errors.initial_stock %} aria-invalid="true"{% endif %}>
+      <span class="sgft-texto-cuerpo-pequeno-medio text-texto-secundario" x-text="unit"></span>
+    </span>
+    {% if errors.initial_stock %}<span class="sgft-texto-cuerpo-nota text-estado-peligro" role="alert">{{ errors.initial_stock }}</span>
+    {% else %}<span class="sgft-texto-cuerpo-nota text-texto-secundario">Se registra como compra inicial.</span>{% endif %}
+  </label>
+
+  {% include "components/field.html" with label="Costo total de la existencia inicial" name="initial_cost" kind="money" value=values.initial_cost error=errors.initial_cost conditional=True help="Obligatorio si la existencia inicial es mayor que 0; con él se calcula el margen." only %}
+
+  <label class="flex flex-col gap-xs">
+    <span class="sgft-texto-cuerpo-pequeno-medio text-texto-primario">Mínimo</span>
+    <span class="sgft-field h-[52px]{% if errors.min_stock %} border-estado-peligro{% endif %}">
+      <input name="min_stock" type="text" inputmode="decimal" required placeholder="0" value="{{ values.min_stock }}" class="sgft-texto-cuerpo-base"{% if errors.min_stock %} aria-invalid="true"{% endif %}>
+      <span class="sgft-texto-cuerpo-pequeno-medio text-texto-secundario" x-text="unit"></span>
+    </span>
+    {% if errors.min_stock %}<span class="sgft-texto-cuerpo-nota text-estado-peligro" role="alert">{{ errors.min_stock }}</span>
+    {% else %}<span class="sgft-texto-cuerpo-nota text-texto-secundario">Con la existencia en o por debajo del mínimo aparece la alerta de stock.</span>{% endif %}
+  </label>
+</div>
+{% endblock %}
