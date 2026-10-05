@@ -1,0 +1,49 @@
+{% comment %}
+components/open_cash_dialog.html — Diálogo · Abrir caja (Figma 2044:2111, rev. 1.1; 6 casillas por DEC-28)
+Se muestra centrado sobre el velo. Solo el Administrador abre la caja (DEC-27).
+Parámetros:
+  post_url      vista que valida el PIN y abre el turno (hx-post). Recibe «pin» (6 valores) y «opening_amount».
+  hx_target, hx_swap   destino de la respuesta (por ejemplo, la pantalla de Nueva Venta)
+  shift_label   por ejemplo «Turno matutino · 30/09/2026» (lo arma el servidor)
+  opening_amount   fondo inicial sugerido (Decimal, opcional)
+  error         mensaje en español si el PIN no es válido (opcional)
+Sin red, la validación la hará static/pos/ con el verificador PBKDF2 (DEC-28, Fase 6). Alpine solo mueve el foco
+entre casillas y cierra el diálogo. Incluir siempre con «only».
+{% endcomment %}
+<div x-data="{ open: true }" x-show="open" x-cloak @keydown.escape.window="open = false" class="fixed inset-0 z-50 grid place-items-center bg-superficie-velo-oscuro p-md">
+  <form hx-post="{{ post_url }}" hx-disabled-elt="find button[type=submit]"{% if hx_target %} hx-target="{{ hx_target }}"{% endif %}{% if hx_swap %} hx-swap="{{ hx_swap }}"{% endif %}
+        role="dialog" aria-modal="true" aria-labelledby="open-cash-title" @click.outside="open = false"
+        x-init="$nextTick(() => $el.querySelector('input[name=pin]').focus())"
+        class="flex w-full max-w-[480px] flex-col gap-canal rounded-xl border border-borde-sutil bg-superficie-tarjeta p-xl shadow-tarjeta">
+    <div class="flex items-center justify-between gap-sm">
+      <div class="flex items-center gap-md">
+        <span class="sgft-card-header__icon">{% include "components/icons/wallet.html" with size=28 only %}</span>
+        <div class="flex flex-col gap-[2px]">
+          <h2 id="open-cash-title" class="sgft-texto-titulo-h2 text-texto-primario">Abrir caja</h2>
+          {% if shift_label %}<p class="sgft-texto-cuerpo-pequeno text-texto-secundario">{{ shift_label }}</p>{% endif %}
+        </div>
+      </div>
+      <button type="button" class="sgft-icon-btn sgft-icon-btn--neutro sgft-icon-btn--compacto" aria-label="Cerrar diálogo" @click="open = false">
+        {% include "components/icons/x.html" with size=20 only %}
+      </button>
+    </div>
+
+    {% include "components/pin_boxes.html" with error=error note="Solo un administrador puede abrir o cerrar la caja. Si no hay conexión, el PIN se valida en este dispositivo." only %}
+
+    <label class="flex flex-col gap-xs">
+      <span class="sgft-texto-cuerpo-pequeno-medio text-texto-primario">Fondo inicial en efectivo</span>
+      <span class="sgft-field h-[52px]">
+        <span class="text-texto-secundario">{% include "components/icons/banknote.html" with size=20 only %}</span>
+        <input name="opening_amount" type="text" inputmode="decimal" required class="sgft-texto-cuerpo-base" placeholder="$0.00"
+               {% if opening_amount is not None %}value="{{ opening_amount|floatformat:2 }}"{% endif %}>
+      </span>
+    </label>
+
+    <div class="flex gap-sm">
+      <button type="button" class="sgft-btn sgft-btn--contorno sgft-btn--full" @click="open = false">Cancelar</button>
+      <button type="submit" class="sgft-btn sgft-btn--primario sgft-btn--full">
+        <span class="inline-flex">{% include "components/icons/lock.html" with size=20 only %}</span>Abrir caja
+      </button>
+    </div>
+  </form>
+</div>

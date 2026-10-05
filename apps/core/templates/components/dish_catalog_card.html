@@ -1,0 +1,33 @@
+{% comment %}
+components/dish_catalog_card.html — Tarjeta de producto · Catálogo (Figma 2003:425)
+Parámetros:
+  dish          {id, name, description, price: Decimal, category, emoji, availability: disponible|pocas|agotado}
+                id da el id «catalog-dish-<id>», que usa la vista de edición para reemplazar solo esta tarjeta.
+                availability la decide el servidor.
+  recipe_url    vista del diálogo «Receta» (opcional); edit_url  vista del diálogo «Editar» (opcional)
+                Abren su diálogo en #dialog con hx-get. Si no vienen, no se muestran: qué acciones existen lo
+                decide el servidor. La edición pide PIN.
+Incluir siempre con «only».
+{% endcomment %}
+<article{% if dish.id %} id="catalog-dish-{{ dish.id }}"{% endif %} class="flex w-full flex-col overflow-hidden rounded-lg border border-borde-sutil bg-superficie-tarjeta shadow-tarjeta">
+  <div class="relative grid h-[120px] place-items-center bg-gradiente-imagen-catalogo text-[60px]" aria-hidden="true">
+    {{ dish.emoji }}
+    <span class="absolute left-[12px] top-[12px] rounded-xs bg-categoria-foto-fondo px-[10px] py-[4px] text-[12px] font-medium text-marca-primario-oscuro">{{ dish.category }}</span>
+  </div>
+  <div class="flex flex-1 flex-col gap-xs px-md pb-md pt-[14px]">
+    <h3 class="truncate sgft-texto-titulo-h3 text-texto-primario">{{ dish.name }}</h3>
+    <p class="line-clamp-2 sgft-texto-cuerpo-descripcion text-texto-secundario">{{ dish.description }}</p>
+    <div class="flex items-center justify-between gap-xs">
+      <span class="sgft-texto-titulo-h2 text-marca-primario-oscuro">${{ dish.price|floatformat:"2g" }}</span>
+      {% if dish.availability == "agotado" %}{% include "components/badge.html" with text="Agotado" variant="peligro" only %}
+      {% elif dish.availability == "pocas" %}{% include "components/badge.html" with text="Pocas porciones" variant="alerta" only %}
+      {% else %}{% include "components/badge.html" with text="Disponible" variant="exito" only %}{% endif %}
+    </div>
+    {% if recipe_url or edit_url %}
+      <div class="mt-auto flex gap-[10px] pt-xs">
+        {% if recipe_url %}<div class="flex-1">{% include "components/button.html" with text="Receta" variant="secundario" size="compacto" full=True hx_get=recipe_url hx_target="#dialog" hx_swap="innerHTML" only %}</div>{% endif %}
+        {% if edit_url %}<div class="flex-1">{% include "components/button.html" with text="Editar" variant="primario" size="compacto" icon="pencil" full=True hx_get=edit_url hx_target="#dialog" hx_swap="innerHTML" only %}</div>{% endif %}
+      </div>
+    {% endif %}
+  </div>
+</article>

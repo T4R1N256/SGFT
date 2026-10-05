@@ -1,6 +1,6 @@
 # CLAUDE.md — Sistema de Gestión de Food Truck (SGFT)
 
-> Contexto y reglas de trabajo para agentes y personas. Actualizado el 24-sep-2026 (DEC-01 a DEC-23).
+> Contexto y reglas de trabajo para agentes y personas. Actualizado el 4-oct-2026 (DEC-01 a DEC-35).
 > Dónde va cada archivo y de quién es: skill `.claude/skills/sgft-organizacion-entregables/`, que se consulta con `scripts/dueno_de_ruta.py <ruta>`. Las decisiones `DEC-nn` están registradas en `references/decisiones-y-pendientes.md` de la misma skill.
 >
 > **No modifiques este archivo sin comentarlo antes con el usuario** y sin su aprobación explícita.
@@ -14,11 +14,11 @@ Aplicación web responsiva (PWA) para el food truck **"El Pardo"** (Ciudad Juár
 
 | Integrante      | GitHub            | Rol                                                                                                                      |
 | --------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| Diego Galindo   | `Diego-Galindo98` | Product Owner · back-end (usuarios, inventario)                                                                          |
+| Diego Galindo   | `Diego-Galindo98` | Product Owner · back-end (servicios de usuarios y su Django Admin, catálogo e inventario)                                 |
 | Jesús Hernández | `EduardGarrido`   | Back-end y BD (modelos, migraciones, servicios transaccionales, despliegue)                                              |
-| Jared Beltrán   | `JBeltran16`      | Back-end (vistas del punto de venta, reportes, CI)                                                                       |
-| Alejandro Tarín | `T4R1N256`        | Scrum Master · front-end (base visual, punto de venta, cliente offline) · **integrador: aprueba y fusiona todos los PR** |
-| Yahir Enríquez  | `CodigaBorealis`  | Front-end (usuarios, inventario, reportes) · pruebas E2E                                                                 |
+| Jared Beltrán   | `JBeltran16`      | Back-end (servicios del punto de venta y reportes, sincronización con Jesús, CI)                                          |
+| Alejandro Tarín | `T4R1N256`        | Scrum Master · front-end: vistas, URLs y plantillas de punto de venta y Productos, base visual, cliente offline · **máxima autoridad del proyecto e integrador: revisa, aprueba y fusiona todos los PR** |
+| Yahir Enríquez  | `CodigaBorealis`  | Front-end: vistas, URLs y plantillas de acceso (PIN y activación del dispositivo), inventario, Caja y reportes · pruebas E2E |
 
 ## 2. Por qué existe
 
@@ -29,9 +29,11 @@ Hoy todo es manual: pedidos en cuaderno, totales mentales, conteo visual del inv
 | Módulo                | Hace                                                                                                                                                                                                                                                                                                                    |
 | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **M-PDV** (app `pos`) | Catálogo con precios, pedidos, personalización (quitar o agregar ingredientes), total automático, cobro con método de pago, ajuste o cancelación con motivo, bandeja de revisión del Administrador. **Funciona con y sin internet.** La consulta de órdenes por cocina está **en evaluación** (DEC-15): no implementar. |
-| **M-INV**             | Insumos con unidad de medida, recetas, descuento automático al vender, mínimos y alertas, compras y mermas, catálogo de platillos y precios. Solo en línea.                                                                                                                                                             |
-| **M-USR**             | Cuentas del personal (alta, cambio de rol, desactivación; nunca borrado), autenticación, roles Administrador y Cajero. Solo en línea.                                                                                                                                                                                   |
-| **M-REP**             | Apertura y cierre de turno de caja, corte automatizado, ventas por periodo, más vendidos, **PDF de las ventas del día**. La apertura funciona sin conexión; lo demás requiere red.                                                                                                                                      |
+| **M-INV**             | Insumos con unidad de medida, recetas, descuento automático al vender, mínimos y alertas, compras y mermas, catálogo de platillos y precios. **Funciona sin red** con PIN de Administrador (DEC-29): los cambios se encolan y se sincronizan; lo que no se pueda aplicar va a cuarentena.                                                                                                                                                             |
+| **M-USR**             | Cuentas del personal (alta, cambio de rol, desactivación; nunca borrado, PIN) **en Django Admin**, solo para el Administrador. Roles Administrador y Cajero. **Sin página de inicio de sesión** (DEC-34): el dispositivo queda activado con la cuenta de cajero y lo restringido pide el PIN de Administrador. Solo en línea.                                                                                                                                                                                   |
+| **M-REP**             | Apertura y cierre de turno de caja, corte automatizado, ventas por periodo, más vendidos, **PDF de las ventas del día**. Apertura y cierre funcionan sin conexión (el cierre, con el contrato v2); Caja y Reportes se consultan sin red con los datos de la última sincronización.                                                                                                                                      |
+
+**Pantallas principales** (DEC-26): Nueva venta, Productos (platillos, precios y recetas), Caja (cierre de turno), Reportes e Inventario (insumos, recetas, compras y mermas). Dispositivo principal: **iPhone 17**; se vende casi siempre sin red y se sincroniza después.
 
 **Fuera de alcance:** pagos con tarjeta o pasarelas (solo se _registra_ el método), pedidos a domicilio, CFDI/SAT, nómina y contabilidad, app de tienda (es PWA), varias sucursales, lealtad/CRM, digitalizar el cuaderno histórico.
 
@@ -43,10 +45,12 @@ Hay **dos roles**: Administrador y Cajero.
 
 | Rol                             | Puede                                                                                                     | No puede                                                                |
 | ------------------------------- | --------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| **Administrador** (propietario) | Todo, incluidas la resolución de cuarentenas y la revisión de diferencias de precio e insumos en negativo | —                                                                       |
-| **Cajero**                      | Tomar pedidos, cobrar (con o sin red), ver sus ventas del día, abrir y cerrar su turno                    | Tocar inventario, precios, recetas o usuarios; ver reportes financieros |
+| **Administrador** (propietario) | Todo, incluidas la apertura y el cierre del turno de caja, la resolución de cuarentenas y la revisión de diferencias de precio e insumos en negativo | —                                                                       |
+| **Cajero**                      | Tomar pedidos, cobrar (con o sin red) mientras haya un turno abierto, ver las ventas del día               | Abrir o cerrar el turno; tocar inventario, precios, recetas o usuarios; ver reportes financieros |
 
 El comensal no es actor: no tiene cuenta y no se guardan sus datos.
+
+**Acceso (DEC-34).** No hay página de inicio de sesión. El dispositivo se activa una vez con el PIN de un Administrador y queda con una sesión permanente de la cuenta de cajero: las ventas quedan a nombre de esa cuenta, sin distinguir a cada persona. Lo restringido (Productos, Inventario, Caja, Reportes, abrir y cerrar caja) pide el PIN de Administrador y se desbloquea 30 minutos (DEC-32); lo que se autoriza con PIN queda a nombre de ese Administrador. Si el servidor responde 401 al sincronizar, la cola se conserva y se pide activar de nuevo el dispositivo. Django Admin conserva su propio inicio con usuario y contraseña, solo para el Administrador.
 
 ## 5. Reglas de negocio (no negociables)
 
@@ -65,14 +69,15 @@ El comensal no es actor: no tiene cuenta y no se guardan sus datos.
     - `devolucion` revierte el dinero, y el insumo se registra como merma;
     - `correccion_pago` no revierte nada, solo cambia a qué método se atribuye en el corte.
 12. **Toda venta requiere un turno de caja abierto.** Se valida antes de calcular, con o sin red; sin red se usa el estado del turno guardado en el dispositivo.
-13. **Un turno por jornada:** una apertura y un cierre, un solo dispositivo; puede abrirlo o cerrarlo el Cajero o el Administrador. Una diferencia de efectivo se registra y no bloquea.
+13. **Un turno por jornada:** una apertura y un cierre, un solo dispositivo; **solo el Administrador lo abre o lo cierra** (DEC-27), con su PIN, también sin red. La apertura sin red queda a nombre del Administrador que la autorizó y el servidor revalida su rol al sincronizar. Una diferencia de efectivo se registra y no bloquea.
 14. **Si al sincronizar el total del catálogo vigente difiere de lo cobrado, manda lo cobrado** (DEC-02). Se registra el total del servidor y la venta se marca para revisión, sin ir a cuarentena. Si lo cobrado ni siquiera corresponde a las líneas de su propio pedido, entonces sí va a cuarentena.
 
 Si una instrucción contradice estas reglas, **detente y avisa**: vienen del cliente, no del equipo.
 
 ## 5-bis. Operación offline
 
-- **Qué funciona sin red:** solo M-PDV, incluida la apertura del turno. Un solo dispositivo: no se programa resolución de conflictos entre varios.
+- **Qué funciona sin red:** M-PDV, incluida la apertura del turno, y Productos e Inventario (DEC-29): platillos, insumos, recetas, compras y mermas, siempre con PIN de Administrador. Caja y Reportes se consultan sin red con lo de la última sincronización: muestran «Sin conexión · N pendientes» y «Última sincronización», y las ventas nuevas aparecen al sincronizar. El cierre de caja se encola sin red (DEC-30). M-USR requiere red. Un solo dispositivo: no se programa resolución de conflictos entre varios; si el servidor cambió un registro que el dispositivo editó sin red, la operación va a cuarentena.
+- **Contrato v2 en borrador** (`contrato-sync-v2-borrador.md`): agrega los tipos `platillo`, `insumo`, `receta`, `compra`, `merma` y `cierre_turno`. Hasta que lo aprueben Jesús, Jared y Tarín rige v1, y Productos e Inventario no se programan sin red.
 - **Sincronización:** `POST /pos/sync/`, contrato v1:
   - Lote único `operaciones` con campo `tipo`, llaves en español e importes en centavos.
   - Respuesta 200 con un estado por UUID.
@@ -85,7 +90,8 @@ Si una instrucción contradice estas reglas, **detente y avisa**: vienen del cli
 
 ```
 Python 3.12 · Django 5.2 LTS (versiones fijas en requirements.txt) · PostgreSQL 16+ (Neon/Supabase en producción)
-Django Templates + Bootstrap 5 + HTMX 2 + Alpine.js 3 por CDN — sin npm, sin build
+Django Templates + Tailwind v4 (CLI autónomo, DEC-24) + HTMX 2 + Alpine.js 3 por CDN — sin npm
+Tailwind: static/core/css/input.css → app.css compilado y versionado; el servidor no compila nada
 Offline: manifest + service worker (Workbox por importScripts) + Dexie.js
 Pruebas: django.test.TestCase · node --test (paridad) · Playwright (venta con y sin red, apertura, corte)
 Despliegue: Render o Railway con Gunicorn + WhiteNoise · CI: GitHub Actions
@@ -99,6 +105,7 @@ cp .env.example .env                     # DJANGO_SECRET_KEY y DATABASE_URL
 python manage.py migrate
 python manage.py check && python manage.py test
 python manage.py runserver
+tailwindcss -i static/core/css/input.css -o static/core/css/app.css --minify   # tras cambiar clases o tokens (--watch al desarrollar)
 node --test tests_e2e/parity/            # si tocaste precios
 python manage.py makemigrations          # SOLO Jesús
 git diff --name-only --diff-filter=d origin/main...HEAD | python .claude/skills/sgft-organizacion-entregables/scripts/dueno_de_ruta.py --revisar
@@ -110,16 +117,17 @@ git diff --name-only --diff-filter=d origin/main...HEAD | python .claude/skills/
 config/            settings, urls, wsgi — sin lógica de negocio
 apps/__init__.py   obligatorio (sin él, manage.py test corre 0 pruebas)
 apps/core/         base.html, filtros de formato, mixins de rol
-apps/accounts/     M-USR       apps/catalog/   platillos, insumos, recetas (Django Admin)
+apps/accounts/     M-USR       apps/catalog/   platillos, insumos, recetas; pantalla Productos (DEC-25)
 apps/inventory/    M-INV       apps/pos/       M-PDV, turno de caja, sincronización
 apps/reports/      M-REP, solo lectura y sin modelos
+static/core/       css/input.css → app.css (Tailwind), tokens.css (generado), components.css; fonts/
 static/pos/        manifest.json, sw.js, db.js, pricing.js
 tests_fixtures/    pricing_cases.json          tests_e2e/   Playwright + parity/
 .claude/skills/    mapa de propiedad           .github/     CODEOWNERS (generado), plantilla de PR, CI
 ```
 
 - **Capas por app:** `urls.py` → `views.py` → `services*.py` → `models.py`, más plantillas en `templates/<app>/` (páginas completas) y `templates/<app>/partials/` (fragmentos HTMX).
-  - La **vista** solo hace HTTP: rol, turno, `request.htmx` y llamada al servicio.
+  - La **vista** solo hace HTTP: rol, turno, `request.htmx` y llamada al servicio. Vistas, URLs y plantillas son del frontend (DEC-31); servicios, modelos y sus pruebas, del backend.
   - El **servicio** tiene las reglas y el `transaction.atomic()`.
   - La **plantilla** solo presenta.
 - **Dependencias entre apps:** `pos` puede importar de `inventory` y `catalog`; `inventory` **nunca** importa de `pos`; `reports` solo lee; `core`, `accounts` y `catalog` no dependen de otras apps. Si un `import` rompe esto, el código está en la app equivocada.
@@ -130,7 +138,7 @@ tests_fixtures/    pricing_cases.json          tests_e2e/   Playwright + parity/
   | `pos/services.py`              | `confirm_sale`, `cancel_sale`, `adjust_sale`                                |
   | `pos/services_pricing.py`      | `calcular_total`                                                            |
   | `pos/services_cash_session.py` | `open_session`, `close_session`, `current_session`                          |
-  | `pos/views.py`                 | `sync_operations`                                                           |
+  | `pos/views_sync.py`            | `sync_operations` (Jesús + Jared)                                           |
   | `inventory/services.py`        | `deduct_for_sale`, `register_purchase`, `register_waste`, `check_min_stock` |
   | `reports/services.py`          | `cash_close`, `sales_by_period`, `top_dishes`, `export_daily_sales_pdf`     |
   | `accounts/services.py`         | `create_user`, `change_role`                                                |
@@ -138,12 +146,13 @@ tests_fixtures/    pricing_cases.json          tests_e2e/   Playwright + parity/
 ## 8. Flujo de trabajo
 
 - **Ramas:** `nombre/tema`, donde `nombre` es tu clave (`diego`, `jesus`, `jared`, `tarin`, `yahir`) y `tema` son 2 a 4 palabras: `diego/login`, `jesus/modelo-venta`. Minúsculas y guiones, sin acentos, `ñ` ni espacios. Una rama por tarea; se borra al fusionar.
-- **Título del PR:** lleva el paquete de la WBS, que es lo que liga el cambio con su requisito: `WBS-3.1.2: inicio de sesión con usuario y contraseña`.
+- **Título del PR:** lleva el paquete de la WBS, que es lo que liga el cambio con su requisito: `WBS-2.2.2: interfaz del punto de venta`.
+- **Issue:** todo PR se liga a un Issue de GitHub con `Closes #n` en la descripción; el Issue se abre antes de empezar la rama.
 - **Commits dentro de la rama:** libres. Los PR se fusionan con _Squash and merge_: a `main` llega un solo commit con el título del PR en la primera línea y los commits, incluido `Co-authored-by`, en el cuerpo.
 - **Pull Requests:**
   - nunca push a `main`;
   - `CODEOWNERS` avisa al dueño de cada archivo;
-  - **Tarín aprueba y es el único que fusiona**; sus propios PR los aprueba otra persona de la ruta;
+  - **Tarín es la máxima autoridad: aprueba y es el único que fusiona**, incluidos sus propios PR, que no requieren otra aprobación (GitHub no deja aprobar el PR propio, así que los fusiona como administrador);
   - hay que usar la plantilla de PR y tener el CI en verde.
 - **Un archivo, un dueño**, según el mapa de la skill. `CODEOWNERS` se genera con `dueno_de_ruta.py --codeowners --salida .github/CODEOWNERS`; no se edita a mano.
 - **`static/pos/` se programa en pareja**, con ambos autores en el commit (`Co-authored-by:`).
@@ -167,16 +176,18 @@ tests_fixtures/    pricing_cases.json          tests_e2e/   Playwright + parity/
   - cada vista nueva documenta en su docstring el **contrato vista–plantilla**: URL, roles, plantilla, contexto, `hx-target` y controles según el estado. Qué acciones se muestran lo decide el servidor, no la plantilla;
   - el `id` del destino HTMX va en la raíz del fragmento;
   - Alpine solo guarda estado local de la interfaz; nunca calcula dinero, salvo `pricing.js` sin conexión;
-  - no hay `.js` propios fuera de `static/pos/`.
+  - no hay `.js` propios fuera de `static/pos/`;
+  - estilos con utilidades de Tailwind y los tokens del sistema (`bg-marca-primario`, `p-lg`): la paleta por defecto de Tailwind no existe y no se usan colores arbitrarios (`bg-[#…]`). Tras cambiar clases, compila y sube `app.css` en el mismo commit.
 - **Autorización:** en el servidor, en cada vista, con el mixin de `apps/core/mixins.py`. Ocultar un botón no es control de acceso. Al sincronizar se revalida el rol de cada operación.
 - **Modelos:** solo Jesús edita `models.py` y genera migraciones. Los demás piden el campo por issue. Una migración aplicada nunca se edita.
-- **Pruebas:** van en `apps/<app>/tests.py`. Quien implementa un servicio escribe sus pruebas, a partir de los criterios de aceptación del requisito.
+- **Pruebas:** las de servicios van en `apps/<app>/tests.py` y las de vistas y contrato vista–plantilla en `apps/<app>/tests_views.py` (DEC-31). Quien implementa un servicio o una vista escribe sus pruebas, a partir de los criterios de aceptación del requisito.
 - **Dependencias:** una nueva se justifica en el PR y la aprueban Jesús (dueño de `requirements.txt`) y Tarín.
 
 ## 10. Seguridad y datos
 
 - **Secretos:** `.env` nunca se sube, y el repositorio es **público**: nada de credenciales ni datos reales. Cada integrante genera su propia `DJANGO_SECRET_KEY` con `python -c "import secrets; print(secrets.token_urlsafe(50))"`. La de producción vive en el panel del proveedor y no se cambia.
 - **Contraseñas:** con hash, mediante el sistema de autenticación de Django.
+- **PIN de Administrador** (DEC-28): 6 dígitos, distinto de la contraseña y guardado con hash. Desbloquea los módulos con candado durante 30 minutos (DEC-32). Para abrir la caja sin red, el dispositivo guarda solo un verificador PBKDF2 por Administrador activo, que caduca a los 7 días sin sincronizar; nunca el PIN. Se recomienda sincronizar antes de cada jornada.
 - **CSRF:** siempre activo. `|safe` solo con justificación. `base.html` envía el token en toda petición HTMX (`hx-headers`), y `db.js` lo lee de la cookie `csrftoken`. Por eso `CSRF_COOKIE_HTTPONLY = False` es **intencional**.
 - **Datos personales:** solo del personal (nombre, rol, credenciales), conforme a la LFPDPPP (DOF 20-03-2025). Referencia de seguridad: OWASP Top 10:2021.
 

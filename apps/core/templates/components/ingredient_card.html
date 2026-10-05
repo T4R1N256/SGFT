@@ -1,0 +1,21 @@
+{% comment %}
+components/ingredient_card.html — Tarjeta de insumo (Figma 2003:453)
+Parámetros:
+  ingredient  {name, emoji, stock: Decimal, min_stock: Decimal, unit, level: normal|bajo|critico, level_pct: 0–100}
+              level y level_pct los decide el servidor comparando la existencia contra el mínimo; sin red, la copia
+              local que descuentan las ventas (la pantalla muestra «Última sincronización»).
+Incluir siempre con «only».
+{% endcomment %}
+<article class="flex min-h-[124px] items-center gap-md rounded-[18px] bg-superficie-tarjeta px-[18px] shadow-tarjeta {% if ingredient.level == 'critico' %}border-[1.5px] border-estado-peligro/45{% else %}border border-borde-sutil{% endif %}">
+  <span class="sgft-thumb size-[58px] rounded-campo text-[30px]" aria-hidden="true">{{ ingredient.emoji }}</span>
+  <div class="flex min-w-0 flex-1 flex-col gap-[6px]">
+    <div class="flex items-center justify-between gap-xs">
+      <h3 class="truncate sgft-texto-cuerpo-medio text-texto-primario">{{ ingredient.name }}</h3>
+      {% if ingredient.level == "critico" %}{% include "components/badge.html" with text="Crítico" variant="critico" small=True only %}
+      {% elif ingredient.level == "bajo" %}{% include "components/badge.html" with text="Bajo" variant="bajo" small=True only %}
+      {% else %}{% include "components/badge.html" with text="Normal" variant="normal" small=True only %}{% endif %}
+    </div>
+    <p class="sgft-texto-cuerpo-descripcion text-texto-secundario">Existencia: {{ ingredient.stock }} {{ ingredient.unit }}&nbsp;&nbsp;·&nbsp;&nbsp;Mínimo: {{ ingredient.min_stock }} {{ ingredient.unit }}</p>
+    <div class="sgft-nivel" role="img" aria-label="Nivel {{ ingredient.level_pct }} %" style="--p: {{ ingredient.level_pct }}; --c: var(--sgft-nivel-{{ ingredient.level }})"></div>
+  </div>
+</article>

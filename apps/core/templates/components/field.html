@@ -1,0 +1,53 @@
+{% comment %}
+components/field.html — Campo de formulario (patrón de los campos del Diálogo · Abrir caja, rev. 1.1)
+Parámetros:
+  label      etiqueta en español (obligatoria)
+  name       nombre del campo (obligatorio)
+  kind       text | money | quantity | date | select | textarea | checkbox   (por omisión: text)
+  value      valor inicial (para money, un Decimal; se muestra con dos decimales)
+  options    para select: lista de {value, label}; selected  valor elegido
+  unit       para quantity: unidad que se muestra a la derecha («kg», «pzas»); la decide el insumo
+  icon       ícono a la izquierda (opcional; money usa banknote, date usa calendar si no se indica)
+  placeholder, help (texto de apoyo), error (mensaje en español), required, maxlength
+  conditional  True: el campo es obligatorio según otro (lo explica help); no muestra «(opcional)»
+No valida ni calcula nada: los errores llegan del servidor. Incluir siempre con «only».
+{% endcomment %}
+{% with k=kind|default:"text" %}
+{% if k == "checkbox" %}
+  <label class="flex items-center gap-sm sgft-texto-cuerpo-medio text-texto-primario">
+    <input type="checkbox" name="{{ name }}" class="size-[22px] accent-marca-primario-oscuro"{% if value %} checked{% endif %}>
+    {{ label }}
+  </label>
+  {% if help %}<p class="-mt-[14px] pl-[34px] sgft-texto-cuerpo-nota text-texto-secundario">{{ help }}</p>{% endif %}
+{% else %}
+<label class="flex flex-col gap-xs">
+  <span class="sgft-texto-cuerpo-pequeno-medio text-texto-primario">{{ label }}{% if not required and not conditional %} <span class="font-normal text-texto-secundario">(opcional)</span>{% endif %}</span>
+  {% if k == "textarea" %}
+    <textarea name="{{ name }}" rows="3"{% if maxlength %} maxlength="{{ maxlength }}"{% endif %}{% if required %} required{% endif %} placeholder="{{ placeholder }}"
+      class="rounded-md border border-borde-sutil bg-superficie-campo px-md py-sm sgft-texto-cuerpo-base text-texto-primario focus:shadow-foco-anillo focus:outline-none{% if error %} border-estado-peligro{% endif %}"{% if error %} aria-invalid="true"{% endif %}>{{ value|default:"" }}</textarea>
+  {% else %}
+    <span class="sgft-field h-[52px]{% if error %} border-estado-peligro{% endif %}">
+      {% if icon %}<span class="text-texto-secundario">{% include "components/icons/"|add:icon|add:".html" with size=20 only %}</span>
+      {% elif k == "money" %}<span class="text-texto-secundario">{% include "components/icons/banknote.html" with size=20 only %}</span>
+      {% elif k == "date" %}<span class="text-texto-secundario">{% include "components/icons/calendar.html" with size=20 only %}</span>{% endif %}
+      {% if k == "select" %}
+        <select name="{{ name }}"{% if required %} required{% endif %} class="h-full flex-1 bg-transparent sgft-texto-cuerpo-base text-texto-primario outline-none"{% if error %} aria-invalid="true"{% endif %}>
+          {% if placeholder %}<option value="">{{ placeholder }}</option>{% endif %}
+          {% for option in options %}<option value="{{ option.value }}"{% if option.value|stringformat:"s" == selected|stringformat:"s" %} selected{% endif %}>{{ option.label }}</option>{% endfor %}
+        </select>
+      {% else %}
+        <input name="{{ name }}" class="sgft-texto-cuerpo-base"
+          {% if k == "money" %}type="text" inputmode="decimal" placeholder="{{ placeholder|default:'0.00' }}"{% if value is not None and value != "" %} value="{{ value|floatformat:2 }}"{% endif %}
+          {% elif k == "quantity" %}type="text" inputmode="decimal" placeholder="{{ placeholder|default:'0' }}"{% if value is not None and value != "" %} value="{{ value }}"{% endif %}
+          {% elif k == "date" %}type="date"{% if value %} value="{{ value|date:'Y-m-d' }}"{% endif %}
+          {% else %}type="text" placeholder="{{ placeholder }}"{% if value %} value="{{ value }}"{% endif %}{% endif %}
+          {% if maxlength %} maxlength="{{ maxlength }}"{% endif %}{% if required %} required{% endif %}{% if error %} aria-invalid="true"{% endif %}>
+        {% if k == "quantity" and unit %}<span class="sgft-texto-cuerpo-pequeno-medio text-texto-secundario">{{ unit }}</span>{% endif %}
+      {% endif %}
+    </span>
+  {% endif %}
+  {% if error %}<span class="sgft-texto-cuerpo-nota text-estado-peligro" role="alert">{{ error }}</span>
+  {% elif help %}<span class="sgft-texto-cuerpo-nota text-texto-secundario">{{ help }}</span>{% endif %}
+</label>
+{% endif %}
+{% endwith %}

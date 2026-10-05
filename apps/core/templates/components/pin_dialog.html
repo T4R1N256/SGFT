@@ -1,0 +1,19 @@
+{% extends "components/dialog.html" %}
+{% comment %}
+components/pin_dialog.html — Diálogo «PIN de administrador» para entrar a un módulo con candado
+Base: «Diálogo · Abrir caja» de Figma (2044:2111): mismas casillas, encabezado y acciones (DEC-27, DEC-28).
+Contexto (lo arma la vista del PIN):
+  post_url      vista que valida el PIN (hx-post); hx_target, hx_swap  destino de los errores (#dialog)
+  module_label  módulo al que se quiere entrar, por ejemplo «Productos»
+  next_url      a dónde ir con el PIN correcto (campo oculto «next»)
+  error         mensaje en español si el PIN no es válido (opcional)
+Con el PIN correcto la vista responde HX-Redirect a next_url. Se inserta en #dialog con hx-get.
+{% endcomment %}
+{% block icon %}{% include "components/icons/lock.html" with size=28 only %}{% endblock %}
+{% block title %}PIN de administrador{% endblock %}
+{% block subtitle %}{% if module_label %}<p class="sgft-texto-cuerpo-pequeno text-texto-secundario">Para entrar a {{ module_label }}</p>{% endif %}{% endblock %}
+{% block submit %}<span class="inline-flex">{% include "components/icons/lock.html" with size=20 only %}</span>Entrar{% endblock %}
+{% block fields %}
+  <input type="hidden" name="next" value="{{ next_url }}">
+  {% include "components/pin_boxes.html" with legend="Solicita ayuda de un administrador" error=error note="Productos, Inventario, Caja y Reportes requieren el PIN de un administrador." only %}
+{% endblock %}

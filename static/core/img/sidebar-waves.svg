@@ -1,0 +1,21 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="270" height="320" viewBox="0 0 270 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Ondas decorativas">
+<path id="Vector" d="M0 70C55 20 115 105 180 70C245 35 250 20 270 40V320H0V70Z" fill="url(#paint0_linear_0_227)"/>
+<path id="Vector_2" d="M0 140C70 95 130 175 195 135C260 95 255 105 270 115V320H0V140Z" fill="url(#paint1_linear_0_227)"/>
+<path id="Vector_3" d="M0 215C75 175 150 250 270 195V320H0V215Z" fill="url(#paint2_linear_0_227)"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear_0_227" x1="0" y1="31.042" x2="270" y2="31.042" gradientUnits="userSpaceOnUse">
+<stop stop-color="#D9702A" stop-opacity="0.55"/>
+<stop offset="1" stop-color="#8A4A1E" stop-opacity="0.15"/>
+</linearGradient>
+<linearGradient id="paint1_linear_0_227" x1="0" y1="106.056" x2="270" y2="106.056" gradientUnits="userSpaceOnUse">
+<stop stop-color="#B85A20" stop-opacity="0.6"/>
+<stop offset="1" stop-color="#6E3816" stop-opacity="0.3"/>
+</linearGradient>
+<linearGradient id="paint2_linear_0_227" x1="0" y1="195" x2="270" y2="195" gradientUnits="userSpaceOnUse">
+<stop stop-color="#8E4519" stop-opacity="0.75"/>
+<stop offset="1" stop-color="#5A2E13" stop-opacity="0.5"/>
+</linearGradient>
+</defs>
+</svg>

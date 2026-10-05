@@ -1,0 +1,292 @@
+/* Componentes del sistema de diseño PuntoVenta. Lo importa input.css después de tokens.css.
+   Solo reglas respaldadas por un componente de Figma; lo demás se resuelve con utilidades en la plantilla.
+   Recetas: skill sgft-sistema-diseno-puntoventa, references/implementacion-web.md §4. */
+
+/* Outfit (OFL, ver ../fonts/OFL.txt) servida desde static/: la venta debe abrir sin red. */
+@font-face { font-family: 'Outfit'; src: url('../fonts/outfit-400.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Outfit'; src: url('../fonts/outfit-500.woff2') format('woff2'); font-weight: 500; font-display: swap; }
+@font-face { font-family: 'Outfit'; src: url('../fonts/outfit-600.woff2') format('woff2'); font-weight: 600; font-display: swap; }
+@font-face { font-family: 'Outfit'; src: url('../fonts/outfit-700.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+
+@layer components {
+  /* Retícula de la aplicación (rev. 1.1): barra superior y contenido a todo lo ancho; el menú lateral es una
+     capa que abre el botón «Menú». Móvil primero para el iPhone 17 (propuesta: Figma solo tiene 1600 × 900);
+     desde 1280 px (xl), barra de 112 y margen de 28 como en Figma. */
+  .sgft-app { min-height: 100dvh; display: grid; grid-template-rows: auto 1fr; }
+  .sgft-app__top { display: flex; align-items: center; justify-content: space-between; gap: var(--sgft-espacio-sm);
+    padding: max(var(--sgft-espacio-sm), env(safe-area-inset-top)) var(--sgft-espacio-md) var(--sgft-espacio-sm); }
+  .sgft-app__main { min-width: 0;
+    padding: 0 var(--sgft-espacio-md) calc(env(safe-area-inset-bottom) + var(--sgft-espacio-md)); }
+
+  @media (width >= 80rem) {
+    .sgft-app { grid-template-rows: 112px 1fr; }
+    .sgft-app__top { padding: 0 var(--sgft-espacio-margen); }
+    .sgft-app__main { padding: 4px var(--sgft-espacio-margen) var(--sgft-espacio-margen); }
+  }
+
+  /* Menú lateral superpuesto: velo + sidebar de 270 (Figma «Sidebar», rev. 1.1). Alpine solo lo muestra u oculta. */
+  .sgft-velo { position: fixed; inset: 0; z-index: 30; background: var(--sgft-color-superficie-velo-oscuro); }
+  .sgft-sidebar { position: fixed; inset: 0 auto 0 0; z-index: 40; width: min(270px, 85vw); overflow-y: auto;
+    display: flex; flex-direction: column; background: var(--sgft-color-sidebar-fondo); color: var(--sgft-color-sidebar-texto);
+    padding: max(30px, env(safe-area-inset-top)) 22px env(safe-area-inset-bottom); }
+
+  /* Botón de ícono (Figma «Botón de ícono», rev. 1.1): Normal 48, Compacto 40. Siempre con aria-label. */
+  .sgft-icon-btn { width: 48px; height: 48px; flex: none; display: inline-grid; place-items: center;
+    border-radius: var(--sgft-radio-md); border: 0; cursor: pointer; }
+  .sgft-icon-btn--compacto { width: 40px; height: 40px; border-radius: var(--sgft-radio-chip); }
+  .sgft-icon-btn--neutro   { background: var(--sgft-color-superficie-tarjeta); border: 1px solid var(--sgft-color-borde-sutil); color: var(--sgft-color-texto-primario); }
+  .sgft-icon-btn--oscuro   { background: var(--sgft-color-boton-oscuro-fondo); color: var(--sgft-color-sidebar-texto); }
+  .sgft-icon-btn--primario { background: var(--sgft-gradiente-accion); color: var(--sgft-color-texto-inverso); box-shadow: var(--sgft-sombra-boton-primario); }
+  .sgft-icon-btn--peligro  { background: var(--sgft-color-estado-peligro-solido); color: var(--sgft-color-texto-inverso); }
+
+  /* Tarjeta de pantalla */
+  .sgft-card { background: var(--sgft-color-superficie-tarjeta); border: 1px solid var(--sgft-color-borde-sutil);
+    border-radius: var(--sgft-radio-tarjeta); box-shadow: var(--sgft-sombra-tarjeta); padding: 28px; display: flex; flex-direction: column; gap: 20px; }
+  .sgft-card--media { padding: 24px; gap: 14px; }
+
+  /* Encabezado de tarjeta */
+  .sgft-card-header { display: flex; align-items: center; gap: 20px; }
+  .sgft-card-header__icon { width: 56px; height: 56px; border-radius: var(--sgft-radio-campo); display: grid; place-items: center;
+    background: var(--sgft-color-marca-durazno-200); color: var(--sgft-color-marca-primario-oscuro); }
+
+  /* Botones */
+  .sgft-btn { height: 48px; border-radius: var(--sgft-radio-md); padding: 0 22px 0 20px; gap: 8px;
+    display: inline-flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 500;
+    line-height: 1.4; border: 0; cursor: pointer; text-decoration: none; white-space: nowrap; }
+  .sgft-btn--grande   { height: 56px; padding: 0 28px 0 26px; }
+  .sgft-btn--compacto { height: 40px; padding: 0 10px; gap: 6px; }
+  .sgft-btn--full     { width: 100%; padding-inline: 12px; }
+  .sgft-btn:disabled, .sgft-btn[aria-disabled="true"] { opacity: .5; cursor: not-allowed; }
+  .sgft-btn--primario   { background: var(--sgft-gradiente-accion); color: var(--sgft-color-texto-inverso); box-shadow: var(--sgft-sombra-boton-primario); }
+  .sgft-btn--secundario { background: var(--sgft-color-marca-durazno-100); color: var(--sgft-color-marca-primario-oscuro); }
+  .sgft-btn--contorno   { background: var(--sgft-color-superficie-tarjeta); color: var(--sgft-color-texto-primario); border: 1px solid var(--sgft-color-borde-sutil); }
+  .sgft-btn--oscuro     { background: var(--sgft-color-boton-oscuro-fondo); color: var(--sgft-color-sidebar-texto); border: 1px solid var(--sgft-boton-oscuro-borde); }
+  /* Ícono recoloreado por variante (Figma pierde el color al cambiar el ícono) */
+  .sgft-btn--contorno .sgft-btn__icon { color: var(--sgft-color-texto-secundario); }
+  .sgft-btn--oscuro   .sgft-btn__icon { color: var(--sgft-color-marca-primario); }
+  /* Seleccionado en un grupo (método de pago): Secundario con borde naranja al 60 % */
+  .sgft-btn--seleccionado { background: var(--sgft-color-marca-durazno-100); color: var(--sgft-color-marca-primario-oscuro);
+    border: 1.5px solid color-mix(in srgb, var(--sgft-color-marca-primario) 60%, transparent); }
+
+  /* Insignia; normal/bajo/critico son alias de estado para el nivel de un insumo */
+  .sgft-badge { height: 32px; padding: 0 14px 0 12px; border-radius: var(--sgft-radio-sm); display: inline-flex;
+    align-items: center; gap: 6px; font-size: 13px; font-weight: 500; }
+  .sgft-badge--exito,   .sgft-badge--normal  { background: var(--sgft-color-estado-exito-fondo);   color: var(--sgft-color-estado-exito); }
+  .sgft-badge--alerta,  .sgft-badge--bajo    { background: var(--sgft-color-estado-alerta-fondo);  color: var(--sgft-color-estado-alerta); }
+  .sgft-badge--peligro, .sgft-badge--critico { background: var(--sgft-color-estado-peligro-fondo); color: var(--sgft-color-estado-peligro); }
+  .sgft-badge--marca   { background: var(--sgft-color-marca-durazno-100); color: var(--sgft-color-marca-primario-oscuro); }
+  .sgft-badge--neutral { background: var(--sgft-color-superficie-pista);  color: var(--sgft-color-texto-secundario); }
+  .sgft-badge--chica   { height: 26px; }
+
+  /* Chip de categoría; el activo lo marca aria-pressed, que decide el servidor */
+  .sgft-chip { height: 40px; padding: 0 18px; border-radius: var(--sgft-radio-chip); font-size: 14px; font-weight: 500;
+    background: var(--sgft-color-superficie-tarjeta); border: 1px solid var(--sgft-color-borde-sutil); color: var(--sgft-color-texto-secundario); }
+  .sgft-chip[aria-pressed="true"] { background: var(--sgft-gradiente-accion); color: var(--sgft-color-texto-inverso);
+    border-color: transparent; box-shadow: var(--sgft-sombra-boton-primario); }
+
+  /* Foco visible (efecto Foco/Anillo de Figma); se suma a la sombra propia del control */
+  .sgft-btn:focus-visible, .sgft-chip:focus-visible, .sgft-icon-btn:focus-visible { outline: none;
+    box-shadow: var(--sgft-foco-anillo); }
+
+  /* Barra de nivel (corte duro): --p de 0 a 100 y --c con el color del nivel */
+  .sgft-nivel { height: 8px; border-radius: 4px;
+    background: linear-gradient(90deg, var(--c) 0 calc(var(--p) * 1%), var(--sgft-color-superficie-pista) 0); }
+
+  /* Elemento de navegación (Figma «Elemento de navegación»): 226 × 52, activo con aria-current */
+  .sgft-nav-item { height: 52px; display: flex; align-items: center; gap: 16px; padding: 0 16px 0 18px;
+    border-radius: var(--sgft-radio-md); color: var(--sgft-color-sidebar-texto); text-decoration: none; font-size: 16px; line-height: 1.4; }
+  .sgft-nav-item__icon { color: var(--sgft-color-sidebar-icono); flex: none; }
+  .sgft-nav-item[aria-current="page"] { background: var(--sgft-gradiente-accion-nav); color: var(--sgft-color-texto-inverso);
+    font-weight: 500; box-shadow: var(--sgft-sombra-boton-primario); }
+  .sgft-nav-item[aria-current="page"] .sgft-nav-item__icon { color: var(--sgft-color-texto-inverso); }
+  .sgft-nav-item:focus-visible { outline: none; box-shadow: var(--sgft-foco-anillo); }
+
+  /* Tarjeta de producto · Venta (rev. 1.1): toque = +1; mantener = Menú de cantidad */
+  .sgft-dish-card { position: relative; width: 100%; min-height: 176px; display: flex; align-items: center; gap: var(--sgft-espacio-md);
+    padding: var(--sgft-espacio-canal); text-align: left; cursor: pointer; border-radius: var(--sgft-radio-lg);
+    background: var(--sgft-color-superficie-tarjeta); border: 1px solid var(--sgft-color-borde-sutil); box-shadow: var(--sgft-sombra-tarjeta);
+    -webkit-touch-callout: none; user-select: none; touch-action: manipulation; }
+  .sgft-dish-card--en-ticket { border: 2px solid var(--sgft-color-marca-primario); }
+  .sgft-dish-card:active, .sgft-dish-card--presionada { background: var(--sgft-color-marca-durazno-100);
+    border: 2px solid var(--sgft-color-marca-primario); box-shadow: none; }
+  .sgft-dish-card:focus-visible { outline: none; box-shadow: var(--sgft-foco-anillo); }
+  .sgft-dish-card__qty { position: absolute; top: 10px; right: 14px; width: 36px; height: 36px; border-radius: 18px;
+    display: grid; place-items: center; background: var(--sgft-gradiente-accion); color: var(--sgft-color-texto-inverso);
+    font-weight: 600; font-size: 16px; box-shadow: var(--sgft-sombra-boton-primario); }
+
+  /* Miniatura con emoji (tarjetas, línea de ticket, menú de cantidad) */
+  .sgft-thumb { flex: none; display: grid; place-items: center; background: var(--sgft-gradiente-miniatura); line-height: 1; }
+
+  /* Campo de texto (buscador, fondo inicial) y casilla de PIN */
+  .sgft-field { display: flex; align-items: center; gap: 12px; background: var(--sgft-color-superficie-campo);
+    border: 1px solid var(--sgft-color-borde-sutil); border-radius: var(--sgft-radio-md); padding: 0 16px; }
+  .sgft-field:focus-within { box-shadow: var(--sgft-foco-anillo); }
+  .sgft-field input { flex: 1; min-width: 0; background: transparent; border: 0; outline: none; color: var(--sgft-color-texto-primario); }
+  .sgft-pin-box { flex: 1; min-width: 0; height: 56px; text-align: center; font-size: 32px; font-weight: 700;
+    background: var(--sgft-color-superficie-campo); border: 1px solid var(--sgft-color-borde-sutil);
+    border-radius: var(--sgft-radio-md); color: var(--sgft-color-texto-primario); -webkit-text-security: disc; }
+  .sgft-pin-box:focus { outline: none; border: 2px solid var(--sgft-color-marca-primario-oscuro); box-shadow: var(--sgft-foco-anillo); }
+
+  /* Retícula de Nueva Venta (Figma 02, rev. 1.1): principal 1080 y ticket 440 con canal 24 desde xl.
+     En el iPhone, una columna: platillos y luego el ticket (propuesta). */
+  .sgft-grid-venta { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sgft-espacio-lg); align-items: start; }
+  .sgft-grid-platillos { display: grid; gap: 18px var(--sgft-espacio-lg);
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); }
+  @media (width >= 80rem) {
+    .sgft-grid-venta { grid-template-columns: minmax(0, 1080fr) minmax(360px, 440fr); }
+    .sgft-grid-platillos { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+
+  /* Retícula del catálogo (Figma 03 · Productos): 5 columnas en 1544 de ancho; menos en pantallas chicas */
+  .sgft-grid-catalogo { display: grid; gap: 22px 23px;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); }
+  @media (width >= 80rem) { .sgft-grid-catalogo { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+
+  /* Contador del ticket sobre la esquina inferior derecha de la miniatura (rejilla y ticket; acordado el 4-oct-2026) */
+  .sgft-dish-card__qty.sgft-dish-card__qty--thumb { top: auto; left: auto; right: -8px; bottom: -8px; }
+  .sgft-dish-card__qty.sgft-dish-card__qty--line { top: auto; left: auto; right: -6px; bottom: -6px; width: 20px; height: 20px;
+    font-size: 11px; box-shadow: none; }
+
+  /* Menú de cantidad como modal de toda la pantalla (acordado el 4-oct-2026) */
+  .sgft-qty-modal { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: var(--sgft-espacio-md);
+    background: var(--sgft-color-superficie-velo-oscuro); }
+
+  /* Solo en el teléfono en horizontal (bloque de abajo): «Alerta stock» en la barra y número de ticket en el título */
+  .sgft-app__stock { display: none; }
+  .sgft-sale-title__no { display: none; }
+
+  /* Acordeón del ticket: solo funciona en el teléfono (bloque de abajo); en escritorio no hay chevrón y todo se ve */
+  .sgft-ticket-toggle { display: none; }
+  .sgft-ticket-header { pointer-events: none; }
+  .sgft-ticket-header :is(a, button) { pointer-events: auto; }
+  .sgft-ticket-toggle svg { transition: transform .2s ease; }
+  #order-summary[data-open="true"] .sgft-ticket-toggle svg { transform: rotate(180deg); }
+}
+
+/* =============================================================================================================
+   Teléfono (iPhone 17: 402 × 874 en vertical, 874 × 402 en horizontal). Acordado con el prototipo del 4-oct-2026.
+   Fuera de @layer a propósito: estas reglas deben ganarles a las utilidades de Tailwind de las plantillas
+   (flex-wrap, tamaños fijos) solo en el teléfono, sin usar !important. En escritorio no aplica nada de esto.
+   ============================================================================================================= */
+
+/* Las dos orientaciones del teléfono */
+@media (orientation: portrait) and (max-width: 767px), (orientation: landscape) and (max-height: 500px) {
+  /* Chips en una fila con desplazamiento horizontal */
+  #category-chips { flex-wrap: nowrap; overflow-x: auto; gap: 8px; scrollbar-width: none; padding: 2px 2px 8px; margin: -2px -2px -6px; }
+  #category-chips .sgft-chip { flex: none; white-space: nowrap; font-size: 13px; padding: 0 14px; }
+
+  /* Tarjeta de venta compacta: miniatura de 52, nombre en varias líneas sin cortarse, sin la etiqueta de categoría
+     (el chip activo ya la indica) */
+  .sgft-dish-card { min-height: 92px; height: 100%; padding: 10px; gap: 14px; border-radius: var(--sgft-radio-campo); }
+  .sgft-dish-card .sgft-thumb { width: 52px; height: 52px; border-radius: var(--sgft-radio-sm); font-size: 28px; }
+  .sgft-dish-card .sgft-texto-etiqueta-mayusculas { display: none; }
+  .sgft-dish-card .sgft-texto-titulo-h2-compacto { font-size: 14px; line-height: 1.2; -webkit-line-clamp: unset; display: block;
+    overflow: visible; overflow-wrap: anywhere; hyphens: auto; }
+  .sgft-dish-card .sgft-texto-titulo-h2 { font-size: 16px; }
+  .sgft-dish-card > span:nth-child(2) { gap: 2px; }
+  .sgft-dish-card__qty.sgft-dish-card__qty--thumb { width: 22px; height: 22px; font-size: 12px; right: -6px; bottom: -6px; }
+
+  /* Acordeón del ticket activo */
+  .sgft-ticket-toggle { display: inline-grid; }
+  .sgft-ticket-header { pointer-events: auto; cursor: pointer; }
+  #order-summary[data-open="false"] .sgft-ticket-body { display: none; }
+  #order-summary > p.sgft-texto-etiqueta-mayusculas { display: none; }
+}
+
+/* Vertical: 2 productos por fila y ticket flotante abajo; abierto ocupa toda la pantalla */
+@media (orientation: portrait) and (max-width: 767px) {
+  #category-chips { margin-right: -16px; padding-right: 16px; }
+  #category-chips .sgft-chip { height: 36px; }
+  .sgft-grid-platillos { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+
+  .sgft-app__main { padding-bottom: calc(250px + env(safe-area-inset-bottom)); }
+  #order-summary { position: fixed; left: 0; right: 0; bottom: 0; top: auto; z-index: 30; min-height: 0; margin: 0;
+    gap: 8px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); border-radius: var(--sgft-radio-lg) var(--sgft-radio-lg) 0 0;
+    box-shadow: 0 -8px 28px 0 color-mix(in srgb, var(--sgft-color-texto-primario) 14%, transparent); }
+  #order-summary .sgft-card-header__icon { width: 40px; height: 40px; border-radius: var(--sgft-radio-sm); }
+  #order-summary .sgft-card-header__icon svg { width: 22px; height: 22px; }
+  #order-summary h2 { font-size: 17px; }
+  #order-summary .sgft-texto-display-indicador { font-size: 26px; }
+  #order-summary .sgft-btn { height: 42px; }
+  #order-summary .sgft-btn--grande { height: 48px; }
+  #order-summary[data-open="true"] { top: 0; border-radius: 0; overflow-y: auto; overscroll-behavior: contain;
+    padding-top: max(16px, env(safe-area-inset-top)); }
+  #order-summary[data-open="true"] > * { flex-shrink: 0; }
+  #order-summary[data-open="true"] .sgft-ticket-body { flex: 1 0 auto; }
+  #order-summary[data-open="true"] .sgft-ticket-lines { overflow: visible; }
+}
+
+/* Horizontal (874 × 402): barra en una fila (hamburguesa naranja, búsqueda, «Alerta stock», «Caja», total), pantalla
+   fija con solo la rejilla desplazable, título y chips en una fila, 3 columnas y ticket en acordeón a la derecha. */
+@media (orientation: landscape) and (max-height: 500px) {
+  /* Barra superior */
+  .sgft-app__top { padding: max(8px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 6px max(16px, env(safe-area-inset-left)); }
+  .sgft-app__top > div { flex-wrap: nowrap; gap: 10px; }
+  .sgft-app__brand { display: none; }
+  .sgft-app__menu-btn { width: 40px; height: 40px; border: 0; border-radius: var(--sgft-radio-sm);
+    background: var(--sgft-gradiente-logotipo); color: var(--sgft-color-texto-inverso); box-shadow: var(--sgft-sombra-boton-primario); }
+  .sgft-app__menu-btn svg { width: 22px; height: 22px; }
+  .sgft-app__search { order: 0; width: auto; flex: 1 1 auto; min-width: 0; height: 40px; border-radius: var(--sgft-radio-md); }
+  .sgft-app__search input { font-size: 13px; }
+  .sgft-app__stock { display: block; flex: none; }
+  .sgft-app__stock a { padding: 3px 10px 3px 3px; gap: 8px; border-radius: var(--sgft-radio-sm); }
+  .sgft-app__stock a > span:first-child { width: 26px; height: 26px; border-radius: var(--sgft-radio-xs); }
+  .sgft-app__stock a > span:first-child svg { width: 15px; height: 15px; }
+  .sgft-app__stock .sgft-texto-cuerpo-medio { font-size: 12px; line-height: 1.2; white-space: nowrap; }
+  .sgft-app__stock a > span:nth-child(2) > span:nth-child(2), .sgft-app__stock a > span:last-child { display: none; }
+  #cash-status { height: 32px; padding: 0 10px; gap: 6px; font-size: 12px; border-radius: var(--sgft-radio-sm); }
+  #cash-status svg { width: 14px; height: 14px; }
+  #session-total { height: 32px; padding: 0 10px; border-radius: var(--sgft-radio-sm); }
+  #session-total > span:first-child { display: none; }
+  #session-total .sgft-texto-titulo-h3 { font-size: 15px; }
+
+  /* Pantalla fija: en Nueva Venta solo se desplaza la rejilla (y el ticket abierto); otras pantallas, como
+     Productos, se desplazan dentro de main */
+  .sgft-app { height: 100dvh; overflow: hidden; grid-template-rows: auto minmax(0, 1fr); }
+  .sgft-app__main { min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column;
+    padding: 0 max(16px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+  #sale-area { flex: 1 1 auto; min-height: 0; }
+  .sgft-grid-venta { height: 100%; grid-template-columns: minmax(0, 1fr) 300px; grid-template-rows: minmax(0, 1fr); gap: 12px; }
+
+  /* Título «Nueva venta #0039» y chips en una fila; «Alerta stock» se fue a la barra; la rejilla ocupa el resto */
+  .sgft-grid-venta > section { align-self: stretch; min-height: 0; overflow: hidden; display: grid;
+    grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); column-gap: 10px; row-gap: 8px; align-items: center; }
+  .sgft-grid-venta > section > header { display: contents; }
+  .sgft-grid-venta > section > header > div:first-child { grid-column: 1; grid-row: 1; }
+  #stock-notice { display: none; }
+  #sale-title { font-size: 18px; white-space: nowrap; }
+  .sgft-sale-title__no { display: inline; color: var(--sgft-color-texto-secundario); font-weight: 500; }
+  #sale-title + p { display: none; }
+  #category-chips { grid-column: 2; grid-row: 1; }
+  #category-chips .sgft-chip { height: 32px; }
+  #dish-list { grid-column: 1 / -1; grid-row: 2; align-self: stretch; min-height: 0; gap: 8px; }
+  #dish-list > .sgft-grid-platillos { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+    align-content: start; padding: 2px 4px 6px 2px; margin: -2px -4px 0 -2px; scrollbar-width: thin; }
+  #dish-list > .sgft-card { flex: 1 1 auto; }
+
+  /* 3 productos por fila */
+  .sgft-grid-platillos { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+
+  /* Ticket a la derecha: plegado muestra la venta; abierto se alarga con todas las líneas y se desplaza completo */
+  #order-summary { position: static; align-self: start; min-height: 0; max-height: 100%; overflow: hidden;
+    padding: 12px; gap: 8px; border-radius: var(--sgft-radio-campo); }
+  #order-summary[data-open="true"] { overflow-y: auto; overscroll-behavior: contain; }
+  #order-summary[data-open="true"] > * { flex-shrink: 0; }
+  #order-summary[data-open="true"] .sgft-ticket-body, #order-summary[data-open="true"] .sgft-ticket-lines { flex: none; overflow: visible; }
+  #order-summary .sgft-card-header__icon { width: 36px; height: 36px; border-radius: var(--sgft-radio-sm); }
+  #order-summary .sgft-card-header__icon svg { width: 20px; height: 20px; }
+  #order-summary .sgft-card-header { gap: 10px; }
+  #order-summary h2 { font-size: 16px; }
+  #order-summary .sgft-badge { height: 24px; padding: 0 8px; font-size: 11px; }
+  #order-summary .sgft-ticket-line { height: 46px; gap: 14px; }
+  #order-summary .sgft-thumb { width: 34px; height: 34px; border-radius: var(--sgft-radio-sm); font-size: 18px; }
+  #order-summary .sgft-texto-cuerpo-medio { font-size: 13px; }
+  #order-summary .sgft-texto-cuerpo-descripcion { font-size: 11px; }
+  #order-summary .sgft-texto-numero-precio { width: 58px; font-size: 13px; }
+  #order-summary .sgft-icon-btn--compacto { width: 30px; height: 30px; border-radius: var(--sgft-radio-xs); }
+  #order-summary .sgft-texto-display-indicador { font-size: 24px; }
+  #order-summary .sgft-texto-titulo-h2 { font-size: 16px; }
+  #order-summary .sgft-btn { height: 38px; font-size: 13px; padding: 0 8px; }
+  #order-summary .sgft-btn--grande { height: 44px; }
+  #order-summary .sgft-btn svg { width: 16px; height: 16px; }
+}

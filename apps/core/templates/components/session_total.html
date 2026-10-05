@@ -1,0 +1,11 @@
+{% comment %}
+components/session_total.html — «Total Sesión» de la barra superior (Figma «Barra superior», 7:412)
+Parámetros:
+  total  Decimal con el total de la sesión (lo calcula el servidor); None: el elemento queda oculto (existe para poder actualizarlo fuera de banda)
+  oob    True: se devuelve fuera de banda (hx-swap-oob) al confirmar una venta
+Incluir siempre con «only».
+{% endcomment %}
+<span id="session-total"{% if oob %} hx-swap-oob="true"{% endif %}{% if total is None %} hidden{% endif %} class="inline-flex h-[54px] items-center gap-xs rounded-campo bg-marca-durazno-100 px-[18px]">
+  <span class="hidden sgft-texto-cuerpo-pequeno text-texto-secundario sm:inline">Total Sesión:</span>
+  <span class="sgft-texto-titulo-h3 text-marca-primario-oscuro">${{ total|floatformat:"2g" }}</span>
+</span>

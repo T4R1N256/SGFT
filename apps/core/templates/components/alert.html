@@ -1,0 +1,11 @@
+{% comment %}
+components/alert.html — Aviso en #messages (errores 403, 409 y 422 que no tienen un campo donde mostrarse)
+Parámetros:
+  message  texto en español (obligatorio)
+  variant  peligro|alerta|exito (por omisión: peligro)
+Las vistas lo devuelven con HX-Retarget="#messages". Incluir siempre con «only».
+{% endcomment %}
+<div role="alert" class="mb-sm rounded-md border px-md py-sm sgft-texto-cuerpo-pequeno-medio
+  {% if variant == 'exito' %}border-estado-exito bg-estado-exito-fondo text-estado-exito
+  {% elif variant == 'alerta' %}border-estado-alerta bg-estado-alerta-fondo text-estado-alerta
+  {% else %}border-estado-peligro bg-estado-peligro-fondo text-estado-peligro{% endif %}">{{ message }}</div>

@@ -1,0 +1,12 @@
+{% comment %}
+components/badge.html — Insignia (Figma «Insignia», 5:50)
+Parámetros:
+  text     texto visible, ya en español, de 25 caracteres como máximo
+  variant  exito|alerta|peligro|marca|neutral, o los alias de nivel normal|bajo|critico (por omisión: neutral)
+  icon     nombre de una plantilla de components/icons/ (opcional; solo tendencias, check o alerta)
+  small    True: 26 de alto (dentro de la tarjeta de insumo)
+La insignia nunca es un botón. Incluir siempre con «only».
+{% endcomment %}
+<span class="sgft-badge sgft-badge--{{ variant|default:'neutral' }}{% if small %} sgft-badge--chica{% endif %}">
+  {% if icon %}{% include "components/icons/"|add:icon|add:".html" with size=16 only %}{% endif %}{{ text }}
+</span>
