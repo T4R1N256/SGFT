@@ -1,0 +1,13 @@
+{% comment %}
+catalog/partials/dish_grid.html — Rejilla del catálogo (id «dish-grid»)
+Vistas: catalog:dish_catalog (página, búsqueda) y catalog:dish_create (tras guardar, con close_dialog).
+Sin platillos: mensaje centrado «Agrega platillos para verlos» (acordado). «Agregar platillo» está en el encabezado.
+{% endcomment %}
+<div id="dish-grid" class="sgft-grid-catalogo">
+  {% for dish in dishes %}
+    {% include "catalog/partials/dish_card.html" with close_dialog=False %}
+  {% empty %}
+    <div class="sgft-card col-span-full">{% include "components/empty_state.html" with message="Agrega platillos para verlos" only %}</div>
+  {% endfor %}
+</div>
+{% if close_dialog %}<div id="dialog" hx-swap-oob="true"></div>{% endif %}

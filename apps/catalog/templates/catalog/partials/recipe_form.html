@@ -1,0 +1,25 @@
+{% extends "components/dialog.html" %}
+{% comment %}
+catalog/partials/recipe_form.html — Diálogo «Receta» (pantallas-y-fragmentos.md §10.2)
+Vista: catalog:recipe_edit (GET y 422). Una fila por insumo (catalog/partials/recipe_line.html); «Agregar insumo»
+pide una fila nueva al servidor (catalog:add_recipe_line). La unidad la decide el insumo.
+{% endcomment %}
+{% block icon %}{% include "components/icons/clipboard-list.html" with size=28 only %}{% endblock %}
+{% block title %}Receta{% endblock %}
+{% block subtitle %}<p class="truncate sgft-texto-cuerpo-pequeno text-texto-secundario">{{ dish.name }}</p>{% endblock %}
+{% block submit %}Guardar receta{% endblock %}
+{% block fields %}
+  <div class="flex flex-col gap-xs">
+    <div class="flex gap-sm pr-[52px] sgft-texto-cuerpo-pequeno-medio text-texto-primario" aria-hidden="true">
+      <span class="flex-1">Insumo</span><span class="w-[132px]">Cantidad</span>
+    </div>
+    <div id="recipe-lines" class="flex flex-col gap-sm">
+      {% for line in lines %}
+        {% include "catalog/partials/recipe_line.html" with oob=False %}
+      {% empty %}
+        <div id="recipe-empty">{% include "components/empty_state.html" with icon="clipboard-list" message="Agrega insumos a la receta" only %}</div>
+      {% endfor %}
+    </div>
+  </div>
+  {% include "catalog/partials/recipe_add_button.html" %}
+{% endblock %}

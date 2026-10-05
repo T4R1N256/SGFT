@@ -1,0 +1,15 @@
+{% extends "components/dialog.html" %}
+{% comment %}
+catalog/partials/dish_form.html — Diálogo «Editar platillo» / «Agregar platillo» (pantallas-y-fragmentos.md §10.1)
+Vistas: catalog:dish_edit y catalog:dish_create (GET y 422). El emoji sale de la categoría (DEC-30).
+{% endcomment %}
+{% block icon %}{% include "components/icons/package.html" with size=28 only %}{% endblock %}
+{% block title %}{% if dish %}Editar platillo{% else %}Agregar platillo{% endif %}{% endblock %}
+{% block subtitle %}{% if dish %}<p class="truncate sgft-texto-cuerpo-pequeno text-texto-secundario">{{ dish.name }}</p>{% endif %}{% endblock %}
+{% block fields %}
+  {% include "components/field.html" with label="Nombre" name="name" value=values.name required=True maxlength=60 error=errors.name only %}
+  {% include "components/field.html" with label="Categoría" name="category" kind="select" options=categories selected=values.category placeholder="Elige una categoría" required=True error=errors.category help="El emoji de la tarjeta sale de la categoría." only %}
+  {% include "components/field.html" with label="Precio" name="price" kind="money" value=values.price required=True error=errors.price only %}
+  {% include "components/field.html" with label="Descripción" name="description" kind="textarea" value=values.description maxlength=120 error=errors.description help="Se muestran 2 líneas en la tarjeta." only %}
+  {% include "components/field.html" with label="Activo en el menú" name="active" kind="checkbox" value=values.active help="Si lo desmarcas, no aparece en Nueva venta." only %}
+{% endblock %}
