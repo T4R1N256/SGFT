@@ -1,0 +1,10 @@
+{% comment %}
+pos/partials/category_chips.html — Chips de categoría (id «category-chips»)
+Vistas: pos:order_builder; pos:dish_list lo devuelve fuera de banda (oob_chips) para marcar el chip activo,
+que decide el servidor.
+{% endcomment %}
+<div id="category-chips"{% if oob_chips %} hx-swap-oob="true"{% endif %} class="flex flex-wrap gap-[10px]" role="group" aria-label="Categorías">
+  {% for category in categories %}
+    {% include "components/category_chip.html" with text=category.name active=category.active hx_get=category.url hx_target="#dish-list" hx_swap="outerHTML" only %}
+  {% endfor %}
+</div>

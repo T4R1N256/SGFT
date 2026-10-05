@@ -1,0 +1,40 @@
+{% comment %}
+pos/partials/sale_area.html — Área de venta de Nueva Venta (id «sale-area»)
+Vistas: pos:order_builder (página o HTMX) y pos:open_session (POST válido).
+En el teléfono en horizontal el título lleva el número de ticket en gris y el subtítulo se oculta.
+Sin turno abierto (regla 12) el contenido queda deshabilitado (opacidad 35 %, inert) y encima va el Aviso de
+caja cerrada, como en Figma 01. Qué se pinta lo decide cash_session_open, que manda el servidor.
+oob_cash_status: tras abrir la caja, actualiza el Estado de caja y el total de la barra, y cierra el diálogo.
+{% endcomment %}
+<div id="sale-area" class="relative">
+  {% if oob_cash_status %}
+    {% include "components/cash_status.html" with open=cash_session_open oob=True only %}
+    {% include "components/session_total.html" with total=session_total oob=True only %}
+    <div id="dialog" hx-swap-oob="true"></div>
+  {% endif %}
+
+  <div class="sgft-grid-venta{% if not cash_session_open %} pointer-events-none select-none opacity-35{% endif %}"{% if not cash_session_open %} inert aria-hidden="true"{% endif %}>
+    <section class="flex min-w-0 flex-col gap-md" aria-labelledby="sale-title">
+      <header class="flex flex-wrap items-start justify-between gap-md">
+        <div class="flex flex-col gap-[4px]">
+          <h1 id="sale-title" class="sgft-texto-titulo-h1 text-texto-primario">Nueva venta{% if cash_session_open and order.number %}<span class="sgft-sale-title__no"> #{{ order.number }}</span>{% endif %}</h1>
+          <p class="sgft-texto-cuerpo-pequeno text-texto-secundario">{{ ticket_label }}</p>
+        </div>
+        <div id="stock-notice">
+          {% if stock_notice %}{% include "components/stock_notice.html" with detail=stock_notice.detail url=stock_notice.url only %}{% endif %}
+        </div>
+      </header>
+      {% include "pos/partials/category_chips.html" %}
+      {% include "pos/partials/dish_list.html" %}
+    </section>
+    {% include "pos/partials/order_summary.html" %}
+  </div>
+
+  {% if not cash_session_open %}
+    <div class="absolute inset-0 z-10 flex justify-center p-md">
+      <div class="sticky top-[160px] h-fit w-full max-w-[520px] xl:mt-[184px]">
+        {% include "components/cash_closed_notice.html" with open_url=open_session_url hx_target="#dialog" only %}
+      </div>
+    </div>
+  {% endif %}
+</div>
