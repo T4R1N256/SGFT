@@ -1,0 +1,21 @@
+{% comment %}
+components/kpi.html — Monto destacado con insignia de tendencia y nota (patrón de «Ganancias totales», «Mermas totales»
+y «Ventas» en Figma). Va dentro de una tarjeta, bajo card_header.
+Parámetros:
+  amount        Decimal (lo calcula el servidor; se muestra $2,910.00) — obligatorio
+  tone          neutral | peligro | marca  (color del monto; por omisión neutral = texto/primario)
+  badge_text, badge_variant, badge_icon   insignia (opcional)
+  badge_below   True: la insignia va en su propia línea, debajo del monto (Reportes · Ventas)
+  note          texto de apoyo bajo el monto (opcional)
+Incluir siempre con «only».
+{% endcomment %}
+{% if badge_below %}
+  <span class="sgft-texto-display-kpi {% if tone == 'peligro' %}text-estado-peligro{% elif tone == 'marca' %}text-marca-primario-oscuro{% else %}text-texto-primario{% endif %}">${{ amount|floatformat:"2g" }}</span>
+  {% if badge_text %}<span class="self-start">{% include "components/badge.html" with text=badge_text variant=badge_variant icon=badge_icon only %}</span>{% endif %}
+{% else %}
+  <div class="flex flex-wrap items-center justify-between gap-sm">
+    <span class="sgft-texto-display-kpi {% if tone == 'peligro' %}text-estado-peligro{% elif tone == 'marca' %}text-marca-primario-oscuro{% else %}text-texto-primario{% endif %}">${{ amount|floatformat:"2g" }}</span>
+    {% if badge_text %}{% include "components/badge.html" with text=badge_text variant=badge_variant icon=badge_icon only %}{% endif %}
+  </div>
+{% endif %}
+{% if note %}<p class="sgft-texto-cuerpo-descripcion text-texto-secundario">{{ note }}</p>{% endif %}

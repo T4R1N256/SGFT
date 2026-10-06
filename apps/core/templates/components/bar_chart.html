@@ -1,0 +1,40 @@
+{% comment %}
+components/bar_chart.html — Gráfica de barras de ventas (Caja · «Gráfica de ventas» y Reportes · «Ventas»)
+Solo dibuja: alturas, barra destacada y montos los calcula el servidor.
+Parámetros:
+  chart   {bars: [{label, amount: Decimal, pct: 0–100, active}], axis: [Decimal]} — obligatorio
+  label   descripción para lectores de pantalla, por ejemplo «Ventas por hora» (obligatorio)
+  size    grande (150 de alto, eje de montos y barras de hasta 48; Caja) | compacto (120, sin eje, barras de hasta
+          28; tarjeta de Reportes). Por omisión: grande
+La barra activa lleva el gradiente «acción» y su monto encima (Figma). Incluir siempre con «only».
+{% endcomment %}
+{% if size == "compacto" %}
+  <ol class="flex h-[120px] items-end gap-xs border-b border-borde-sutil" role="img" aria-label="{{ label }}">
+    {% for bar in chart.bars %}
+      <li class="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-[4px]">
+        {% if bar.active %}<span class="rounded-xs bg-superficie-oscura px-[6px] py-[2px] sgft-texto-etiqueta-mini text-texto-inverso">${{ bar.amount|floatformat:"0g" }}</span>{% endif %}
+        <span class="w-full max-w-[28px] rounded-t-xs {% if bar.active %}bg-gradiente-accion{% else %}bg-marca-durazno-200{% endif %}" style="height: {{ bar.pct }}%"></span>
+        <span class="sr-only">{{ bar.label }}: ${{ bar.amount|floatformat:"2g" }}</span>
+      </li>
+    {% endfor %}
+  </ol>
+  <ol class="-mt-sm flex gap-xs" aria-hidden="true">{% for bar in chart.bars %}<li class="flex-1 text-center sgft-texto-cuerpo-nota text-texto-secundario">{{ bar.label }}</li>{% endfor %}</ol>
+{% else %}
+  <div class="flex gap-sm" role="img" aria-label="{{ label }}">
+    <div class="flex h-[150px] flex-col justify-between text-right sgft-texto-cuerpo-nota text-texto-secundario" aria-hidden="true">
+      {% for tick in chart.axis %}<span>${{ tick|floatformat:"0g" }}</span>{% endfor %}
+    </div>
+    <ol class="flex flex-1 items-end gap-xs border-b border-borde-sutil">
+      {% for bar in chart.bars %}
+        <li class="flex h-[150px] min-w-0 flex-1 flex-col items-center justify-end gap-[6px]">
+          {% if bar.active %}<span class="rounded-xs bg-superficie-oscura px-xs py-[2px] sgft-texto-etiqueta-mini text-texto-inverso">${{ bar.amount|floatformat:"0g" }}</span>{% endif %}
+          <span class="w-full max-w-[48px] rounded-t-xs {% if bar.active %}bg-gradiente-accion{% else %}bg-marca-durazno-200{% endif %}" style="height: {{ bar.pct }}%"></span>
+          <span class="sr-only">{{ bar.label }}: ${{ bar.amount|floatformat:"2g" }}</span>
+        </li>
+      {% endfor %}
+    </ol>
+  </div>
+  <ol class="ml-[52px] flex gap-xs" aria-hidden="true">
+    {% for bar in chart.bars %}<li class="min-w-0 flex-1 truncate text-center sgft-texto-cuerpo-nota {% if bar.active %}font-semibold text-texto-primario{% else %}text-texto-secundario{% endif %}">{{ bar.label }}</li>{% endfor %}
+  </ol>
+{% endif %}

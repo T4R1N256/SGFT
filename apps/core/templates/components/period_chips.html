@@ -1,0 +1,10 @@
+{% comment %}
+components/period_chips.html — Grupo de chips Hoy / Semana / Mes (Caja y Reportes)
+Parámetros:
+  chips    lista de {text, active, hx_get, hx_target} (la arma el servidor; exactamente uno activo)
+  hx_swap  modo de intercambio de la región que actualizan (por ejemplo «outerHTML»)
+Incluir siempre con «only».
+{% endcomment %}
+<div class="flex gap-xs" role="group" aria-label="Periodo">
+  {% for chip in chips %}{% include "components/category_chip.html" with text=chip.text active=chip.active hx_get=chip.hx_get hx_target=chip.hx_target hx_swap=hx_swap only %}{% endfor %}
+</div>

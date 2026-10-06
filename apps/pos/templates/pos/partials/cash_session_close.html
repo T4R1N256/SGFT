@@ -1,0 +1,16 @@
+{% extends "components/dialog.html" %}
+{% comment %}
+pos/partials/cash_session_close.html — Diálogo «Cerrar caja» (pantallas-y-fragmentos.md §10.6)
+Vista: pos:close_session (GET, 409 y 422).
+{% endcomment %}
+{% block icon %}{% include "components/icons/wallet.html" with size=28 only %}{% endblock %}
+{% block title %}Cerrar caja{% endblock %}
+{% block subtitle %}<p class="sgft-texto-cuerpo-pequeno text-texto-secundario">{{ shift_label }}</p>{% endblock %}
+{% block submit %}Cerrar caja{% endblock %}
+{% block fields %}
+  <dl class="rounded-campo bg-superficie-campo px-md py-sm">
+    {% with expected=expected_amount|floatformat:"2g" %}{% include "components/key_value.html" with label="Efectivo esperado en caja" value="$"|add:expected strong=True only %}{% endwith %}
+  </dl>
+  {% include "components/field.html" with label="Efectivo contado" name="closing_amount" kind="money" value=closing_amount required=True error=errors.closing_amount help="Si no coincide, la diferencia se registra y no impide cerrar." only %}
+  {% include "components/sync_status.html" with pending=pending_sync only %}
+{% endblock %}

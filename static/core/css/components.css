@@ -169,6 +169,12 @@
    (flex-wrap, tamaños fijos) solo en el teléfono, sin usar !important. En escritorio no aplica nada de esto.
    ============================================================================================================= */
 
+/* Botón de menú con el naranja del logotipo en todo momento (escritorio y teléfono); fuera de @layer para ganarle a
+   la variante neutra del botón de ícono */
+.sgft-app__menu-btn { border: 0; background: var(--sgft-gradiente-logotipo); color: var(--sgft-color-texto-inverso);
+  box-shadow: var(--sgft-sombra-boton-primario); }
+.sgft-app__menu-btn:hover { filter: brightness(1.05); }
+
 /* Las dos orientaciones del teléfono */
 @media (orientation: portrait) and (max-width: 767px), (orientation: landscape) and (max-height: 500px) {
   /* Chips en una fila con desplazamiento horizontal */
@@ -223,8 +229,7 @@
   .sgft-app__top { padding: max(8px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 6px max(16px, env(safe-area-inset-left)); }
   .sgft-app__top > div { flex-wrap: nowrap; gap: 10px; }
   .sgft-app__brand { display: none; }
-  .sgft-app__menu-btn { width: 40px; height: 40px; border: 0; border-radius: var(--sgft-radio-sm);
-    background: var(--sgft-gradiente-logotipo); color: var(--sgft-color-texto-inverso); box-shadow: var(--sgft-sombra-boton-primario); }
+  .sgft-app__menu-btn { width: 40px; height: 40px; border-radius: var(--sgft-radio-sm); }
   .sgft-app__menu-btn svg { width: 22px; height: 22px; }
   .sgft-app__search { order: 0; width: auto; flex: 1 1 auto; min-width: 0; height: 40px; border-radius: var(--sgft-radio-md); }
   .sgft-app__search input { font-size: 13px; }
@@ -241,8 +246,9 @@
   #session-total .sgft-texto-titulo-h3 { font-size: 15px; }
 
   /* Pantalla fija: en Nueva Venta solo se desplaza la rejilla (y el ticket abierto); otras pantallas, como
-     Productos, se desplazan dentro de main */
-  .sgft-app { height: 100dvh; overflow: hidden; grid-template-rows: auto minmax(0, 1fr); }
+     Productos, se desplazan dentro de main. La app va fija a la pantalla: al girar desde vertical con la página
+     desplazada (barra del navegador oculta), el desplazamiento de la ventana dejaba la barra superior cortada. */
+  .sgft-app { position: fixed; inset: 0; overflow: hidden; grid-template-rows: auto minmax(0, 1fr); }
   .sgft-app__main { min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column;
     padding: 0 max(16px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
   #sale-area { flex: 1 1 auto; min-height: 0; }

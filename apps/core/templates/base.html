@@ -28,7 +28,7 @@
   tocando el velo, con Escape o al navegar. Alpine solo guarda si está abierto (`menu`).
   Contexto que usan el menú y la barra (lo arma el servidor; pendiente un procesador de contexto en core):
     nav_modules [{key, label, icon, url, requires_pin}] · active_module · sync_pending · sync_url · admin_mode_url
-    user_initials · logout_url · search_placeholder · search_url · search_target · cash_session_open
+    user_initials · logout_url · search_placeholder · search_url · search_target · hide_search · cash_session_open
     session_total (Decimal o None) · has_notifications · stock_notice (Nueva Venta)
 {% endcomment %}
 <body class="sgft-app bg-superficie-fondo font-sans text-texto-primario" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
@@ -48,7 +48,7 @@
 
   <header class="sgft-app__top">
     {% block top_bar %}
-      {% include "components/top_bar.html" with search_placeholder=search_placeholder search_url=search_url search_target=search_target cash_open=cash_session_open session_total=session_total has_notifications=has_notifications stock_notice=stock_notice only %}
+      {% include "components/top_bar.html" with search_placeholder=search_placeholder search_url=search_url search_target=search_target hide_search=hide_search cash_open=cash_session_open session_total=session_total has_notifications=has_notifications stock_notice=stock_notice only %}
     {% endblock %}
   </header>
 

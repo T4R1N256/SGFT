@@ -1,0 +1,16 @@
+{% comment %}
+reports/partials/sales_chart.html — Gráfica de ventas con los chips Hoy / Semana / Mes (id «sales-chart»)
+Vista: reports:cash (?periodo=…). Las alturas (pct) y la barra destacada las calcula el servidor. Sin ventas:
+«Sin ventas para este periodo» centrado (acordado).
+{% endcomment %}
+<article id="sales-chart" class="sgft-card flex flex-col gap-md p-lg" aria-label="Gráfica de ventas">
+  <div class="flex flex-wrap items-center justify-between gap-sm">
+    {% include "components/card_header.html" with title="Gráfica de ventas" icon="chart-column" compact=True only %}
+    {% include "components/period_chips.html" with chips=chips hx_swap="outerHTML" only %}
+  </div>
+  {% if chart.bars %}
+    {% include "components/bar_chart.html" with chart=chart label="Ventas por periodo" only %}
+  {% else %}
+    {% include "components/empty_state.html" with message="Sin ventas para este periodo" icon="chart-column" only %}
+  {% endif %}
+</article>

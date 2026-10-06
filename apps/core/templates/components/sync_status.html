@@ -1,0 +1,10 @@
+{% comment %}
+components/sync_status.html — «N operaciones pendientes de sincronizar» con punto de estado (regla 5)
+Parámetros:
+  pending   número de operaciones sin sincronizar (lo da el servidor; sin red, la cola del dispositivo)
+Verde con 0; ámbar (estado/alerta) si hay pendientes. Incluir siempre con «only».
+{% endcomment %}
+<p class="flex items-center gap-xs sgft-texto-cuerpo-nota {% if pending %}text-estado-alerta{% else %}text-estado-exito{% endif %}">
+  <span class="size-[8px] rounded-full {% if pending %}bg-estado-alerta{% else %}bg-estado-exito{% endif %}" aria-hidden="true"></span>
+  {{ pending|default:0 }} operacion{{ pending|pluralize:"es" }} pendiente{{ pending|pluralize }} de sincronizar
+</p>
