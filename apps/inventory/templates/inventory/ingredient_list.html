@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% comment %}
+inventory/ingredient_list.html — Inventario (Figma 05 · Inventario, 2047:1101, rev. 1.1)
+Vista: inventory:ingredient_list. Solo Administrador, con PIN. Sin «Ordenar» ni «Filtros» (acordado). «Agregar insumo»
+en la línea del título, como en Productos (acordado), en Contorno: la acción Primaria de la vista es «Registrar compra».
+Teléfono: una columna, con «Insumos bajos» antes de la rejilla; en horizontal, dos columnas de insumos.
+{% endcomment %}
+{% block title %}Inventario{% endblock %}
+{% block content %}
+  <section class="flex flex-col gap-[26px]" aria-labelledby="inventory-title">
+    {% include "components/page_header.html" with title="Inventario" title_id="inventory-title" subtitle=subtitle action_text="Agregar insumo" action_icon="plus" action_variant="contorno" action_hx_get=create_url only %}
+    <div class="grid items-start gap-lg xl:grid-cols-[minmax(0,1080fr)_minmax(360px,440fr)]">
+      {% include "inventory/partials/ingredient_grid.html" %}
+      {% include "inventory/partials/low_stock.html" %}
+    </div>
+  </section>
+{% endblock %}

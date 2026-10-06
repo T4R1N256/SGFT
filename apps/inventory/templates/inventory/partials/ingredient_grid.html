@@ -1,0 +1,13 @@
+{% comment %}
+inventory/partials/ingredient_grid.html — Rejilla de insumos (id «ingredient-grid»)
+Vistas: inventory:ingredient_list (búsqueda) y, fuera de banda, register_purchase y register_waste (oob_grid).
+Se refresca sola cuando catalog:ingredient_create dispara «ingredient-created». Sin insumos: mensaje centrado.
+{% endcomment %}
+<div id="ingredient-grid"{% if oob_grid %} hx-swap-oob="true"{% endif %} hx-get="{{ list_url }}" hx-trigger="ingredient-created from:body" hx-swap="outerHTML"
+     class="grid content-start gap-x-lg gap-y-[18px] md:grid-cols-2">
+  {% for ingredient in ingredients %}
+    {% include "components/ingredient_card.html" with ingredient=ingredient only %}
+  {% empty %}
+    <div class="sgft-card md:col-span-2">{% if query %}{% include "components/empty_state.html" with message="Sin insumos que coincidan" detail="Prueba con otro nombre o unidad." icon="search" only %}{% else %}{% include "components/empty_state.html" with message="Agrega insumos para verlos" icon="clipboard-list" only %}{% endif %}</div>
+  {% endfor %}
+</div>

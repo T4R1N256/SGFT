@@ -1,0 +1,14 @@
+{% extends "components/dialog.html" %}
+{% comment %}
+inventory/partials/purchase_form.html — Diálogo «Registrar compra» (pantallas-y-fragmentos.md §10.3)
+Vista: inventory:register_purchase (GET y 422). La unidad de la cantidad es la del insumo elegido.
+{% endcomment %}
+{% block icon %}{% include "components/icons/package.html" with size=28 only %}{% endblock %}
+{% block title %}Registrar compra{% endblock %}
+{% block submit %}Registrar compra{% endblock %}
+{% block fields %}
+  {% include "components/field.html" with label="Insumo" name="ingredient" kind="select" options=ingredients selected=values.ingredient placeholder="Elige un insumo" required=True error=errors.ingredient only %}
+  {% include "components/field.html" with label="Cantidad" name="quantity" kind="quantity" value=values.quantity required=True error=errors.quantity help="En la unidad del insumo." only %}
+  {% include "components/field.html" with label="Costo total" name="total_cost" kind="money" value=values.total_cost required=True error=errors.total_cost help="Con él se actualiza el costo unitario del insumo." only %}
+  {% include "components/field.html" with label="Nota" name="note" kind="textarea" value=values.note maxlength=120 placeholder="Proveedor o factura" only %}
+{% endblock %}

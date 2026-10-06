@@ -1,0 +1,8 @@
+{% comment %}
+inventory/partials/stock_saved.html — Respuesta al registrar una compra o una merma
+Aviso en #messages; fuera de banda: cierra el diálogo y refresca «ingredient-grid» y «low-stock».
+{% endcomment %}
+{% include "components/alert.html" with message=message variant="exito" only %}
+<div id="dialog" hx-swap-oob="true"></div>
+{% include "inventory/partials/ingredient_grid.html" with oob_grid=True %}
+{% include "inventory/partials/low_stock.html" with oob_low_stock=True %}
