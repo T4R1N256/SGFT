@@ -1,0 +1,16 @@
+{% comment %}
+components/rank_row.html — Fila de ranking con barra de proporción (Reportes · «Productos vendidos»)
+Va dentro de un <ol>. Parámetros:
+  rank    posición (1, 2, 3 llevan el círculo con gradiente «acción»; las demás, contorno) — obligatorio
+  name    nombre del platillo; value  texto a la derecha, por ejemplo «214 uds.»
+  pct     0–100, proporción respecto del primero (la calcula el servidor)
+Incluir siempre con «only».
+{% endcomment %}
+<li class="flex flex-col gap-[6px]">
+  <span class="flex items-center gap-sm">
+    <span class="grid size-[24px] place-items-center rounded-full sgft-texto-etiqueta-mini {% if rank <= 3 %}bg-gradiente-accion text-texto-inverso{% else %}border border-borde-sutil text-texto-secundario{% endif %}">{{ rank }}</span>
+    <span class="min-w-0 flex-1 truncate sgft-texto-cuerpo-pequeno-medio text-texto-primario">{{ name }}</span>
+    <span class="sgft-texto-cuerpo-nota text-texto-secundario">{{ value }}</span>
+  </span>
+  <span class="sgft-nivel" role="img" aria-label="{{ pct }} % del primero" style="--p: {{ pct }}; --c: var(--sgft-color-marca-primario)"></span>
+</li>

@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% comment %}
+reports/reports.html — Reportes (Figma 06 · Reportes, 2047:1358, rev. 1.1)
+Vista: reports:reports. Solo Administrador, con PIN. Sin buscador (plan de interfaz §2). «Exportar PDF» (Contorno) va en la
+misma línea que el título y abre el diálogo en #dialog. Teléfono: una columna; en horizontal, dos; en escritorio, cuatro.
+{% endcomment %}
+{% block title %}Reportes{% endblock %}
+{% block content %}
+  <section class="flex flex-col gap-lg" aria-labelledby="reports-title">
+    {% include "components/page_header.html" with title="Reportes" title_id="reports-title" subtitle=subtitle subtitle_id="report-period" action_text="Exportar PDF" action_icon="download" action_variant="contorno" action_hx_get=export_url only %}
+    {% include "reports/partials/report_columns.html" %}
+  </section>
+{% endblock %}

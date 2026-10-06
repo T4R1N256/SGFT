@@ -1,0 +1,64 @@
+{% comment %}
+reports/partials/report_columns.html — Selector de periodo y las cuatro columnas (id «report-columns»)
+Vista: reports:reports (?periodo=hoy|semana|mes&fecha=…), con hx-push-url; con HTMX también reemplaza fuera de banda el
+subtítulo del encabezado («report-period»). Totales, porcentajes y alturas los calcula el servidor.
+Orden acordado: Ventas, Mermas, Productos vendidos, Insumos usados. El selector va antes de las tarjetas (decide lo que
+se ve debajo; en Figma estaba al final) y sin «Calendario»: el campo de fecha ya abre el selector del navegador.
+Sin ventas: «Sin ventas para este periodo» centrado (acordado).
+{% endcomment %}
+<div id="report-columns" class="flex flex-col gap-lg">
+  <form class="flex flex-wrap items-center gap-sm" hx-get="{{ list_url }}" hx-target="#report-columns" hx-swap="outerHTML" hx-push-url="true" hx-trigger="change" aria-label="Periodo del reporte">
+    <input type="hidden" name="periodo" value="{{ period }}">
+    {% include "components/field.html" with label="Fecha" name="fecha" kind="date" value=date_value inline=True describedby="report-range" only %}
+    <span id="report-range" class="sr-only">{{ range_label }}</span>
+    {% include "components/period_chips.html" with chips=chips hx_swap="outerHTML" only %}
+  </form>
+  {% if report.empty %}
+    <div class="sgft-card min-h-[320px]">{% include "components/empty_state.html" with message="Sin ventas para este periodo" icon="chart-column" detail="Elige otro periodo o sincroniza las ventas pendientes." only %}</div>
+  {% else %}
+  <div class="grid gap-lg md:grid-cols-2 xl:grid-cols-4">
+    <article class="sgft-card flex flex-col gap-md p-lg" aria-label="Ventas">
+      {% include "components/card_header.html" with title="Ventas" icon="trending-up" compact=True only %}
+      {% include "components/kpi.html" with amount=report.sales.total tone="marca" badge_text=report.sales.trend badge_variant="exito" badge_icon="trending-up" badge_below=True only %}
+      {% include "components/bar_chart.html" with chart=report.chart label="Ventas por día" size="compacto" only %}
+      <dl class="mt-auto flex flex-col gap-xs border-t border-borde-sutil pt-sm">
+        {% include "components/key_value.html" with label="Efectivo" value=report.sales.cash_label icon="banknote" only %}
+        {% include "components/key_value.html" with label="Transferencia" value=report.sales.transfer_label icon="arrow-left-right" only %}
+        {% include "components/key_value.html" with label=report.sales.tickets_label value=report.sales.average_label icon="receipt" only %}
+      </dl>
+    </article>
+
+    <article class="sgft-card flex flex-col gap-md p-lg" aria-label="Mermas">
+      {% include "components/card_header.html" with title="Mermas" icon="trash-2" compact=True only %}
+      {% include "components/kpi.html" with amount=report.waste.total tone="peligro" badge_text=report.waste.share badge_variant="peligro" only %}
+      <ul class="flex flex-col gap-sm">
+        {% for item in report.waste.items %}{% include "components/list_row.html" with title=item.name note=item.reason value=item.cost_label only %}{% endfor %}
+      </ul>
+      <p class="mt-auto border-t border-borde-sutil pt-sm sgft-texto-cuerpo-nota text-texto-secundario">Cada merma se registra con motivo y se descuenta del inventario.</p>
+    </article>
+
+    <article class="sgft-card flex flex-col gap-md p-lg" aria-label="Productos vendidos">
+      {% include "components/card_header.html" with title="Productos vendidos" icon="crown" compact=True only %}
+      <p class="sgft-texto-cuerpo-nota text-texto-secundario">Top {{ report.top_dishes|length }} del periodo, en unidades</p>
+      <ol class="flex flex-col gap-[14px]">
+        {% for dish in report.top_dishes %}{% include "components/rank_row.html" with rank=dish.rank name=dish.name value=dish.units_label pct=dish.pct only %}{% endfor %}
+      </ol>
+      <dl class="mt-auto border-t border-borde-sutil pt-sm">
+        {% include "components/key_value.html" with label=report.top_label value=report.top_units_label muted=True only %}
+      </dl>
+    </article>
+
+    <article class="sgft-card flex flex-col gap-md p-lg" aria-label="Insumos usados">
+      {% include "components/card_header.html" with title="Insumos usados" icon="package" compact=True only %}
+      <p class="sgft-texto-cuerpo-nota text-texto-secundario">Consumo calculado por receta (insumo × cantidad)</p>
+      <ul class="flex flex-col gap-sm">
+        {% for item in report.ingredients_used %}{% include "components/list_row.html" with emoji=item.emoji title=item.name note=item.cost_label value=item.quantity only %}{% endfor %}
+      </ul>
+      <dl class="mt-auto border-t border-borde-sutil pt-sm">
+        {% include "components/key_value.html" with label=report.ingredients_label value=report.ingredients_cost_label muted=True only %}
+      </dl>
+    </article>
+  </div>
+  {% endif %}
+</div>
+{% if oob_subtitle %}<p id="report-period" hx-swap-oob="true" class="sgft-texto-cuerpo-pequeno text-texto-secundario">{{ subtitle }}</p>{% endif %}

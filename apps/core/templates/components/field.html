@@ -10,6 +10,8 @@ Parámetros:
   icon       ícono a la izquierda (opcional; money usa banknote, date usa calendar si no se indica)
   placeholder, help (texto de apoyo), error (mensaje en español), required, maxlength
   conditional  True: el campo es obligatorio según otro (lo explica help); no muestra «(opcional)»
+  inline       True: etiqueta a la izquierda y campo de 300 (filtros, como «Fecha» en Reportes); sin ayuda ni error
+  describedby  id de un texto que describe el campo (aria-describedby), opcional
 No valida ni calcula nada: los errores llegan del servidor. Incluir siempre con «only».
 {% endcomment %}
 {% with k=kind|default:"text" %}
@@ -19,6 +21,14 @@ No valida ni calcula nada: los errores llegan del servidor. Incluir siempre con 
     {{ label }}
   </label>
   {% if help %}<p class="-mt-[14px] pl-[34px] sgft-texto-cuerpo-nota text-texto-secundario">{{ help }}</p>{% endif %}
+{% elif inline %}
+  <label class="flex items-center gap-sm">
+    <span class="sgft-texto-cuerpo-pequeno text-texto-secundario">{{ label }}</span>
+    <span class="sgft-field h-[52px] w-[300px] max-w-full">
+      {% if k == "date" %}<span class="text-texto-secundario">{% include "components/icons/calendar.html" with size=20 only %}</span>{% endif %}
+      <input name="{{ name }}" class="sgft-texto-cuerpo-pequeno-medio" {% if k == "date" %}type="date"{% if value %} value="{{ value|date:'Y-m-d' }}"{% endif %}{% else %}type="text" value="{{ value|default:'' }}"{% endif %}{% if describedby %} aria-describedby="{{ describedby }}"{% endif %}>
+    </span>
+  </label>
 {% else %}
 <label class="flex flex-col gap-xs">
   <span class="sgft-texto-cuerpo-pequeno-medio text-texto-primario">{{ label }}{% if not required and not conditional %} <span class="font-normal text-texto-secundario">(opcional)</span>{% endif %}</span>
