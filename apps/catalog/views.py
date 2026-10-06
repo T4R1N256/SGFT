@@ -95,9 +95,9 @@ def _shell_context(search_url):
     """Menu and top bar context. Temporary: will come from a context processor in apps/core (Jesús)."""
     modules = [("pos", "Nueva Venta", "shopping-cart", False, _url("pos:order_builder")),
                ("products", "Productos", "package", True, _url("catalog:dish_catalog")),
-               ("inventory", "Inventario", "clipboard-list", True, "#"),
-               ("cash", "Caja", "wallet", True, "#"),
-               ("reports", "Reportes", "chart-column", True, "#")]
+               ("inventory", "Inventario", "clipboard-list", True, _url("inventory:ingredient_list")),
+               ("cash", "Caja", "wallet", True, _url("reports:cash")),
+               ("reports", "Reportes", "chart-column", True, _url("reports:reports"))]
     return {
         "nav_modules": [{"key": k, "label": l, "icon": i, "requires_pin": p, "url": u} for k, l, i, p, u in modules],
         "active_module": "products",

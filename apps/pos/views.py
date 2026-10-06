@@ -60,7 +60,8 @@ _MODULES = [
 
 # URL names of the modules built so far; the others render «#» until they exist. reverse() by name is not an import,
 # so pos does not depend on catalog (CLAUDE.md §7).
-_MODULE_URLS = {"pos": "pos:order_builder", "products": "catalog:dish_catalog"}
+_MODULE_URLS = {"pos": "pos:order_builder", "products": "catalog:dish_catalog",
+                "inventory": "inventory:ingredient_list", "cash": "reports:cash", "reports": "reports:reports"}
 
 
 def _url(name, *args):
