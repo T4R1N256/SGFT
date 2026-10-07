@@ -16,6 +16,8 @@ from django.shortcuts import render
 from django.urls import NoReverseMatch, reverse
 from django.views.decorators.http import require_GET, require_http_methods
 
+from apps.core import preview
+
 
 def _url(name, *args):
     try:
@@ -76,6 +78,11 @@ def _low_stock():
             "purchase_url": _url("inventory:register_purchase"), "waste_url": _url("inventory:register_waste")}
 
 
+# Integration branch only: the whole screen asks for the admin PIN (apps/core/preview.py).
+_require_pin = preview.require_admin_pin("Inventario", lambda request: preview.apply_to_shell(request, _shell("inventory")))
+
+
+@_require_pin
 @require_GET
 def ingredient_list(request):
     """
@@ -103,8 +110,8 @@ def ingredient_list(request):
                "list_url": _url("inventory:ingredient_list")}
     if request.htmx and not request.htmx.boosted:
         return render(request, "inventory/partials/ingredient_grid.html", context)
-    context.update(_shell("inventory", "Buscar insumo por nombre o unidad (F2)...", _url("inventory:ingredient_list"),
-                          "#ingredient-grid"))
+    context.update(preview.apply_to_shell(request, _shell("inventory", "Buscar insumo por nombre o unidad (F2)...", _url("inventory:ingredient_list"),
+                          "#ingredient-grid")))
     context.update(_low_stock())
     context["subtitle"] = f"Existencias de insumos · Última sincronización: hoy, 10:45 AM · {len(_INGREDIENTS)} insumos"
     return render(request, "inventory/ingredient_list.html", context)
@@ -165,6 +172,7 @@ def _stock_form(request, kind):
     return response
 
 
+@_require_pin
 @require_http_methods(["GET", "POST"])
 def register_purchase(request):
     """
@@ -178,6 +186,7 @@ def register_purchase(request):
     return _stock_form(request, "purchase")
 
 
+@_require_pin
 @require_http_methods(["GET", "POST"])
 def register_waste(request):
     """

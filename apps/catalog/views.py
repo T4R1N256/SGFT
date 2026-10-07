@@ -15,6 +15,8 @@ from django.shortcuts import render
 from django.urls import NoReverseMatch, reverse
 from django.views.decorators.http import require_GET, require_http_methods
 
+from apps.core import preview
+
 # --- Sample data (contract draft) -------------------------------------------------------------
 # Coherent with Figma 03 · Productos (rev. 1.1). The emoji comes from the category (DEC-30).
 
@@ -163,6 +165,12 @@ def _validate_dish(data):
 
 # --- Views -------------------------------------------------------------------------------------
 
+# Integration branch only: the whole screen asks for the admin PIN (apps/core/preview.py).
+_require_pin = preview.require_admin_pin(
+    "Productos", lambda request: preview.apply_to_shell(request, _shell_context(_url("catalog:dish_catalog"))))
+
+
+@_require_pin
 @require_GET
 def dish_catalog(request):
     """
@@ -184,11 +192,12 @@ def dish_catalog(request):
     Errores     : 403 sin rol o sin PIN
     """
     query = request.GET.get("q", "").strip()
-    context = {**_shell_context(_url("catalog:dish_catalog")), **_grid_context(query)}
+    context = {**preview.apply_to_shell(request, _shell_context(_url("catalog:dish_catalog"))), **_grid_context(query)}
     template = "catalog/partials/dish_grid.html" if request.htmx else "catalog/products.html"
     return render(request, template, context)
 
 
+@_require_pin
 @require_http_methods(["GET", "POST"])
 def dish_create(request):
     """
@@ -213,6 +222,7 @@ def dish_create(request):
     return render(request, "catalog/partials/dish_grid.html", {**_grid_context(), "close_dialog": True})
 
 
+@_require_pin
 @require_http_methods(["GET", "POST"])
 def dish_edit(request, dish_id):
     """
@@ -239,6 +249,7 @@ def dish_edit(request, dish_id):
     return render(request, "catalog/partials/dish_card.html", {"dish": saved, "close_dialog": True})
 
 
+@_require_pin
 @require_http_methods(["GET", "POST"])
 def recipe_edit(request, dish_id):
     """
@@ -286,6 +297,7 @@ def recipe_edit(request, dish_id):
     return render(request, "catalog/partials/recipe_saved.html", {"dish": dish})
 
 
+@_require_pin
 @require_GET
 def add_recipe_line(request):
     """
@@ -322,6 +334,7 @@ def _decimal(value):
     return Decimal(str(value).replace("$", "").replace(",", "").strip())
 
 
+@_require_pin
 @require_http_methods(["GET", "POST"])
 def ingredient_create(request):
     """

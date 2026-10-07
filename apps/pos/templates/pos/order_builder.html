@@ -7,3 +7,4 @@ Vista: pos:order_builder. La página solo incluye fragmentos; el contrato está 
 {% block content %}
   {% include "pos/partials/sale_area.html" %}
 {% endblock %}
+{% block dialog %}{% if open_cash %}{% include "pos/partials/open_cash_session.html" with post_url=open_cash.post_url hx_target=open_cash.hx_target hx_swap=open_cash.hx_swap shift_label=open_cash.shift_label opening_amount=open_cash.opening_amount %}{% endif %}{% endblock %}
