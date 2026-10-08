@@ -17,6 +17,8 @@ from django.shortcuts import render
 from django.urls import NoReverseMatch, reverse
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
+from apps.core import preview
+
 # --- Sample data (contract draft) -------------------------------------------------------------
 # Coherent with Figma rev. 1.1: 8 items, $480.00. Totals are literals: views never compute money.
 
@@ -60,7 +62,8 @@ _MODULES = [
 
 # URL names of the modules built so far; the others render «#» until they exist. reverse() by name is not an import,
 # so pos does not depend on catalog (CLAUDE.md §7).
-_MODULE_URLS = {"pos": "pos:order_builder", "products": "catalog:dish_catalog"}
+_MODULE_URLS = {"pos": "pos:order_builder", "products": "catalog:dish_catalog",
+                "inventory": "inventory:ingredient_list", "cash": "reports:cash", "reports": "reports:reports"}
 
 
 def _url(name, *args):
@@ -89,8 +92,8 @@ def _sample_dishes(category="todos", query=""):
 def _shell_context(request, cash_open=True, session_total=Decimal("4850.00")):
     """Menu and top bar context. Temporary: will come from a context processor in apps/core (Jesús)."""
     return {
-        "nav_modules": [{"key": k, "label": l, "icon": i, "url": _url(_MODULE_URLS[k]) if k in _MODULE_URLS else "#", "requires_pin": p}
-                        for k, l, i, p in _MODULES],
+        "nav_modules": preview.lock_menu(request, [{"key": k, "label": l, "icon": i, "url": _url(_MODULE_URLS[k]) if k in _MODULE_URLS else "#", "requires_pin": p}
+                                                   for k, l, i, p in _MODULES]),
         "active_module": "pos",
         "sync_pending": 0,
         "user_initials": "CM",
@@ -168,7 +171,8 @@ def order_builder(request):
     Borrador    : ?estado=caja-cerrada muestra el estado sin turno; ?estado=ticket-vacio, el ticket vacío.
     """
     state = request.GET.get("estado", "")
-    cash_open = state != "caja-cerrada"
+    # Integration branch: the cash state lives in the session (apps/core/preview.py); ?estado still forces it.
+    cash_open = state != "caja-cerrada" and preview.is_cash_open(request)
     context = {
         **_shell_context(request, cash_open=cash_open, session_total=Decimal("4850.00") if cash_open else None),
         **_sale_context(),
@@ -176,6 +180,8 @@ def order_builder(request):
         "ticket_label": "Ticket #0039 · Turno matutino · Para llevar" if cash_open else "Sin turno de caja abierto",
         "stock_notice": {"detail": "3 insumos bajos · Ver inventario", "url": "#"} if cash_open else None,
         "open_session_url": _url("pos:open_session"),
+        # Closed cash: the page opens with the «Abrir caja» dialog already shown (integration branch).
+        "open_cash": None if cash_open or request.htmx else _open_cash_dialog(),
     }
     if state == "ticket-vacio":
         context["order"] = _sample_order(empty=True)
@@ -295,6 +301,11 @@ def confirm_sale(request):
     return render(request, "pos/partials/order_summary.html", context)
 
 
+def _open_cash_dialog():
+    return {"shift_label": "Turno matutino · 30/09/2026", "opening_amount": Decimal("500.00"),
+            "post_url": _url("pos:open_session"), "hx_target": "#sale-area", "hx_swap": "outerHTML"}
+
+
 @require_http_methods(["GET", "POST"])
 def open_session(request):
     """
@@ -310,8 +321,7 @@ def open_session(request):
                   #dialog con HX-Retarget para no reemplazar el área de venta
     Borrador    : acepta cualquier PIN de 6 dígitos; el servicio real valida el hash (DEC-28).
     """
-    dialog = {"shift_label": "Turno matutino · 30/09/2026", "opening_amount": Decimal("500.00"),
-              "post_url": _url("pos:open_session"), "hx_target": "#sale-area", "hx_swap": "outerHTML"}
+    dialog = _open_cash_dialog()
     if request.method == "GET":
         return render(request, "pos/partials/open_cash_session.html", dialog)
     pin = "".join(request.POST.getlist("pin"))
@@ -326,6 +336,7 @@ def open_session(request):
         response["HX-Retarget"] = "#dialog"
         response["HX-Reswap"] = "innerHTML"
         return response
+    preview.set_cash_open(request, True)
     context = {**_shell_context(request), **_sale_context(), "cash_session_open": True, "oob_cash_status": True,
                "ticket_label": "Ticket #0039 · Turno matutino · Para llevar",
                "stock_notice": {"detail": "3 insumos bajos · Ver inventario", "url": "#"}}
@@ -380,6 +391,7 @@ def close_session(request):
         return _retarget_dialog(render(request, template, context, status=422))
     # Borrador: el servicio real (close_session de services_cash_session.py) cierra el turno, genera el corte y
     # devuelve la diferencia de efectivo para el mensaje.
+    preview.set_cash_open(request, False)
     messages.success(request, "Caja cerrada. El corte del turno se generó con las ventas sincronizadas.")
     response = HttpResponse(status=204)
     response["HX-Redirect"] = _url("pos:order_builder") + "?estado=caja-cerrada"

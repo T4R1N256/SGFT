@@ -19,6 +19,8 @@ from django.shortcuts import render
 from django.urls import NoReverseMatch, reverse
 from django.views.decorators.http import require_GET
 
+from apps.core import preview
+
 
 def _money(amount):
     """$4,850.00 (pantallas-y-patrones.md §4), for labels the server builds, like ticket_label in pos."""
@@ -77,6 +79,7 @@ def _period_chips(period, url, target):
             for k, t in (("hoy", "Hoy"), ("semana", "Semana"), ("mes", "Mes"))]
 
 
+@preview.require_admin_pin("Caja", lambda request: preview.apply_to_shell(request, _shell("cash")))
 @require_GET
 def cash(request):
     """
@@ -106,7 +109,7 @@ def cash(request):
     context = {"chart": chart, "chips": _period_chips(period, url, "#sales-chart")}
     if request.htmx and not request.htmx.boosted:
         return render(request, "reports/partials/sales_chart.html", context)
-    context.update(_shell("cash"))
+    context.update(preview.apply_to_shell(request, _shell("cash")))
     context.update({
         "subtitle": f"Turno matutino · Abierta desde las 7:00 AM · Fondo inicial {_money(Decimal('500'))} · Última sincronización: hoy, 10:45 AM",
         "profit": {"amount": Decimal("2910.00"), "trend": "+8.3% vs ayer",
@@ -148,6 +151,7 @@ def _report(period, empty=False):
     }
 
 
+@preview.require_admin_pin("Reportes", lambda request: preview.apply_to_shell(request, _shell("reports")))
 @require_GET
 def reports(request):
     """
@@ -178,11 +182,12 @@ def reports(request):
                "subtitle": f"{labels[0]} · Última sincronización: hoy, 10:45 AM"}
     if request.htmx and not request.htmx.boosted:
         return render(request, "reports/partials/report_columns.html", {**context, "oob_subtitle": True})
-    context.update(_shell("reports"))
+    context.update(preview.apply_to_shell(request, _shell("reports")))
     context["export_url"] = _url("reports:export_daily_sales_pdf")
     return render(request, "reports/reports.html", context)
 
 
+@preview.require_admin_pin("Reportes", lambda request: preview.apply_to_shell(request, _shell("reports")))
 @require_GET
 def export_daily_sales_pdf(request):
     """

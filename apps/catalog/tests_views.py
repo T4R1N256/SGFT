@@ -129,7 +129,7 @@ class RecipeTests(ViewTestCase):
         html = response.content.decode()
         self.assertEqual(html.count(" data-line class="), 4)
         self.assertIn("Burrito de asada", html)
-        self.assertIn('hx-get="#?index=4"', html)
+        self.assertRegex(html, r'hx-get="[^"]*\?index=4"')  # «#» until the route exists, the real URL after
         self.assertUniqueIds(response)
 
     def test_add_line_returns_row_and_next_button_out_of_band(self):
