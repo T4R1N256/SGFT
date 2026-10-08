@@ -1,0 +1,18 @@
+{% comment %}
+components/page_header.html — Encabezado de página (Figma: H1, subtítulo y acción a la derecha; 28, 116 · 1544 × 58)
+Parámetros:
+  title        título de la página en Título/H1 (obligatorio)
+  title_id     id del título, para aria-labelledby de la sección (obligatorio)
+  subtitle     contexto: turno, periodo, «Última sincronización: …» (opcional)
+  subtitle_id  id del subtítulo, si una respuesta HTMX lo reemplaza fuera de banda (opcional)
+  action_text, action_icon, action_variant, action_hx_get   botón a la derecha, en la línea del título (opcional;
+               si no hay action_hx_get no se dibuja: qué acción existe lo decide el servidor)
+Incluir siempre con «only».
+{% endcomment %}
+<header class="flex flex-col gap-[4px]">
+  <div class="flex items-center justify-between gap-md">
+    <h1 id="{{ title_id }}" class="sgft-texto-titulo-h1 text-texto-primario">{{ title }}</h1>
+    {% if action_hx_get %}{% include "components/button.html" with text=action_text icon=action_icon variant=action_variant hx_get=action_hx_get hx_target="#dialog" hx_swap="innerHTML" only %}{% endif %}
+  </div>
+  {% if subtitle %}<p{% if subtitle_id %} id="{{ subtitle_id }}"{% endif %} class="sgft-texto-cuerpo-pequeno text-texto-secundario">{{ subtitle }}</p>{% endif %}
+</header>

@@ -1,0 +1,37 @@
+{% comment %}
+reports/partials/cash_kpis.html — Total de hoy, ganancias, mermas y cierre de turno (id «cash-kpis»)
+Orden acordado: «Total de hoy» primero (arriba a la izquierda en la rejilla de 2 × 2).
+Vista: reports:cash. Los importes y porcentajes los calcula el servidor (servicios de Jared). «Cerrar caja» abre
+pos:close_session en #dialog; es Primario y sin candado: el PIN ya se pidió al entrar.
+{% endcomment %}
+<div id="cash-kpis" class="grid gap-lg md:grid-cols-2">
+  <article class="sgft-card flex flex-row flex-wrap items-center gap-lg p-lg" aria-label="Total de hoy">
+    <div class="flex flex-col gap-[2px]">
+      <span class="sgft-texto-etiqueta-mayusculas text-texto-secundario">Total de hoy</span>
+      <span class="sgft-texto-display-monto-xl text-marca-primario-oscuro">${{ today.total|floatformat:"2g" }}</span>
+    </div>
+    <dl class="flex min-w-[220px] flex-1 flex-col gap-xs border-borde-sutil sm:border-l sm:pl-lg">
+      {% include "components/key_value.html" with label="Efectivo" value=today.cash_label icon="banknote" only %}
+      {% include "components/key_value.html" with label="Transferencia" value=today.transfer_label icon="arrow-left-right" only %}
+    </dl>
+  </article>
+
+  <article class="sgft-card flex flex-col gap-md p-lg" aria-label="Ganancias totales">
+    {% include "components/card_header.html" with title="Ganancias totales" icon="trending-up" compact=True only %}
+    {% include "components/kpi.html" with amount=profit.amount badge_text=profit.trend badge_variant="exito" badge_icon="trending-up" note=profit.note only %}
+  </article>
+
+  <article class="sgft-card flex flex-col gap-md p-lg" aria-label="Mermas totales">
+    {% include "components/card_header.html" with title="Mermas totales" icon="trending-down" compact=True only %}
+    {% include "components/kpi.html" with amount=waste.amount tone="peligro" badge_text=waste.share badge_variant="peligro" badge_icon="triangle-alert" note=waste.note only %}
+  </article>
+
+  <article class="sgft-card flex flex-row flex-wrap items-center justify-between gap-md p-lg" aria-labelledby="close-title">
+    <div class="flex flex-col gap-[4px]">
+      <h2 id="close-title" class="sgft-texto-titulo-h3 text-texto-primario">Cierre de turno</h2>
+      <p class="sgft-texto-cuerpo-descripcion text-texto-secundario">Efectivo esperado en caja: ${{ close.expected_amount|floatformat:"2g" }}</p>
+      {% include "components/sync_status.html" with pending=close.pending_sync only %}
+    </div>
+    {% include "components/button.html" with text="Cerrar caja" hx_get=close.url hx_target="#dialog" hx_swap="innerHTML" only %}
+  </article>
+</div>

@@ -5,6 +5,7 @@ que declara <body>.
 Parámetros:
   search_placeholder  texto del buscador de la pantalla, terminado en «(F2)...»
   search_url          vista que filtra (hx-get, opcional); search_target  destino del fragmento
+  hide_search         True: sin buscador (Caja y Reportes, plan de interfaz §2)
   cash_open           True si hay turno abierto (Estado de caja)
   session_total       Decimal con el total de la sesión (None: no se muestra)
   stock_notice        {detail, url} o None: en el teléfono en horizontal, «Alerta stock» va aquí, junto a la búsqueda
@@ -25,12 +26,14 @@ solo tiene 1600 de ancho). Incluir siempre con «only».
     </span>
   </div>
 
+  {% if not hide_search %}
   <label class="sgft-app__search sgft-field order-last h-[56px] w-full rounded-campo shadow-tarjeta xl:order-none xl:w-[600px]">
     <span class="text-texto-secundario">{% include "components/icons/search.html" with size=20 only %}</span>
     <span class="sr-only">Buscar</span>
     <input type="search" name="q" placeholder="{{ search_placeholder|default:'Buscar (F2)...' }}" class="sgft-texto-cuerpo-pequeno placeholder:text-texto-secundario"
       {% if search_url %}hx-get="{{ search_url }}" hx-trigger="input changed delay:300ms, search" {% if search_target %}hx-target="{{ search_target }}"{% endif %}{% endif %}>
   </label>
+  {% endif %}
 
   <div class="flex items-center gap-sm xl:gap-[26px]">
     <div id="stock-notice-top" class="sgft-app__stock">

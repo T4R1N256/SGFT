@@ -1,0 +1,14 @@
+{% comment %}
+components/key_value.html — Fila clave–valor (Efectivo, Transferencia, Tickets, totales al pie de una tarjeta)
+Va dentro de un <dl>. Parámetros:
+  label   texto de la clave (obligatorio)
+  value   texto ya formateado por la plantilla que lo incluye, por ejemplo «$3,120.00» o «720 uds.» (obligatorio)
+  icon    ícono de 18 a la izquierda de la clave (opcional)
+  muted   True: clave en Cuerpo/Descripción (pie de tarjeta); si no, Cuerpo/Pequeño
+  strong  True: valor en Número/Precio (resumen destacado, por ejemplo «Efectivo esperado en caja»)
+Incluir siempre con «only».
+{% endcomment %}
+<div class="flex items-center justify-between gap-sm">
+  <dt class="flex items-center gap-xs {% if muted %}sgft-texto-cuerpo-descripcion{% else %}sgft-texto-cuerpo-pequeno{% endif %} text-texto-secundario">{% if icon %}{% include "components/icons/"|add:icon|add:".html" with size=18 only %}{% endif %}{{ label }}</dt>
+  <dd class="{% if strong %}sgft-texto-numero-precio{% else %}sgft-texto-numero-importe{% endif %} text-texto-primario">{{ value }}</dd>
+</div>

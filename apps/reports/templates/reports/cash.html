@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% comment %}
+reports/cash.html — Caja (Figma 04 · Caja, 2046:1100, rev. 1.1)
+Vista: reports:cash. Solo Administrador, con PIN. Sin buscador (plan de interfaz §2). «reports» solo lee: el cierre
+lo aplica pos:close_session, que se abre en #dialog. Teléfono: una columna; en horizontal, dos.
+{% endcomment %}
+{% block title %}Caja{% endblock %}
+{% block content %}
+  <section class="flex flex-col gap-lg" aria-labelledby="cash-title">
+    {% include "components/page_header.html" with title="Caja" title_id="cash-title" subtitle=subtitle only %}
+    {% include "reports/partials/sales_chart.html" %}
+    {% include "reports/partials/cash_kpis.html" %}
+  </section>
+{% endblock %}
