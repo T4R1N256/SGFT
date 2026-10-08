@@ -171,7 +171,7 @@ def order_builder(request):
     Borrador    : ?estado=caja-cerrada muestra el estado sin turno; ?estado=ticket-vacio, el ticket vacío.
     """
     state = request.GET.get("estado", "")
-    # Integration branch: the cash state lives in the session (apps/core/preview.py); ?estado still forces it.
+    # Temporary: the cash state lives in the session (apps/core/preview.py); ?estado still forces it.
     cash_open = state != "caja-cerrada" and preview.is_cash_open(request)
     context = {
         **_shell_context(request, cash_open=cash_open, session_total=Decimal("4850.00") if cash_open else None),
@@ -180,7 +180,7 @@ def order_builder(request):
         "ticket_label": "Ticket #0039 · Turno matutino · Para llevar" if cash_open else "Sin turno de caja abierto",
         "stock_notice": {"detail": "3 insumos bajos · Ver inventario", "url": "#"} if cash_open else None,
         "open_session_url": _url("pos:open_session"),
-        # Closed cash: the page opens with the «Abrir caja» dialog already shown (integration branch).
+        # Closed cash: the page opens with the «Abrir caja» dialog already shown (temporary, apps/core/preview.py).
         "open_cash": None if cash_open or request.htmx else _open_cash_dialog(),
     }
     if state == "ticket-vacio":
