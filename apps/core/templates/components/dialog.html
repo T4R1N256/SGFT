@@ -9,6 +9,8 @@ Variables del contexto del formulario:
   post_url       vista que recibe el formulario (hx-post)
   hx_target, hx_swap   destino de la respuesta
   submit_text    texto del botón primario (por omisión «Guardar»); submit_icon  ícono (opcional)
+  method         «get»: envío normal (no HTMX) hacia post_url, para descargas como «Exportar PDF»; el diálogo se
+                 cierra solo al enviar. Por omisión, hx-post.
   form_error     error general en español (opcional; los de cada campo van en el campo)
 Se muestra centrado sobre superficie/velo-oscuro; si es más alto que la pantalla, empieza arriba y se desplaza
 completo (con place-items:center la parte de arriba quedaba fuera de alcance). Alpine solo lo abre y lo cierra; los datos los valida el servidor
@@ -16,7 +18,7 @@ completo (con place-items:center la parte de arriba quedaba fuera de alcance). A
 {% endcomment %}
 <div x-data="{ open: true }" x-show="open" x-cloak @keydown.escape.window="open = false"
      class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-superficie-velo-oscuro p-md">
-  <form hx-post="{{ post_url }}" hx-disabled-elt="find button[type=submit]"{% if hx_target %} hx-target="{{ hx_target }}"{% endif %}{% if hx_swap %} hx-swap="{{ hx_swap }}"{% endif %}
+  <form {% if method == "get" %}method="get" action="{{ post_url }}" @submit="setTimeout(() => open = false, 300)"{% else %}hx-post="{{ post_url }}" hx-disabled-elt="find button[type=submit]"{% if hx_target %} hx-target="{{ hx_target }}"{% endif %}{% if hx_swap %} hx-swap="{{ hx_swap }}"{% endif %}{% endif %}
         role="dialog" aria-modal="true" aria-labelledby="{{ dialog_id|default:'dialog-title' }}" @click.outside="open = false"
         x-init="$nextTick(() => $el.querySelector('input:not([type=hidden]), select, textarea')?.focus())"
         class="my-auto flex w-full max-w-[480px] flex-col gap-canal rounded-xl border border-borde-sutil bg-superficie-tarjeta p-lg shadow-tarjeta sm:p-xl">

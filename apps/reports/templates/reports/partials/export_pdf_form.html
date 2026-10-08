@@ -1,0 +1,13 @@
+{% extends "components/dialog.html" %}
+{% comment %}
+reports/partials/export_pdf_form.html — Diálogo «Exportar PDF» (pantallas-y-fragmentos.md §10.7)
+Vista: reports:export_daily_sales_pdf (GET con HTMX). «Descargar» envía con GET normal (method="get" del diálogo base),
+no con HTMX, para que el navegador baje el archivo.
+{% endcomment %}
+{% block icon %}{% include "components/icons/download.html" with size=28 only %}{% endblock %}
+{% block title %}Exportar PDF{% endblock %}
+{% block subtitle %}<p class="sgft-texto-cuerpo-pequeno text-texto-secundario">Ventas del día</p>{% endblock %}
+{% block submit %}<span class="inline-flex">{% include "components/icons/download.html" with size=20 only %}</span>Descargar{% endblock %}
+{% block fields %}
+  {% include "components/field.html" with label="Día elegido" name="day" kind="date" value=day required=True only %}
+{% endblock %}

@@ -1,16 +1,20 @@
 """
-Views of M-REP: Caja (WBS 3.5.1, 3.5.7; interface 2.2.4). Owner: Yahir (DEC-31); services: Jared.
-Adapted from Yahir's Caja screen (apps/core/templates/caja.html) to base.html and the component library.
+Views of M-REP: Caja y Reportes (WBS 3.5.1–3.5.7; interface 2.2.4). Owner: Yahir (DEC-31); services: Jared.
+Adapted from Yahir's Caja and Reportes screens (apps/core/templates/caja.html, reportes.html) to base.html and the
+component library.
 
 CONTRACT DRAFT: every view returns sample data with the exact shape of its context, so the templates can be built and
-tested before the services exist (reports/services.py: cash_close, sales_by_period). reports only reads: closing the
+tested before the services exist (reports/services.py: cash_close, sales_by_period, top_dishes,
+export_daily_sales_pdf). reports only reads: closing the
 shift is pos:close_session. Pending, outside this file:
   - role and PIN checks with the mixin of apps/core/mixins.py (Jesús);
   - the shell context (menu, top bar) from a context processor in apps/core (Jesús);
   - the routes in apps/reports/urls.py (rutas-pendientes.md).
 """
+from datetime import date
 from decimal import Decimal
 
+from django.http import HttpResponse
 from django.shortcuts import render
 from django.urls import NoReverseMatch, reverse
 from django.views.decorators.http import require_GET
@@ -19,6 +23,13 @@ from django.views.decorators.http import require_GET
 def _money(amount):
     """$4,850.00 (pantallas-y-patrones.md §4), for labels the server builds, like ticket_label in pos."""
     return f"${amount:,.2f}"
+
+
+def _date(value, default):
+    try:
+        return date.fromisoformat(value) if value else default
+    except ValueError:
+        return default
 
 
 def _url(name, *args):
@@ -107,3 +118,82 @@ def cash(request):
                   "url": _url("pos:close_session")},
     })
     return render(request, "reports/cash.html", context)
+
+
+# ------------------------------------------------------------------------------------------------ Reportes
+
+def _report(period, empty=False):
+    if empty:
+        return {"empty": True}
+    return {
+        "empty": False,
+        "ingredients_used": [{"emoji": e, "name": n, "cost_label": f"Costo {_money(Decimal(c))}", "quantity": q} for e, n, c, q in [
+            ("🌮", "Tortilla de harina", "1224", "612 pzas"), ("🥩", "Carne asada", "4048", "18.4 kg"),
+            ("🍗", "Pollo deshebrado", "1638", "12.6 kg"), ("🧀", "Queso chihuahua", "1264", "7.9 kg"),
+            ("🥣", "Frijol refrito", "368", "9.2 kg"), ("🥚", "Huevo", "288", "96 pzas"), ("☕", "Café molido", "400", "1.6 kg")]],
+        "ingredients_label": "Costo de insumos (top 7)", "ingredients_cost_label": _money(Decimal("9230")),
+        "top_dishes": [{"rank": i + 1, "name": n, "units_label": f"{u} uds.", "pct": round(u / 214 * 100)} for i, (n, u) in enumerate([
+            ("Burrito de asada", 214), ("Burrito de pollo", 176), ("Chilaquiles verdes", 98), ("Café de olla", 91),
+            ("Machaca con huevo", 77), ("Frijol con queso", 64)])],
+        "top_label": "Total vendido (top 6)", "top_units_label": "720 uds.",
+        "sales": {"total": Decimal("31550.00"), "trend": "+6.1% vs semana anterior", "cash_label": _money(Decimal("20450")),
+                  "transfer_label": _money(Decimal("11100")), "tickets_label": "Tickets: 254",
+                  "average_label": f"Promedio {_money(Decimal('124.21'))}"},
+        "chart": _chart("semana"),
+        "waste": {"total": Decimal("742.00"), "share": "2.4% de ventas", "items": [
+            {"name": n, "reason": r, "cost_label": _money(Decimal(c))} for n, r, c in [
+                ("Carne asada", "Caducidad", "210"), ("Queso chihuahua", "Mal almacenamiento", "168"),
+                ("Tortilla de harina", "Daño en empaque", "108"), ("Pollo deshebrado", "Caducidad", "96"),
+                ("Aguacate", "Maduración", "90"), ("Salsa verde", "Caducidad", "70")]]},
+    }
+
+
+@require_GET
+def reports(request):
+    """
+    CONTRATO VISTA–PLANTILLA — SGFT
+    Paquete WBS : 3.5.2–3.5.4 · interfaz 2.2.4
+    URL name    : reports:reports      Método: GET (?periodo=hoy|semana|mes&fecha=AAAA-MM-DD)
+    Roles       : admin (con PIN)
+    Plantilla   : request.htmx → reports/partials/report_columns.html [fragmento, id «report-columns»]
+                  si no → reports/reports.html [página completa]
+    HTMX        : chips y campo de fecha con hx-get, hx-target="#report-columns" y hx-push-url
+    Contexto    :
+        report     {empty, sales, chart, waste, top_dishes, top_label, top_units_label, ingredients_used,
+                    ingredients_label, ingredients_cost_label} — textos ya formateados para los componentes
+        subtitle   str      periodo y «Última sincronización»; con HTMX se reemplaza fuera de banda (oob_subtitle)
+        range_label str     «21/09/2026 – 27/09/2026»
+        chips, date_value (date), export_url («Exportar PDF» abre el diálogo en #dialog)
+    Vacío       : «Sin ventas para este periodo» centrado en las cuatro columnas (?estado=vacio)
+    """
+    period = request.GET.get("periodo", "semana")
+    period = period if period in ("hoy", "semana", "mes") else "semana"
+    labels = {"hoy": ("Domingo 27 de septiembre de 2026 · Corte del día", "27/09/2026"),
+              "semana": ("Semana del 21 al 27 de septiembre de 2026 · Corte semanal", "21/09/2026 – 27/09/2026"),
+              "mes": ("Septiembre de 2026 · Corte mensual", "01/09/2026 – 30/09/2026")}[period]
+    url = _url("reports:reports")
+    context = {"report": _report(period, empty=request.GET.get("estado") == "vacio"), "period_label": labels[0],
+               "range_label": labels[1], "chips": _period_chips(period, url, "#report-columns"), "period": period,
+               "date_value": _date(request.GET.get("fecha"), date(2026, 9, 21)), "list_url": url,
+               "subtitle": f"{labels[0]} · Última sincronización: hoy, 10:45 AM"}
+    if request.htmx and not request.htmx.boosted:
+        return render(request, "reports/partials/report_columns.html", {**context, "oob_subtitle": True})
+    context.update(_shell("reports"))
+    context["export_url"] = _url("reports:export_daily_sales_pdf")
+    return render(request, "reports/reports.html", context)
+
+
+@require_GET
+def export_daily_sales_pdf(request):
+    """
+    CONTRATO VISTA–PLANTILLA — SGFT
+    URL name  : reports:export_daily_sales_pdf
+    GET con HTMX → reports/partials/export_pdf_form.html [#dialog]; GET normal con «day» → descarga el PDF
+    (borrador: devuelve un texto en lugar del PDF; el servicio export_daily_sales_pdf es de Jared)
+    """
+    if request.htmx:
+        return render(request, "reports/partials/export_pdf_form.html",
+                      {"day": _date(request.GET.get("day"), date(2026, 9, 27)), "method": "get",
+                       "post_url": _url("reports:export_daily_sales_pdf")})
+    return HttpResponse(f"Borrador: aquí se descargaría el PDF de las ventas del {request.GET.get('day', '')}.",
+                        content_type="text/plain; charset=utf-8")

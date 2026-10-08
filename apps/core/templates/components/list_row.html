@@ -1,0 +1,13 @@
+{% comment %}
+components/list_row.html — Fila de lista con título, nota y valor a la derecha (Reportes: insumos usados y mermas)
+Va dentro de un <ul>. Parámetros:
+  title    nombre (obligatorio); note  texto secundario debajo (opcional)
+  value    texto ya formateado a la derecha, por ejemplo «$210.00» o «18.4 kg» (obligatorio)
+  emoji    miniatura de 36 a la izquierda (opcional)
+Incluir siempre con «only».
+{% endcomment %}
+<li class="flex items-center gap-sm{% if not emoji %} justify-between{% endif %}">
+  {% if emoji %}<span class="sgft-thumb size-[36px] rounded-sm text-[20px]" aria-hidden="true">{{ emoji }}</span>{% endif %}
+  <span class="flex min-w-0 {% if emoji %}flex-1 {% endif %}flex-col"><span class="truncate sgft-texto-cuerpo-pequeno-medio text-texto-primario">{{ title }}</span>{% if note %}<span class="sgft-texto-cuerpo-nota text-texto-secundario">{{ note }}</span>{% endif %}</span>
+  <span class="sgft-texto-numero-importe text-texto-primario">{{ value }}</span>
+</li>
