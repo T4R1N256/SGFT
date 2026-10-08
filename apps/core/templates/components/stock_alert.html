@@ -1,0 +1,15 @@
+{% comment %}
+components/stock_alert.html — Alerta de un insumo bajo (Inventario · «Insumos bajos»; Figma 390 × 68)
+Va dentro de un <ul>. Regla 3: es visual y no bloquea la venta.
+Parámetros:
+  item   {emoji, name, detail, level: bajo|critico} — nivel y texto los decide el servidor
+Incluir siempre con «only».
+{% endcomment %}
+<li class="flex items-center gap-sm rounded-campo px-sm py-[10px] {% if item.level == 'critico' %}bg-estado-peligro-fondo{% else %}bg-estado-alerta-fondo{% endif %}">
+  <span class="sgft-thumb size-[44px] rounded-md text-[24px]" aria-hidden="true">{{ item.emoji }}</span>
+  <span class="flex min-w-0 flex-1 flex-col gap-[2px]">
+    <span class="truncate sgft-texto-cuerpo-pequeno-medio text-texto-primario">{{ item.name }}</span>
+    <span class="sgft-texto-cuerpo-nota text-texto-secundario">{{ item.detail }}</span>
+  </span>
+  <span class="sgft-texto-etiqueta-mini {% if item.level == 'critico' %}text-estado-peligro{% else %}text-estado-alerta{% endif %}">{% if item.level == 'critico' %}Crítico{% else %}Bajo{% endif %}</span>
+</li>

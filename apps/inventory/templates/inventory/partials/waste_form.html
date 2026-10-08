@@ -1,0 +1,19 @@
+{% extends "components/dialog.html" %}
+{% comment %}
+inventory/partials/waste_form.html — Diálogo «Registrar merma» (pantallas-y-fragmentos.md §10.4)
+Vista: inventory:register_waste (GET y 422). «Especifica el motivo» aparece con «Otro» (Alpine solo lo muestra; el
+servidor lo exige, máximo 50 caracteres). El botón sigue siendo Primario: el rojo se reserva para quitar.
+{% endcomment %}
+{% block icon %}{% include "components/icons/trash-2.html" with size=28 only %}{% endblock %}
+{% block title %}Registrar merma{% endblock %}
+{% block submit %}Registrar merma{% endblock %}
+{% block fields %}
+<div class="flex flex-col gap-canal" x-data="{ reason: '{{ values.reason|escapejs }}' }" @change="if ($event.target.name === 'reason') reason = $event.target.value">
+  {% include "components/field.html" with label="Insumo" name="ingredient" kind="select" options=ingredients selected=values.ingredient placeholder="Elige un insumo" required=True error=errors.ingredient only %}
+  {% include "components/field.html" with label="Cantidad" name="quantity" kind="quantity" value=values.quantity required=True error=errors.quantity help="En la unidad del insumo." only %}
+  {% include "components/field.html" with label="Motivo" name="reason" kind="select" options=reasons selected=values.reason placeholder="Elige el motivo" required=True error=errors.reason only %}
+  <div x-show="reason === 'Otro'" x-cloak>
+    {% include "components/field.html" with label="Especifica el motivo" name="other_reason" value=values.other_reason maxlength=50 conditional=True error=errors.other_reason help="Máximo 50 caracteres." only %}
+  </div>
+</div>
+{% endblock %}

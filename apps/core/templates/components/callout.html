@@ -1,0 +1,11 @@
+{% comment %}
+components/callout.html — Recuadro informativo sobre durazno con ícono y título (Inventario · «Sugerencia de compra»)
+Parámetros:
+  title   título en Cuerpo/Pequeño Medio (obligatorio); text  contenido (obligatorio)
+  icon    ícono de 18 en marca/primario-oscuro (opcional)
+Incluir siempre con «only».
+{% endcomment %}
+<div class="flex flex-col gap-xs rounded-campo bg-marca-durazno-100 p-md">
+  <span class="flex items-center gap-xs sgft-texto-cuerpo-pequeno-medio text-texto-primario">{% if icon %}<span class="text-marca-primario-oscuro">{% include "components/icons/"|add:icon|add:".html" with size=18 only %}</span>{% endif %}{{ title }}</span>
+  <p class="sgft-texto-cuerpo-descripcion text-texto-primario">{{ text }}</p>
+</div>

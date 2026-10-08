@@ -1,0 +1,22 @@
+{% comment %}
+inventory/partials/low_stock.html — Panel «Insumos bajos» (id «low-stock»; Figma 1132, 200 · 440 × 624)
+Vistas: inventory:ingredient_list y, fuera de banda, register_purchase y register_waste (oob_low_stock).
+El nivel (Bajo o Crítico) y el texto de cada alerta los decide el servidor (regla 3: visual, no bloquea la venta).
+{% endcomment %}
+<aside id="low-stock"{% if oob_low_stock %} hx-swap-oob="true"{% endif %} class="sgft-card order-first flex flex-col gap-[18px] p-lg xl:order-none xl:min-h-[624px]" aria-label="Insumos bajos">
+  {% with count=low_stock|length|stringformat:"d" %}
+    {% include "components/card_header.html" with title="Insumos bajos" icon="triangle-alert" compact=True badge_text=count badge_variant="peligro" only %}
+  {% endwith %}
+  <ul class="flex flex-col gap-sm">
+    {% for item in low_stock %}
+      {% include "components/stock_alert.html" with item=item only %}
+    {% empty %}
+      <li>{% include "components/empty_state.html" with message="Sin insumos bajos" icon="circle-check" only %}</li>
+    {% endfor %}
+  </ul>
+  {% if purchase_suggestion %}{% include "components/callout.html" with title="Sugerencia de compra" text=purchase_suggestion icon="shopping-cart" only %}{% endif %}
+  <div class="mt-auto flex flex-col gap-sm pt-sm">
+    {% include "components/button.html" with text="Registrar compra" icon="package" full=True hx_get=purchase_url hx_target="#dialog" hx_swap="innerHTML" only %}
+    {% include "components/button.html" with text="Registrar merma" icon="trash-2" variant="secundario" full=True hx_get=waste_url hx_target="#dialog" hx_swap="innerHTML" only %}
+  </div>
+</aside>
