@@ -11,7 +11,7 @@ Closes #<!-- número del Issue -->
 
 - [ ] Cada archivo está en la ruta que indica el mapa de propiedad: `git diff --name-only --diff-filter=d origin/main...HEAD | python .claude/skills/sgft-organizacion-entregables/scripts/dueno_de_ruta.py --revisar` no muestra bloqueos.
 - [ ] Si toqué una función que vive en un archivo ajeno, su autor y el dueño del archivo están como revisores.
-- [ ] No toqué `models.py` ni `migrations/` (solo Jesús) — o soy Jesús y la migración es nueva, no una editada.
+- [ ] Si toqué `models.py`, avisé antes a Jesús, la migración va en esta rama y es nueva (no edita ni borra una aplicada), y Jesús está como revisor (DEC-37).
 - [ ] Toda vista nueva tiene su contrato vista–plantilla en el docstring y el dueño de la plantilla lo aprobó.
 - [ ] Los fragmentos HTMX están en `partials/`; ninguna plantilla ni código Alpine calcula dinero o decide reglas.
 - [ ] Si toqué `static/pos/`, hubo pareja y ambos aparecen como autores (`Co-authored-by:` en el commit).

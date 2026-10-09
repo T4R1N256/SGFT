@@ -1,6 +1,6 @@
 # CLAUDE.md — Sistema de Gestión de Food Truck (SGFT)
 
-> Contexto y reglas de trabajo para agentes y personas. Actualizado el 9-oct-2026 (DEC-01 a DEC-36).
+> Contexto y reglas de trabajo para agentes y personas. Actualizado el 9-oct-2026 (DEC-01 a DEC-37).
 > Dónde va cada archivo y de quién es: skill `.claude/skills/sgft-organizacion-entregables/`, que se consulta con `scripts/dueno_de_ruta.py <ruta>`. Las decisiones `DEC-nn` están registradas en `references/decisiones-y-pendientes.md` de la misma skill.
 >
 > **No modifiques este archivo sin comentarlo antes con el usuario** y sin su aprobación explícita.
@@ -107,7 +107,7 @@ python manage.py check && python manage.py test
 python manage.py runserver
 tailwindcss -i static/core/css/input.css -o static/core/css/app.css --minify   # tras cambiar clases o tokens (--watch al desarrollar)
 node --test tests_e2e/parity/            # si tocaste precios
-python manage.py makemigrations          # SOLO Jesús
+python manage.py makemigrations          # quien escribe el modelo, avisando antes a Jesús (DEC-37)
 git diff --name-only --diff-filter=d origin/main...HEAD | python .claude/skills/sgft-organizacion-entregables/scripts/dueno_de_ruta.py --revisar
 ```
 
@@ -179,7 +179,7 @@ tests_fixtures/    pricing_cases.json          tests_e2e/   Playwright + parity/
   - no hay `.js` propios fuera de `static/pos/`;
   - estilos con utilidades de Tailwind y los tokens del sistema (`bg-marca-primario`, `p-lg`): la paleta por defecto de Tailwind no existe y no se usan colores arbitrarios (`bg-[#…]`). Tras cambiar clases, compila y sube `app.css` en el mismo commit.
 - **Autorización:** en el servidor, en cada vista, con el mixin de `apps/core/mixins.py`. Ocultar un botón no es control de acceso. Al sincronizar se revalida el rol de cada operación.
-- **Modelos:** solo Jesús edita `models.py` y genera migraciones. Los demás piden el campo por issue. Una migración aplicada nunca se edita.
+- **Modelos y migraciones** (DEC-37): Jesús es el dueño del esquema y revisa todo PR que toque `models.py` o `migrations/`. Quien escribe un modelo genera su migración en la misma rama, **después de avisar a Jesús**, para que nadie más genere migraciones de esa app en paralelo. Si dos ramas generan migraciones de la misma app, la segunda en fusionarse rehace la suya sobre `main`. Una migración aplicada nunca se edita ni se borra: se agrega otra.
 - **Pruebas:** las de servicios van en `apps/<app>/tests.py` y las de vistas y contrato vista–plantilla en `apps/<app>/tests_views.py` (DEC-31). Quien implementa un servicio o una vista escribe sus pruebas, a partir de los criterios de aceptación del requisito.
 - **Dependencias:** una nueva se justifica en el PR y la aprueban Jesús (dueño de `requirements.txt`) y Tarín.
 
@@ -201,7 +201,7 @@ tests_fixtures/    pricing_cases.json          tests_e2e/   Playwright + parity/
 2. **No hagas:**
    - ampliar el alcance;
    - crear archivos fuera del mapa o de paquetes en evaluación (hoy: 3.3.7, vista de cocina);
-   - correr `makemigrations` si no eres Jesús;
+   - correr `makemigrations` sin avisar antes a Jesús, o sobre una app con migraciones de otra rama sin fusionar;
    - hacer push a `main`, usar `--force` o fusionar PR;
    - agregar dependencias sin justificarlas;
    - simplificar el diseño offline;
@@ -209,7 +209,7 @@ tests_fixtures/    pricing_cases.json          tests_e2e/   Playwright + parity/
 3. **Si tocas un archivo de otra persona,** díselo al desarrollador.
 4. **Terminado significa:**
    - `check` y `test` en verde;
-   - `makemigrations --check --dry-run` sin cambios, salvo que Jesús genere una migración;
+   - `makemigrations --check --dry-run` sin cambios (la migración del modelo va en la misma rama);
    - `--revisar` sin bloqueos;
    - `.env` fuera de `git status`;
    - aviso al usuario si el comportamiento se aparta de lo que pide el requisito;

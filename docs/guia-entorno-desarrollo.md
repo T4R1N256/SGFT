@@ -267,7 +267,7 @@ Luego abre el Pull Request en GitHub con el título `WBS-x.y.z: descripción` (e
 **Reglas que no se rompen:**
 
 - Nunca `git push` directo a `main` (GitHub lo bloquea de todos modos).
-- **Solo Jesús corre `makemigrations`** y sube migraciones. Si necesitas un campo nuevo, pídeselo por issue.
+- **Migraciones:** quien escribe un modelo corre `makemigrations` en su rama, **después de avisar a Jesús**, y sube la migración en el mismo PR; Jesús lo revisa. Nunca se edita ni se borra una migración ya aplicada.
 - Nunca subas `.env`, credenciales ni datos reales del negocio.
 - Los nombres de archivos y carpetas de código van en inglés; la app del punto de venta es `pos`.
 - Antes de crear un archivo nuevo, consulta el mapa. Si su ruta no está, pregúntale a Tarín dónde va.

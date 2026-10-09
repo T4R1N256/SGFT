@@ -42,7 +42,7 @@ python scripts/dueno_de_ruta.py --persona <diego|jesus|jared|tarin|yahir>
 
 **Revisa:** las vistas de Jared (llaman a sus servicios), el backend de autenticación de Diego (seguridad), `pricing.js` (espejo de su `services_pricing.py`), plantillas-tag de Tarín (que no calculen dinero), fixtures demo de Yahir (coherencia con los modelos), workflows de CI.
 
-**Cómo recibe pedidos de otros:** cualquier campo nuevo lo solicita el interesado con un issue o un PR a `models.py` que Jesús aprueba; Jesús genera la migración. Nadie más corre `makemigrations` sobre la rama principal.
+**Cómo recibe pedidos de otros:** cualquier campo nuevo lo solicita el interesado con un issue, o lo escribe él mismo en su rama avisando antes a Jesús y genera ahí su migración (DEC-37); Jesús revisa el PR. Nunca se corre `makemigrations` directamente sobre `main`.
 
 ---
 

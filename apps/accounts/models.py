@@ -1,4 +1,4 @@
-"""Staff accounts (WBS 3.1.1). Only Jesús edits this file."""
+"""Staff accounts (WBS 3.1.1). Owner: Jesús, who reviews every change; whoever writes a model generates its migration after telling him (DEC-37)."""
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models
 
