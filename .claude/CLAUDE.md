@@ -1,6 +1,6 @@
 # CLAUDE.md — Sistema de Gestión de Food Truck (SGFT)
 
-> Contexto y reglas de trabajo para agentes y personas. Actualizado el 4-oct-2026 (DEC-01 a DEC-35).
+> Contexto y reglas de trabajo para agentes y personas. Actualizado el 9-oct-2026 (DEC-01 a DEC-36).
 > Dónde va cada archivo y de quién es: skill `.claude/skills/sgft-organizacion-entregables/`, que se consulta con `scripts/dueno_de_ruta.py <ruta>`. Las decisiones `DEC-nn` están registradas en `references/decisiones-y-pendientes.md` de la misma skill.
 >
 > **No modifiques este archivo sin comentarlo antes con el usuario** y sin su aprobación explícita.
@@ -163,7 +163,7 @@ tests_fixtures/    pricing_cases.json          tests_e2e/   Playwright + parity/
   - interfaz, mensajes y errores en español;
   - identificadores, tablas, comentarios y **nombres de archivos y carpetas de código y pruebas** en inglés (DEC-17). La app es `pos`, no `pdv`;
 - **Excepción DEC-01:** el módulo de precios y el lote de sincronización van en español: `calcular_total()`, `calcularTotal()`, y llaves como `pedido`, `lineas`, `platillo_id`, `precio_base_centavos`, `ajuste_centavos`, `total_cobrado_centavos`.
-- **Glosario:** punto de venta `pos` · venta `sale` · platillo `dish` · insumo `ingredient` · receta `recipe` · pedido `order` · personalización `modifier` · existencia `stock` · nivel mínimo `min_stock` · merma `waste` · corte `cash_close` · turno `cash_session` · roles `admin`/`cashier` · ajuste `sale_adjustment` · cuarentena `quarantined_sale`/`quarantined_cash_session` · efectivo inicial/final/esperado `opening_amount`/`closing_amount`/`expected_amount` · diferencia `cash_difference` · bandeja de revisión `review`.
+- **Glosario:** punto de venta `pos` · venta `sale` · platillo `dish` · insumo `ingredient` · receta `recipe` · pedido `order` · personalización `modifier` · existencia `stock` · nivel mínimo `min_stock` · merma `waste` · corte `cash_close` · turno `cash_session` · roles `admin`/`cashier` · ajuste `sale_adjustment` · cuarentena `quarantined_operation` (envoltura genérica para toda operación sincronizada que no se pudo aplicar, DEC-36) · efectivo inicial/final/esperado `opening_amount`/`closing_amount`/`expected_amount` · diferencia `cash_difference` · bandeja de revisión `review`.
 - **Dinero:**
   - nunca en punto flotante;
   - en el servidor, `DecimalField(max_digits=10, decimal_places=2)`;

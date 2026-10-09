@@ -99,8 +99,8 @@ Desde DEC-25, `catalog` tiene la pantalla **Productos** (platillos, precios y re
 ```
 apps/pos/                             [JB] (rev: JH)  urls.py, admin.py, apps.py
 ├── models.py                         [JH]  Order, OrderItem, Modifier, Sale (dos marcas de tiempo),
-│                                           SaleAdjustment, QuarantinedSale, CashRegisterSession,
-│                                           QuarantinedCashSession — con restricción de unicidad del UUID
+│                                           SaleAdjustment, CashRegisterSession, QuarantinedOperation
+│                                           (cuarentena genérica) — con restricción de unicidad del UUID
 ├── migrations/                       [JH]
 ├── services.py                       [JH] (rev: JB)  WBS 3.3.5, 3.3.8 🆕, 3.4.9 🆕 — confirm_sale(), cancel_sale(),
 │                                           adjust_sale() con motivo, resolución de cuarentena y revisiones

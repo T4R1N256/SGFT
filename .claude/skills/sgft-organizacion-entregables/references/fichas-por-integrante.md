@@ -22,7 +22,7 @@ python scripts/dueno_de_ruta.py --persona <diego|jesus|jared|tarin|yahir>
 **Responsabilidad central:** el esquema de datos y todo lo que corre dentro de `transaction.atomic()`. Es el único que genera migraciones.
 
 **Dueño de**
-- Todos los `apps/*/models.py` y `apps/*/migrations/` (3.1.1, 3.2.1–3.2.4, modelos de `pos` incluidos `Modifier`, `CashRegisterSession`, `QuarantinedSale`, `QuarantinedCashSession`).
+- Todos los `apps/*/models.py` y `apps/*/migrations/` (3.1.1, 3.2.1–3.2.4, modelos de `pos` incluidos `Modifier`, `CashRegisterSession` y la cuarentena genérica `QuarantinedOperation`).
 - `apps/pos/services.py`: `confirm_sale` (3.3.5), `cancel_sale` / `adjust_sale` con motivo (3.3.8, regla 11) y la resolución de cuarentena y revisiones (3.4.9).
 - `apps/pos/services_pricing.py`: `calcular_total()` (3.3.4, nombres en español por DEC-01).
 - `apps/pos/services_cash_session.py`: `open_session`, `close_session`, `current_session` (3.5.1, 3.4.7, 3.5.7).

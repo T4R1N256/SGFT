@@ -86,7 +86,7 @@ Todo importe viaja en **enteros de centavos**; el servidor lo convierte a `Decim
 1. **Validación del lote.** Sin sesión → 401. Token CSRF inválido → 403 (comportamiento estándar de Django). JSON mal formado, falta `operaciones` o versión desconocida → 400. Más de 100 operaciones → 413. En estos casos **no se procesa ninguna operación**.
 2. **Orden.** Primero todas las operaciones `apertura_turno`, luego las `venta`, cada grupo en orden ascendente de `marca_tiempo_dispositivo`. Así cada venta encuentra su turno ya creado.
 3. **Una transacción por operación.** Cada operación se aplica en su propia `transaction.atomic()` (ADR-02 §7). Un fallo en una no revierte las demás.
-4. **Idempotencia.** Si el `uuid` ya existe en `Sale`, `CashRegisterSession`, `QuarantinedSale` o `QuarantinedCashSession`, el resultado es `duplicada` y no se toca nada. La garantía es una restricción de unicidad en base de datos, no una consulta previa (regla 8).
+4. **Idempotencia.** Si el `uuid` ya existe en `Sale`, `CashRegisterSession` o `QuarantinedOperation`, el resultado es `duplicada` y no se toca nada. La garantía es una restricción de unicidad en base de datos, no una consulta previa (regla 8).
 5. **Autorización por operación.** El `usuario_id` debe existir, estar activo y tener un rol que permita la operación: Cajero o Administrador para `venta`; **solo Administrador para `apertura_turno`** (DEC-27; sin red, el `usuario_id` de la apertura es el del Administrador que la autorizó con su PIN). Si no, la operación va a cuarentena con motivo `usuario_sin_permiso`: la venta ya ocurrió y no se rechaza (regla 9).
 6. **Apertura de turno.** Si ya existe un turno abierto para la jornada, va a cuarentena con motivo `turno_ya_abierto` (regla 13, caso previsto en la descomposición SADT de A6).
 7. **Venta.** En este orden:
@@ -119,7 +119,7 @@ Cuando el lote se pudo procesar, siempre **HTTP 200**:
 | `aplicada` | Registrada normalmente. | Sí |
 | `aplicada_con_revision` | Registrada, con uno o más `motivos`: `precio_distinto`, `existencia_negativa`. Aparece en la bandeja del Administrador (3.4.9). | Sí |
 | `duplicada` | El servidor ya la tenía (reintento). | Sí |
-| `cuarentena` | Guardada en `QuarantinedSale` / `QuarantinedCashSession` con un `motivo`: `usuario_sin_permiso`, `turno_ya_abierto`, `turno_invalido`, `platillo_desconocido`, `receta_faltante`, `total_inconsistente`. La resuelve el Administrador en la bandeja (3.4.9). | Sí |
+| `cuarentena` | Guardada en `QuarantinedOperation` (envoltura genérica con el JSON original, DEC-36) con un `motivo`: `usuario_sin_permiso`, `turno_ya_abierto`, `turno_invalido`, `platillo_desconocido`, `receta_faltante`, `total_inconsistente`. La resuelve el Administrador en la bandeja (3.4.9). | Sí |
 
 **Regla del cliente:** borra de su cola **todo UUID que aparezca en `resultados`**, cualquiera que sea su estado, porque en los cuatro casos el servidor ya tiene la operación. Conserva la cola completa ante 401, 403, 400, 413, errores 5xx o falta de red, y reintenta después. El reintento es seguro gracias a la idempotencia.
 
