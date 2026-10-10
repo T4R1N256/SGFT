@@ -97,3 +97,64 @@ class AccessRestrictionTest(TestCase):
         resp = self.client.get("/admin/")
         self.assertEqual(resp.status_code,200)
 
+
+# Pruebas unitarias de roles realizadas por Diego
+
+class RoleTests(TestCase):
+    """Pruebas del modelo de roles (WBS 3.1.5)."""
+
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            username="admin_test",
+            password=PASSWORD,
+            role=Role.ADMIN,
+        )
+        self.cashier = User.objects.create_user(
+            username="cashier_test",
+            password=PASSWORD,
+            role=Role.CASHIER,
+        )
+
+    # El rol por defecto al crear un usuario sin especificar es CASHIER
+    def test_default_role_is_cashier(self):
+        user = User.objects.create_user(username="nuevo", password=PASSWORD)
+        self.assertEqual(user.role, Role.CASHIER)
+
+    # Un usuario creado con rol ADMIN conserva ese rol
+    def test_admin_role_is_assigned(self):
+        self.assertEqual(self.admin.role, Role.ADMIN)
+
+    # Un usuario creado con rol CASHIER conserva ese rol
+    def test_cashier_role_is_assigned(self):
+        self.assertEqual(self.cashier.role, Role.CASHIER)
+
+    # La propiedad is_admin solo es True para rol ADMIN
+    def test_is_admin_property(self):
+        self.assertTrue(self.admin.is_admin)
+        self.assertFalse(self.cashier.is_admin)
+
+    # La propiedad is_cashier solo es True para rol CASHIER
+    def test_is_cashier_property(self):
+        self.assertTrue(self.cashier.is_cashier)
+        self.assertFalse(self.admin.is_cashier)
+
+    # El rol ADMIN y el rol CASHIER son distintos entre sí
+    def test_roles_are_different(self):
+        self.assertNotEqual(Role.ADMIN, Role.CASHIER)
+
+    # get_role_display devuelve el texto legible del rol
+    def test_role_display_text(self):
+        self.assertEqual(self.admin.get_role_display(), "Administrador")
+        self.assertEqual(self.cashier.get_role_display(), "Cajero")
+
+    # Un superusuario recibe automáticamente el rol ADMIN
+    def test_superuser_gets_admin_role(self):
+        superuser = User.objects.create_superuser(
+            username="root_test",
+            email="root@example.com",
+            password=PASSWORD,
+        )
+        self.assertEqual(superuser.role, Role.ADMIN)
+        self.assertTrue(superuser.is_admin)
+        self.assertTrue(superuser.is_superuser)
+        self.assertTrue(superuser.is_staff)
