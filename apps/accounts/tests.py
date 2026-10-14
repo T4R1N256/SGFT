@@ -1,13 +1,12 @@
 """Unit tests for apps.accounts. Whoever implements a service writes its tests."""
 import base64
 import hashlib
-from unittest import expectedFailure
 
 from django.contrib.auth import authenticate, get_user_model
 from django.test import TestCase, override_settings
 
 from apps.accounts.models import DEFAULT_PIN_VERIFIER_ITERATIONS, Role
-
+from apps.accounts.services import create_user
 
 class UserModelTests(TestCase):
     """WBS 3.1.1 — custom user model with role (author: Jesús)."""
@@ -142,12 +141,10 @@ class AccessRestrictionTest(TestCase):
         resp = self.client.get("/admin/")
         self.assertEqual(resp.status_code,200)
 
-    @expectedFailure  # create_user does not set is_staff for the admin role yet (WBS 3.1.1, accounts/services.py)
     def test_admin_role_can_open_admin(self):
-        admin = User.objects.create_user(username="admin2", password=PASSWORD, role=Role.ADMIN)
+        admin = create_user(username="admin2", password=PASSWORD, role=Role.ADMIN)
         self.client.force_login(admin)
         self.assertEqual(self.client.get("/admin/").status_code, 200)
-
 
 # Pruebas unitarias de roles realizadas por Diego
 
