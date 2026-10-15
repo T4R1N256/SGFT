@@ -11,6 +11,7 @@ from django.contrib.auth.models import AnonymousUser
 from unittest import skipUnless
 
 from django.test import RequestFactory, SimpleTestCase
+from django.urls import reverse
 from django_htmx.middleware import HtmxDetails
 
 from apps.pos import views
@@ -31,6 +32,15 @@ class ViewTestCase(SimpleTestCase):
         ids = Counter(re.findall(r'\sid="([^"]+)"', response.content.decode()))
         repeated = [i for i, n in ids.items() if n > 1]
         self.assertEqual(repeated, [], f"ids repetidos: {repeated}")
+
+
+class HomeTests(SimpleTestCase):
+    """The site root opens Nueva venta (config/urls.py)."""
+
+    def test_root_redirects_to_order_builder(self):
+        response = self.client.get("/")
+        self.assertRedirects(response, reverse("pos:order_builder"), fetch_redirect_response=False)
+        self.assertEqual(response.status_code, 302, "temporal: la raíz podrá mandar a la activación del dispositivo")
 
 
 class OrderBuilderTests(ViewTestCase):
