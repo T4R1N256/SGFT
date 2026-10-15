@@ -1,6 +1,6 @@
 # CLAUDE.md — Sistema de Gestión de Food Truck (SGFT)
 
-> Contexto y reglas de trabajo para agentes y personas. Actualizado el 9-oct-2026 (DEC-01 a DEC-37).
+> Contexto y reglas de trabajo para agentes y personas. Actualizado el 11-oct-2026 (DEC-01 a DEC-38).
 > Dónde va cada archivo y de quién es: skill `.claude/skills/sgft-organizacion-entregables/`, que se consulta con `scripts/dueno_de_ruta.py <ruta>`. Las decisiones `DEC-nn` están registradas en `references/decisiones-y-pendientes.md` de la misma skill.
 >
 > **No modifiques este archivo sin comentarlo antes con el usuario** y sin su aprobación explícita.
@@ -50,7 +50,7 @@ Hay **dos roles**: Administrador y Cajero.
 
 El comensal no es actor: no tiene cuenta y no se guardan sus datos.
 
-**Acceso (DEC-34).** No hay página de inicio de sesión. El dispositivo se activa una vez con el PIN de un Administrador y queda con una sesión permanente de la cuenta de cajero: las ventas quedan a nombre de esa cuenta, sin distinguir a cada persona. Lo restringido (Productos, Inventario, Caja, Reportes, abrir y cerrar caja) pide el PIN de Administrador y se desbloquea 30 minutos (DEC-32); lo que se autoriza con PIN queda a nombre de ese Administrador. Si el servidor responde 401 al sincronizar, la cola se conserva y se pide activar de nuevo el dispositivo. Django Admin conserva su propio inicio con usuario y contraseña, solo para el Administrador.
+**Acceso (DEC-34).** No hay página de inicio de sesión. El dispositivo se activa una vez con el PIN de un Administrador y queda con una sesión permanente de la cuenta de cajero: las ventas quedan a nombre de esa cuenta, sin distinguir a cada persona. Lo restringido (Productos, Inventario, Caja, Reportes, abrir y cerrar caja) pide el PIN de Administrador y se desbloquea 30 minutos (DEC-32); lo que se autoriza con PIN queda a nombre de ese Administrador. Si el servidor responde 401 al sincronizar, la cola se conserva y se pide activar de nuevo el dispositivo. Django Admin conserva su propio inicio con usuario y contraseña, solo para el Administrador; esa contraseña es su PIN (DEC-38).
 
 ## 5. Reglas de negocio (no negociables)
 
@@ -187,7 +187,7 @@ tests_fixtures/    pricing_cases.json          tests_e2e/   Playwright + parity/
 
 - **Secretos:** `.env` nunca se sube, y el repositorio es **público**: nada de credenciales ni datos reales. Cada integrante genera su propia `DJANGO_SECRET_KEY` con `python -c "import secrets; print(secrets.token_urlsafe(50))"`. La de producción vive en el panel del proveedor y no se cambia.
 - **Contraseñas:** con hash, mediante el sistema de autenticación de Django.
-- **PIN de Administrador** (DEC-28): 6 dígitos, distinto de la contraseña y guardado con hash. Desbloquea los módulos con candado durante 30 minutos (DEC-32). Para abrir la caja sin red, el dispositivo guarda solo un verificador PBKDF2 por Administrador activo, que caduca a los 7 días sin sincronizar; nunca el PIN. Se recomienda sincronizar antes de cada jornada.
+- **PIN de Administrador** (DEC-28, DEC-38): es la contraseña de la cuenta, de 6 dígitos, guardada con hash por Django (`check_password`); no hay campo aparte. Desbloquea los módulos con candado durante 30 minutos (DEC-32). Para abrir la caja sin red, el dispositivo guarda solo un verificador PBKDF2 por Administrador activo, que el servidor calcula al fijar la contraseña y caduca a los 7 días sin sincronizar; nunca el PIN. Se recomienda sincronizar antes de cada jornada.
 - **CSRF:** siempre activo. `|safe` solo con justificación. `base.html` envía el token en toda petición HTMX (`hx-headers`), y `db.js` lo lee de la cookie `csrftoken`. Por eso `CSRF_COOKIE_HTTPONLY = False` es **intencional**.
 - **Datos personales:** solo del personal (nombre, rol, credenciales), conforme a la LFPDPPP (DOF 20-03-2025). Referencia de seguridad: OWASP Top 10:2021.
 
