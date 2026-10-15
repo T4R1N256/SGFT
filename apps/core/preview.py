@@ -1,7 +1,12 @@
 """
-Stand-in for the admin PIN and the cash session, ONLY for the local integration branch (tarin/integracion-pantallas).
-Not part of the WBS and never goes to a PR: the real pieces are the role/PIN mixin of apps/core/mixins.py and the shell
-context processor (Jesús), the PIN view of apps/accounts (Yahir) and the cash session services (Jared and Jesús).
+TEMPORARY stand-in for the admin PIN and the cash session, merged to main on purpose (PR #44) so the team can walk
+through every screen. It validates NOTHING: any 6-digit PIN unlocks the modules with a padlock.
+
+Remove it, with every «preview.» call in the views, once the real pieces exist (rutas-pendientes.md):
+  - the role/PIN mixin of apps/core/mixins.py (Jesús, J3), which replaces require_admin_pin;
+  - the shell context processor of apps/core (Jesús, J2), which replaces apply_to_shell and each app's _shell_context;
+  - the PIN hash field in the user model (Jesús, J4), the PIN service (Diego) and the PIN view of apps/accounts (Yahir);
+  - the cash session services (Jared and Jesús), which replace is_cash_open and set_cash_open.
 
 State lives in the Django session. Any 6-digit PIN unlocks the modules with a padlock for 30 minutes. Without a
 session (views called with RequestFactory in the tests) everything stays unlocked and the cash open, as in the

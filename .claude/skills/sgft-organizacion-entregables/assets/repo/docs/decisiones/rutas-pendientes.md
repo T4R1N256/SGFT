@@ -1,40 +1,33 @@
-# Rutas (URLs) pendientes para conectar las vistas
+# Rutas (URLs) para conectar las vistas
 
-**Fecha:** 3 de octubre de 2026 · **Estado:** abierto · **Lo prepara:** Alejandro Tarín · **Para:** Jesús, Jared, Diego y Yahir
+**Fecha:** 15 de octubre de 2026 (antes, 3 y 8 de octubre) · **Estado:** rutas de la interfaz registradas; quedan las del backend y el PIN real · **Lo prepara:** Alejandro Tarín · **Para:** Jesús, Jared, Diego y Yahir
 
 ## Por qué existe
 
-Las vistas de la interfaz ya se escriben con su contrato vista–plantilla (Fase 4 de `traducir-prototipos-figma-SGFT.md`). Cada vista resuelve sus URLs **por nombre** con `reverse()`, por ejemplo `pos:add_item`, y se las pasa a la plantilla. Mientras la ruta no exista en `urls.py`, la vista pinta `#` y la pantalla se ve, pero sus botones no llaman al servidor.
+Las vistas de la interfaz se escriben con su contrato vista–plantilla. Cada vista resuelve sus URLs **por nombre** con `reverse()`, por ejemplo `pos:add_item`, y se las pasa a la plantilla. Mientras la ruta no exista en `urls.py`, la vista pinta `#` y la pantalla se ve, pero sus botones no llaman al servidor.
 
-Para conectar todo falta registrar las rutas. Este documento dice cuáles, con qué nombre y quién las registra.
+Este documento dice qué rutas hay, con qué nombre, quién las registra y qué falta.
 
-## 1. Decisión pendiente: ¿de quién es `urls.py`?
+## 1. De quién es `urls.py` (resuelto)
 
-DEC-31 asignó `views.py`, `urls.py` y las plantillas al frontend. Tarín pidió revisar si `urls.py` debe ser del **backend**, porque define la superficie de peticiones (rutas que también usan el cliente sin red y las pruebas). Mientras se decide, **nadie del frontend edita `urls.py`**.
-
-| Opción | `urls.py` de `pos` y `reports` | `urls.py` de `catalog`, `inventory` y `accounts` |
-|---|---|---|
-| A. Backend (propuesta de Tarín) | Jared | Diego |
-| B. Frontend (DEC-31 tal como está) | Tarín (`pos`, `catalog`) · Yahir (`inventory`, `reports`, `accounts`) | ídem |
-
-Al decidir, Tarín actualiza `assets/ownership.json` y regenera `CODEOWNERS`.
+Se quedó la opción de DEC-31: **vistas, URLs y plantillas son del frontend** (`CLAUDE.md` §7). `pos` y `catalog` son de Tarín; `inventory`, `reports` y `accounts`, de Yahir. `config/urls.py` sigue siendo de Jesús.
 
 ## 2. Pendientes de Jesús (`config/`, `apps/core/`)
 
-| # | Pendiente | Archivo | Por qué |
+| # | Pendiente | Archivo | Estado |
 |---|---|---|---|
-| J1 | Incluir las rutas de `catalog`: `path("catalog/", include("apps.catalog.urls"))` | `config/urls.py` | Productos (DEC-25) no tiene ruta; `catalog/urls.py` todavía no existe. |
-| J2 | Procesador de contexto con lo que piden el menú y la barra superior: `nav_modules`, `active_module`, `cash_session_open`, `session_total`, `sync_pending`, `user_initials`, `logout_url`, `search_placeholder`, `search_url`, `search_target` | `apps/core/context_processors.py` y su registro en `config/settings.py` | Hoy cada vista lo arma con `_shell_context()` como borrador. La lista completa está al inicio de `apps/core/templates/base.html`. |
-| J3 | Mixin o decorador de rol y de PIN de Administrador | `apps/core/mixins.py` | Las vistas lo aplicarán; el borrador aún no valida roles. |
-| J4 | Campos de modelo de DEC-28 y DEC-30: hash del PIN, `description` y activo en `Dish`, emoji en la categoría, costo total en la compra, costo unitario en `Ingredient` | `apps/*/models.py` | Los piden los formularios. |
+| J1 | Incluir las rutas de `catalog`: `path("catalog/", include("apps.catalog.urls"))` | `config/urls.py` | **Hecho** en el PR #44 (8-oct-2026). |
+| J2 | Procesador de contexto con lo que piden el menú y la barra superior: `nav_modules`, `active_module`, `cash_session_open`, `session_total`, `sync_pending`, `user_initials`, `logout_url`, `search_placeholder`, `search_url`, `search_target` y **`hide_search`** (nuevo: oculta el buscador en Caja y Reportes) | `apps/core/context_processors.py` y su registro en `config/settings.py` | Pendiente. Hoy cada vista lo arma con `_shell_context()` o `_shell()` como borrador, envuelto por el simulacro (§5). La lista completa está al inicio de `apps/core/templates/base.html`. |
+| J3 | Mixin o decorador de rol y de PIN de Administrador | `apps/core/mixins.py` | Pendiente. Reemplaza a `preview.require_admin_pin` (§5). |
+| J4 | Campos de modelo de DEC-30: `description` y activo en `Dish`, emoji en la categoría, costo total en la compra, costo unitario en `Ingredient` | `apps/*/models.py` | `catalog` en curso (PR #48, Issue #13). El PIN ya no necesita campo: es la contraseña de la cuenta (DEC-38, PR #46), y el verificador sin red quedó en los campos `pin_verifier*` del usuario. |
 
-## 3. Rutas que esperan las vistas
+## 3. Rutas registradas
 
-Los nombres son el contrato y no cambian; las rutas (`path`) son una **propuesta** que decide quien registre `urls.py`.
+Los nombres son el contrato y no cambiaron: las rutas quedaron tal como se propusieron.
 
-### `pos` (vistas de Tarín, `apps/pos/views.py`) — ya escritas en borrador
+### `pos` (Tarín, `apps/pos/urls.py`) — PR #44
 
-| Nombre | Ruta propuesta | Vista | Método |
+| Nombre | Ruta | Vista | Método |
 |---|---|---|---|
 | `pos:order_builder` | `pos/` | `order_builder` | GET |
 | `pos:dish_list` | `pos/dishes/` | `dish_list` | GET (HTMX), `?category=` `?q=` |
@@ -44,12 +37,11 @@ Los nombres son el contrato y no cambian; las rutas (`path`) son una **propuesta
 | `pos:set_payment_method` | `pos/order/payment-method/` | `set_payment_method` | POST |
 | `pos:confirm_sale` | `pos/order/confirm/` | `confirm_sale` | POST |
 | `pos:open_session` | `pos/cash-session/open/` | `open_session` | GET y POST |
-| `pos:close_session` | `pos/cash-session/close/` | `close_session` (escrita; su plantilla es de Yahir) | GET y POST |
-| `pos:sync_operations` | `pos/sync/` | `views_sync.sync_operations` (Jesús + Jared) | POST, contrato v1 |
+| `pos:close_session` | `pos/cash-session/close/` | `close_session` (su plantilla es de Yahir) | GET y POST |
 
-### `catalog` (vistas de Tarín) — escritas en borrador
+### `catalog` (Tarín, `apps/catalog/urls.py`) — PR #44
 
-| Nombre | Ruta propuesta | Método |
+| Nombre | Ruta | Método |
 |---|---|---|
 | `catalog:dish_catalog` | `catalog/` | GET |
 | `catalog:dish_create` | `catalog/dishes/new/` | GET y POST |
@@ -58,33 +50,56 @@ Los nombres son el contrato y no cambian; las rutas (`path`) son una **propuesta
 | `catalog:add_recipe_line` | `catalog/recipe-lines/new/` | GET (HTMX), `?index=` |
 | `catalog:ingredient_create` | `catalog/ingredients/new/` | GET y POST |
 
-### `inventory` (vistas de Yahir) — pendientes
+### `inventory` (Yahir, `apps/inventory/urls.py`) — PR #41
 
-| Nombre | Ruta propuesta | Método |
+| Nombre | Ruta | Método |
 |---|---|---|
-| `inventory:ingredient_list` | `inventory/` | GET |
+| `inventory:ingredient_list` | `inventory/` | GET, `?q=` (HTMX) |
 | `inventory:register_purchase` | `inventory/purchases/new/` | GET y POST |
 | `inventory:register_waste` | `inventory/waste/new/` | GET y POST |
 
-### `reports` (vistas de Yahir) — pendientes
+### `reports` (Yahir, `apps/reports/urls.py`) — PR #40 y #43
 
-| Nombre | Ruta propuesta | Método |
+| Nombre | Ruta | Método |
 |---|---|---|
-| `reports:cash` | `reports/cash/` | GET (página Caja) |
-| `reports:reports` | `reports/` | GET |
-| `reports:sales_by_period` | `reports/sales/` | GET (HTMX) |
+| `reports:cash` | `reports/cash/` | GET (página Caja), `?periodo=hoy\|semana\|mes` (HTMX) |
+| `reports:reports` | `reports/` | GET, `?periodo=…&fecha=AAAA-MM-DD` (HTMX, con `hx-push-url`) |
 | `reports:export_daily_sales_pdf` | `reports/daily-sales.pdf` | GET, `?day=AAAA-MM-DD` |
 
-### `accounts` (vistas de Yahir) — pendientes
+`reports:sales_by_period` (`reports/sales/`) **ya no hace falta**: `reports:reports` cambia de periodo con sus parámetros y devuelve las columnas como fragmento.
 
-| Nombre | Ruta propuesta | Método |
+### `accounts` (Yahir, `apps/accounts/urls.py`) — PR #44, temporal
+
+| Nombre | Ruta | Método |
 |---|---|---|
-| `accounts:activate_device` | `accounts/activate/` | GET (diálogo del PIN) y POST (valida el PIN de un Administrador y abre la sesión permanente de la cuenta de cajero; DEC-34, sin login ni logout) |
-| `accounts:admin_pin` | `accounts/pin/` | GET (devuelve `components/pin_dialog.html` con `module_label` y `next_url`) y POST (valida; correcto: 204 con `HX-Redirect` a `next`; incorrecto: 422 con el diálogo y `HX-Retarget: #dialog`) |
-| `accounts:pin_verifiers` | `accounts/pin-verifiers/` | GET (verificadores para el modo sin red, DEC-28) |
+| `accounts:admin_pin` | `accounts/pin/` | GET (diálogo del PIN con `module_label` y `next_url`) y POST (correcto: 204 con `HX-Redirect` a `next`; incorrecto: 422 con el diálogo y `HX-Retarget: #dialog`). **Hoy es el simulacro (§5): acepta cualquier PIN de 6 dígitos.** |
 
-## 4. Cómo comprobar que quedó conectado
+## 4. Rutas que faltan
+
+| Nombre | Ruta propuesta | Quién | Para qué |
+|---|---|---|---|
+| `pos:sync_operations` | `pos/sync/` | Jesús + Jared (`views_sync.sync_operations`) | POST, contrato v1. Está comentada en `pos/urls.py` hasta que exista la vista. |
+| `accounts:activate_device` | `accounts/activate/` | Yahir (vista) y Diego (servicio) | GET (diálogo del PIN) y POST (valida el PIN de un Administrador y abre la sesión permanente de la cuenta de cajero; DEC-34, sin login ni logout). |
+| `accounts:pin_verifiers` | `accounts/pin-verifiers/` | Yahir (vista) y Diego (servicio) | GET: verificadores para el modo sin red (DEC-28). |
+
+La vista real de `accounts:admin_pin` también es de Yahir y Diego: conserva el nombre y la ruta, y valida el PIN con `check_password`, porque el PIN es la contraseña de la cuenta (DEC-38).
+
+## 5. Simulacro del PIN y de la caja (`apps/core/preview.py`, temporal)
+
+Entró a `main` a propósito con el PR #44 para que el equipo pueda recorrer todas las pantallas. **No valida nada:** cualquier PIN de 6 dígitos desbloquea Productos, Inventario, Caja y Reportes por 30 minutos, y el estado de la caja vive en la sesión. En las pruebas de vistas (sin sesión) todo queda desbloqueado.
+
+Se retira, con todas las llamadas a `preview.` de las vistas, cuando existan:
+
+| Pieza real | De quién | Reemplaza a |
+|---|---|---|
+| Mixin de rol y PIN (J3) | Jesús | `preview.require_admin_pin` |
+| Procesador de contexto (J2) | Jesús | `preview.apply_to_shell` y los `_shell_context()` de cada app |
+| Validador de la contraseña de 6 dígitos y servicio que valida el PIN | Diego | la validación de `accounts:admin_pin` |
+| Vista real del PIN y `accounts:activate_device` | Yahir | `accounts/views.py` del simulacro |
+| Servicios del turno de caja | Jared y Jesús | `preview.is_cash_open` y `preview.set_cash_open` |
+
+## 6. Cómo comprobar que quedó conectado
 
 1. `python manage.py check` sin errores.
-2. Abrir `/pos/`: los botones ya no apuntan a `#`.
+2. Abrir `/pos/`, `/catalog/`, `/inventory/`, `/reports/cash/` y `/reports/`: las pantallas con candado piden el PIN y los botones ya no apuntan a `#`.
 3. Las pruebas de `apps/<app>/tests_views.py` siguen en verde; no dependen de las rutas porque llaman a las vistas directamente.

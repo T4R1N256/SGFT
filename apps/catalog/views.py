@@ -165,7 +165,7 @@ def _validate_dish(data):
 
 # --- Views -------------------------------------------------------------------------------------
 
-# Integration branch only: the whole screen asks for the admin PIN (apps/core/preview.py).
+# Temporary: the whole screen asks for the admin PIN through the stand-in of apps/core/preview.py.
 _require_pin = preview.require_admin_pin(
     "Productos", lambda request: preview.apply_to_shell(request, _shell_context(_url("catalog:dish_catalog"))))
 
