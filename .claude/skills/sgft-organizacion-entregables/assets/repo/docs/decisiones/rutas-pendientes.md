@@ -19,7 +19,7 @@ Se quedó la opción de DEC-31: **vistas, URLs y plantillas son del frontend** (
 | J1 | Incluir las rutas de `catalog`: `path("catalog/", include("apps.catalog.urls"))` | `config/urls.py` | **Hecho** en el PR #44 (8-oct-2026). |
 | J2 | Procesador de contexto con lo que piden el menú y la barra superior: `nav_modules`, `active_module`, `cash_session_open`, `session_total`, `sync_pending`, `user_initials`, `logout_url`, `search_placeholder`, `search_url`, `search_target` y **`hide_search`** (nuevo: oculta el buscador en Caja y Reportes) | `apps/core/context_processors.py` y su registro en `config/settings.py` | Pendiente. Hoy cada vista lo arma con `_shell_context()` o `_shell()` como borrador, envuelto por el simulacro (§5). La lista completa está al inicio de `apps/core/templates/base.html`. |
 | J3 | Mixin o decorador de rol y de PIN de Administrador | `apps/core/mixins.py` | Pendiente. Reemplaza a `preview.require_admin_pin` (§5). |
-| J4 | Campos de modelo de DEC-30: `description` y activo en `Dish`, emoji en la categoría, costo total en la compra, costo unitario en `Ingredient` | `apps/*/models.py` | `catalog` en curso (PR #48, Issue #13). El PIN ya no necesita campo: es la contraseña de la cuenta (DEC-38, PR #46), y el verificador sin red quedó en `User.offline_verifier`. |
+| J4 | Campos de modelo de DEC-30: `description` y activo en `Dish`, emoji en la categoría, costo total en la compra, costo unitario en `Ingredient` | `apps/*/models.py` | `catalog` en curso (PR #48, Issue #13). El PIN ya no necesita campo: es la contraseña de la cuenta (DEC-38, PR #46), y el verificador sin red quedó en los campos `pin_verifier*` del usuario. |
 
 ## 3. Rutas registradas
 
