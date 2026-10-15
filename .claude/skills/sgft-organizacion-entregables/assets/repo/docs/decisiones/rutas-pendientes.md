@@ -1,6 +1,6 @@
 # Rutas (URLs) para conectar las vistas
 
-**Fecha:** 8 de octubre de 2026 (antes, 3 de octubre) · **Estado:** rutas de la interfaz registradas; quedan las del backend y el PIN real · **Lo prepara:** Alejandro Tarín · **Para:** Jesús, Jared, Diego y Yahir
+**Fecha:** 15 de octubre de 2026 (antes, 3 y 8 de octubre) · **Estado:** rutas de la interfaz registradas; quedan las del backend y el PIN real · **Lo prepara:** Alejandro Tarín · **Para:** Jesús, Jared, Diego y Yahir
 
 ## Por qué existe
 
@@ -19,7 +19,7 @@ Se quedó la opción de DEC-31: **vistas, URLs y plantillas son del frontend** (
 | J1 | Incluir las rutas de `catalog`: `path("catalog/", include("apps.catalog.urls"))` | `config/urls.py` | **Hecho** en el PR #44 (8-oct-2026). |
 | J2 | Procesador de contexto con lo que piden el menú y la barra superior: `nav_modules`, `active_module`, `cash_session_open`, `session_total`, `sync_pending`, `user_initials`, `logout_url`, `search_placeholder`, `search_url`, `search_target` y **`hide_search`** (nuevo: oculta el buscador en Caja y Reportes) | `apps/core/context_processors.py` y su registro en `config/settings.py` | Pendiente. Hoy cada vista lo arma con `_shell_context()` o `_shell()` como borrador, envuelto por el simulacro (§5). La lista completa está al inicio de `apps/core/templates/base.html`. |
 | J3 | Mixin o decorador de rol y de PIN de Administrador | `apps/core/mixins.py` | Pendiente. Reemplaza a `preview.require_admin_pin` (§5). |
-| J4 | Campos de modelo de DEC-28 y DEC-30: hash del PIN (y fecha de cambio) en el usuario, `description` y activo en `Dish`, emoji en la categoría, costo total en la compra, costo unitario en `Ingredient` | `apps/*/models.py` | Pendiente. El PR #39 cambió el usuario, pero todavía sin el PIN. |
+| J4 | Campos de modelo de DEC-30: `description` y activo en `Dish`, emoji en la categoría, costo total en la compra, costo unitario en `Ingredient` | `apps/*/models.py` | `catalog` en curso (PR #48, Issue #13). El PIN ya no necesita campo: es la contraseña de la cuenta (DEC-38, PR #46), y el verificador sin red quedó en `User.offline_verifier`. |
 
 ## 3. Rutas registradas
 
@@ -82,7 +82,7 @@ Los nombres son el contrato y no cambiaron: las rutas quedaron tal como se propu
 | `accounts:activate_device` | `accounts/activate/` | Yahir (vista) y Diego (servicio) | GET (diálogo del PIN) y POST (valida el PIN de un Administrador y abre la sesión permanente de la cuenta de cajero; DEC-34, sin login ni logout). |
 | `accounts:pin_verifiers` | `accounts/pin-verifiers/` | Yahir (vista) y Diego (servicio) | GET: verificadores para el modo sin red (DEC-28). |
 
-La vista real de `accounts:admin_pin` también es de Yahir y Diego: conserva el nombre y la ruta, y valida el hash del PIN.
+La vista real de `accounts:admin_pin` también es de Yahir y Diego: conserva el nombre y la ruta, y valida el PIN con `check_password`, porque el PIN es la contraseña de la cuenta (DEC-38).
 
 ## 5. Simulacro del PIN y de la caja (`apps/core/preview.py`, temporal)
 
@@ -94,7 +94,7 @@ Se retira, con todas las llamadas a `preview.` de las vistas, cuando existan:
 |---|---|---|
 | Mixin de rol y PIN (J3) | Jesús | `preview.require_admin_pin` |
 | Procesador de contexto (J2) | Jesús | `preview.apply_to_shell` y los `_shell_context()` de cada app |
-| Hash del PIN en el usuario (J4) y servicio que lo valida | Jesús y Diego | la validación de `accounts:admin_pin` |
+| Validador de la contraseña de 6 dígitos y servicio que valida el PIN | Diego | la validación de `accounts:admin_pin` |
 | Vista real del PIN y `accounts:activate_device` | Yahir | `accounts/views.py` del simulacro |
 | Servicios del turno de caja | Jared y Jesús | `preview.is_cash_open` y `preview.set_cash_open` |
 
