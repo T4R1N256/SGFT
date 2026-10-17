@@ -29,7 +29,7 @@ jobs:
 
     env:
       DJANGO_SECRET_KEY: clave-solo-para-ci-no-es-secreta
-      DJANGO_DEBUG: "True"
+      DJANGO_DEBUG: "False"
       DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
       DJANGO_CSRF_TRUSTED_ORIGINS: ""
       DJANGO_SECURE_SSL_REDIRECT: "False"
@@ -44,7 +44,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: requirements-dev.txt
+          cache-dependency-path: "requirements*.txt"
 
       - name: Instalar dependencias
         run: |
@@ -65,4 +65,4 @@ jobs:
         env:
           BASE_REF: ${{ github.base_ref }}
         run: |
-          git diff --name-only "origin/$BASE_REF...HEAD" | python .claude/skills/sgft-organizacion-entregables/scripts/dueno_de_ruta.py --revisar
+          git diff --name-only --diff-filter=d "origin/$BASE_REF...HEAD" | python .claude/skills/sgft-organizacion-entregables/scripts/dueno_de_ruta.py --revisar
