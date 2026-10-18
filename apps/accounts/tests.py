@@ -6,8 +6,12 @@ from django.contrib.auth import authenticate, get_user_model
 from django.test import TestCase, override_settings
 
 from apps.accounts.models import DEFAULT_PIN_VERIFIER_ITERATIONS, Role
-from apps.accounts.services import create_user
-
+from apps.accounts.services import (
+    create_user,
+    activate_device,
+    InvalidPinError,
+    NoCashierAvailableError,
+)
 class UserModelTests(TestCase):
     """WBS 3.1.1 — custom user model with role (author: Jesús)."""
 
@@ -198,3 +202,62 @@ class RoleTests(TestCase):
         self.assertTrue(superuser.is_admin)
         self.assertTrue(superuser.is_superuser)
         self.assertTrue(superuser.is_staff)
+
+PIN_ADMIN = "482915"
+PASSWORD_CASHIER = "Clave12345"
+
+class ActivateDeviceTests(TestCase):
+    """Pruebas unitarias del servicio de activación de dispositivos."""
+
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            username="admin_test",
+            password=PIN_ADMIN,
+            role=Role.ADMIN,
+        )
+
+        self.cashier = User.objects.create_user(
+            username="cajero_test",
+            password=PASSWORD_CASHIER,
+            role=Role.CASHIER,
+        )
+
+    # Un PIN válido de administrador permite activar el dispositivo
+    def test_valid_admin_pin_activates_device(self):
+        cashier = activate_device(PIN_ADMIN)
+        self.assertEqual(cashier, self.cashier)
+
+    # Un PIN incorrecto no permite activar el dispositivo
+    def test_invalid_pin_does_not_activate_device(self):
+        with self.assertRaises(InvalidPinError):
+            activate_device("654321")
+
+    # Un PIN incompleto es rechazado
+    def test_incomplete_pin_is_rejected(self):
+        with self.assertRaises(InvalidPinError):
+            activate_device("123")
+
+    # Un PIN con letras es rechazado
+    def test_pin_with_letters_is_rejected(self):
+        with self.assertRaises(InvalidPinError):
+            activate_device("12AB56")
+
+    # Un administrador inactivo no puede activar el dispositivo
+    def test_inactive_admin_cannot_activate_device(self):
+        self.admin.is_active = False
+        self.admin.save(update_fields=["is_active"])
+
+        with self.assertRaises(InvalidPinError):
+            activate_device(PIN_ADMIN)
+
+    # No se puede activar el dispositivo sin un cajero activo
+    def test_activation_fails_without_cashier(self):
+        self.cashier.delete()
+
+        with self.assertRaises(NoCashierAvailableError):
+            activate_device(PIN_ADMIN)
+
+    # Un cajero no puede utilizar su contraseña como PIN de administrador
+    def test_cashier_password_cannot_activate_device(self):
+        with self.assertRaises(InvalidPinError):
+            activate_device(PASSWORD_CASHIER)
