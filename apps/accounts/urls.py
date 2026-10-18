@@ -6,4 +6,5 @@ from . import views
 app_name = "accounts"
 urlpatterns = [
     path("pin/", views.admin_pin, name="admin_pin"),  # stand-in for the integration branch only
+    path("activate/", views.activate_device, name="activate_device"),
 ]
