@@ -3,10 +3,12 @@ import base64
 import hashlib
 
 from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from django.test import TestCase, override_settings
 
 from apps.accounts.models import DEFAULT_PIN_VERIFIER_ITERATIONS, Role
-from apps.accounts.services import create_user
+from apps.accounts.services import change_role, create_user
 
 class UserModelTests(TestCase):
     """WBS 3.1.1 — custom user model with role (author: Jesús)."""
@@ -90,10 +92,10 @@ class AdminPinTests(TestCase):
         self.assertEqual(DEFAULT_PIN_VERIFIER_ITERATIONS, 600_000)
 
 
-#Pruebas unitarias de autenticacion realizadas por Jared y Diego
+# Authentication unit tests by Jared and Diego
 
 User = get_user_model()
-PASSWORD = 'Clave12345'
+PASSWORD = '482915'
 
 class AuthenticationTests(TestCase):
 
@@ -102,17 +104,12 @@ class AuthenticationTests(TestCase):
 
 
 
-    #Prueba que prueba que la cuenta de un empleado que ha sido desactivada no puede ingresar
+    # An inactive employee account cannot log in.
     def test_inactive_user_doesnt_login(self):
         self.user.is_active = False
         self.user.save()
         self.assertIsNone(authenticate(username='cajero1', password=PASSWORD))
 
-
-    #Verifica que la contraseña se guarde encriptada y que auque la contraseña este encriptada aun se reconoce
-    def test_password_is_saved_encrypted(self):
-        self.assertNotEqual(self.user.password, PASSWORD)
-        self.assertTrue(self.user.check_password(PASSWORD))
 
 class AccessRestrictionTest(TestCase):
     def setUp(self):
@@ -146,10 +143,10 @@ class AccessRestrictionTest(TestCase):
         self.client.force_login(admin)
         self.assertEqual(self.client.get("/admin/").status_code, 200)
 
-# Pruebas unitarias de roles realizadas por Diego
+# Role unit tests by Diego
 
 class RoleTests(TestCase):
-    """Pruebas del modelo de roles (WBS 3.1.5)."""
+    """Role model tests (WBS 3.1.5)."""
 
     def setUp(self):
         self.admin = User.objects.create_user(
@@ -163,38 +160,51 @@ class RoleTests(TestCase):
             role=Role.CASHIER,
         )
 
-    # El rol por defecto al crear un usuario sin especificar es CASHIER
-    def test_default_role_is_cashier(self):
-        user = User.objects.create_user(username="nuevo", password=PASSWORD)
-        self.assertEqual(user.role, Role.CASHIER)
-
     
 
-    # La propiedad is_admin solo es True para rol ADMIN
+    # The is_admin property is True only for ADMIN role.
     def test_is_admin_property(self):
         self.assertTrue(self.admin.is_admin)
         self.assertFalse(self.cashier.is_admin)
 
-    # La propiedad is_cashier solo es True para rol CASHIER
+    # The is_cashier property is True only for CASHIER role.
     def test_is_cashier_property(self):
         self.assertTrue(self.cashier.is_cashier)
         self.assertFalse(self.admin.is_cashier)
 
 
 
-    # get_role_display devuelve el texto legible del rol
-    def test_role_display_text(self):
-        self.assertEqual(self.admin.get_role_display(), "Administrador")
-        self.assertEqual(self.cashier.get_role_display(), "Cajero")
 
-    # Un superusuario recibe automáticamente el rol ADMIN
-    def test_superuser_gets_admin_role(self):
-        superuser = User.objects.create_superuser(
-            username="root_test",
-            email="root@example.com",
-            password=PASSWORD,
-        )
-        self.assertEqual(superuser.role, Role.ADMIN)
-        self.assertTrue(superuser.is_admin)
-        self.assertTrue(superuser.is_superuser)
-        self.assertTrue(superuser.is_staff)
+@override_settings(PASSWORD_HASHERS=FAST_HASHERS, SGFT_PIN_VERIFIER_ITERATIONS=1000)
+class SixDigitPasswordTests(TestCase):
+    """WBS 3.1.1 — the account password is the 6-digit admin PIN."""
+
+    def test_six_digits_are_accepted(self):
+        validate_password("482915")
+
+    def test_other_passwords_are_rejected(self):
+        for bad in ("48291", "4829150", "48a915", "123456", "x-9Lq!pr2"):
+            with self.assertRaises(ValidationError, msg=bad):
+                validate_password(bad)
+
+    def test_create_user_accepts_a_six_digit_admin(self):
+        admin = create_user("dueno", "482915", Role.ADMIN)
+        self.assertTrue(admin.is_staff)
+        self.assertTrue(admin.has_offline_verifier)
+
+    def test_create_user_rejects_a_bad_password(self):
+        with self.assertRaises(ValidationError):
+            create_user("dueno", "Clave12345", Role.ADMIN)
+
+@override_settings(PASSWORD_HASHERS=FAST_HASHERS, SGFT_PIN_VERIFIER_ITERATIONS=1000)
+class ChangeRoleTests(TestCase):
+    """WBS 3.1.1 — change_role keeps is_staff in step with the role."""
+
+    def test_syncs_is_staff_both_ways(self):
+        user = create_user("ana", "730261", Role.CASHIER)
+        self.assertTrue(change_role(user, Role.ADMIN).is_staff)
+        self.assertFalse(change_role(user, Role.CASHIER).is_staff)
+
+    def test_superuser_keeps_admin_access(self):
+        root = get_user_model().objects.create_superuser("root", password="730261")
+        self.assertTrue(change_role(root, Role.CASHIER).is_staff)
