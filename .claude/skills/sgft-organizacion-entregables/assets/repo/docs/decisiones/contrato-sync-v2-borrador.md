@@ -34,7 +34,7 @@
 ### 3.1 Cuarentena: una envoltura genérica
 
 - Los modelos de cada clase (`Sale`, `CashRegisterSession`, `Dish`, `Ingredient`, `Recipe`, compras y mermas) guardan **solo lo que se aplicó**.
-- Lo que no se puede aplicar se guarda en **un solo modelo genérico** (propuesta: `QuarantinedOperation`) con: `uuid` único (regla 8), `tipo`, el **JSON original** de la operación, `motivo`, usuario, marca del dispositivo y del servidor, estado, y resolución (quién, cuándo, con qué salida). Lleva una referencia opcional al registro real cuando llega a crearse.
+- Lo que no se puede aplicar se guarda en **un solo modelo genérico**, `QuarantinedOperation` (**aprobado el 9-oct-2026, DEC-36; rige ya con el contrato v1**), con: `uuid` único (regla 8), `tipo`, el **JSON original** de la operación, `motivo`, usuario, marca del dispositivo y del servidor, estado, y resolución (quién, cuándo, con qué salida). Lleva una referencia opcional al registro real cuando llega a crearse.
 - Sustituye a `QuarantinedSale` y `QuarantinedCashSession` de v1, que aún no tienen migración. La idempotencia sigue garantizada por la unicidad del `uuid` en base de datos, ahora en una tabla menos. Los modelos los define Jesús.
 
 ### 3.2 Existencias sin red
