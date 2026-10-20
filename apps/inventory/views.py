@@ -78,7 +78,7 @@ def _low_stock():
             "purchase_url": _url("inventory:register_purchase"), "waste_url": _url("inventory:register_waste")}
 
 
-# Integration branch only: the whole screen asks for the admin PIN (apps/core/preview.py).
+# Temporary: the whole screen asks for the admin PIN through the stand-in of apps/core/preview.py.
 _require_pin = preview.require_admin_pin("Inventario", lambda request: preview.apply_to_shell(request, _shell("inventory")))
 
 
