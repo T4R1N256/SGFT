@@ -241,7 +241,7 @@
         "3.3.8",
         "3.4.9"
       ],
-      "nota": "Esquema de datos con un solo dueño: SOLO Jesús abre PR que toquen models.py; los demás lo piden por issue. Diego figura como segundo code owner únicamente para poder aprobar los PR de Jesús. Dinero: DecimalField(max_digits=10, decimal_places=2).",
+      "nota": "Esquema de datos: dueño Jesús, que revisa todo PR que toque models.py. Quien escribe un modelo lo hace en su rama avisando antes a Jesús (DEC-37). Diego figura como segundo code owner para poder aprobar los PR de Jesús. Dinero: DecimalField(max_digits=10, decimal_places=2).",
       "prioridad": 1,
       "revisor": [
         "diego"
@@ -253,7 +253,7 @@
       "wbs": [
         "3.1.1"
       ],
-      "nota": "Solo Jesús ejecuta makemigrations y sube migraciones; Diego aprueba. Nunca modificar una migración ya aplicada: crear una nueva.",
+      "nota": "Quien escribe el modelo genera su migración en la misma rama, después de avisar a Jesús (DEC-37); Jesús revisa y Diego puede aprobar. Nunca modificar ni borrar una migración ya aplicada: crear una nueva.",
       "prioridad": 1,
       "revisor": [
         "diego"
