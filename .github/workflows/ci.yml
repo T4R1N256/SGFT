@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: sgft
+          POSTGRES_PASSWORD: sgft
+          POSTGRES_DB: sgft
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sgft"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DJANGO_SECRET_KEY: clave-solo-para-ci-no-es-secreta
+      DJANGO_DEBUG: "False"
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
+      DJANGO_CSRF_TRUSTED_ORIGINS: ""
+      DJANGO_SECURE_SSL_REDIRECT: "False"
+      DATABASE_URL: postgres://sgft:sgft@localhost:5432/sgft
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: "requirements*.txt"
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: 1. El proyecto arranca (check)
+        run: python manage.py check
+
+      - name: 2. No falta ninguna migración
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: 3. Pruebas (con PostgreSQL)
+        run: python manage.py test
+
+      - name: 4. Archivos en su lugar según el mapa de la skill
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          git diff --name-only --diff-filter=d "origin/$BASE_REF...HEAD" | python .claude/skills/sgft-organizacion-entregables/scripts/dueno_de_ruta.py --revisar
