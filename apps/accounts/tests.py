@@ -9,6 +9,8 @@ from django.test import TestCase, override_settings
 
 from apps.accounts.models import DEFAULT_PIN_VERIFIER_ITERATIONS, Role
 from apps.accounts.services import activate_device, change_role, create_user, InvalidPinError, NoCashierAvailableError
+from django.contrib.auth import get_user_model
+from django.urls import reverse
 
 class UserModelTests(TestCase):
     """WBS 3.1.1 — custom user model with role (author: Jesús)."""
@@ -266,3 +268,101 @@ class ActivateDeviceTests(TestCase):
     def test_cashier_password_cannot_activate_device(self):
         with self.assertRaises(InvalidPinError):
             activate_device(self.PASSWORD_CASHIER)
+
+
+
+class ActivateDeviceViewTests(TestCase):
+    """WBS 3.1.2 — HTTP tests for device activation."""
+
+    USER = get_user_model()
+
+    ADMIN_PIN = "482915"
+
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            username="activation_admin",
+            password=self.ADMIN_PIN,
+            role=Role.ADMIN,
+        )
+        self.cashier = User.objects.create_user(
+            username="activation_cashier",
+            password="CashierPass123!",
+            role=Role.CASHIER,
+        )
+        self.url = reverse("accounts:activate_device")
+        self.sales_url = reverse("pos:order_builder")
+
+    def post_pin(self, pin):
+        return self.client.post(
+            self.url,
+            {"pin": pin},
+            HTTP_HX_REQUEST="true",
+        )
+
+    def test_get_renders_activation_page(self):
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(
+            response, "accounts/activate_device.html"
+        )
+        self.assertIn("pin_dialog", response.context)
+        self.assertIn("Nueva venta", response.content.decode())
+
+    def test_correct_pin_redirects_with_htmx_and_logs_in_cashier(self):
+        response = self.post_pin(self.ADMIN_PIN)
+
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(response["HX-Redirect"], self.sales_url)
+        self.assertEqual(
+            int(self.client.session["_auth_user_id"]),
+            self.cashier.pk,
+        )
+        self.assertTrue(self.client.session["device_activated"])
+
+    def test_incorrect_pin_returns_422_and_retargets_dialog(self):
+        response = self.post_pin("123456")
+
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(response["HX-Retarget"], "#dialog")
+        self.assertContains(
+            response, "El PIN no es válido", status_code=422
+        )
+
+    def test_five_failed_attempts_show_lockout_message(self):
+        response = None
+
+        for _ in range(5):
+            response = self.post_pin("123456")
+
+        self.assertEqual(response.status_code, 422)
+        self.assertIn(
+            "Espera cinco minutos",
+            response.content.decode(),
+        )
+        self.assertEqual(
+            self.client.session["pin_attempts"], 5
+        )
+        self.assertIn(
+            "pin_locked_until", self.client.session
+        )
+
+    def test_get_when_already_activated_redirects_to_sales(self):
+        session = self.client.session
+        session["device_activated"] = True
+        session.save()
+
+        response = self.client.get(self.url)
+
+        self.assertRedirects(
+            response, self.sales_url, fetch_redirect_response=False
+        )
+
+    def test_post_when_already_activated_returns_409(self):
+        session = self.client.session
+        session["device_activated"] = True
+        session.save()
+
+        response = self.post_pin(self.ADMIN_PIN)
+
+        self.assertEqual(response.status_code, 409)

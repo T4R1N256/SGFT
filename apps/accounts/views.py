@@ -1,6 +1,15 @@
+
 """
-Admin PIN dialog. TEMPORARY stand-in (apps/core/preview.py, PR #44): any 6 digits unlock the modules. The real view
-is WBS 3.1.x (Yahir) and validates the PIN hash with Diego's service.
+Admin PIN dialog and device activation views.
+
+The admin PIN view is a TEMPORARY stand-in (apps/core/preview.py, PR #44):
+any 6 digits unlock the modules. The real admin PIN validation is planned
+for WBS 3.1.x (Yahir) and will validate the PIN hash using Diego's service.
+
+The activate_device view performs device activation using the accounts
+service, authenticates the cashier, and stores provisional activation and
+PIN lockout state in the session. The session-based state is temporary
+pending persistent device tracking and cache-based lockout.
 """
 from datetime import timedelta
 
@@ -18,18 +27,25 @@ from apps.accounts import services
 from apps.core import preview
 
 
-
 MAX_PIN_ATTEMPTS = 5
 PIN_LOCKOUT_SECONDS = 300
+
 
 @require_http_methods(["GET", "POST"])
 def admin_pin(request):
     """
-    CONTRATO VISTA–PLANTILLA — SGFT (simulacro)
-    URL name    : accounts:admin_pin         Método: GET (diálogo) · POST (valida)
+    CONTRATO VISTA–PLANTILLA — SGFT (simulacro).
+
+    URL name    : accounts:admin_pin
+    Método      : GET (diálogo) · POST (valida)
+    Roles       : usuarios que pueden acceder a la vista; el PIN es
+                  provisional y cualquier secuencia de 6 dígitos es válida
     Plantilla   : components/pin_dialog.html [fragmento, en #dialog]
     Contexto    : module_label, next_url, post_url, hx_target, hx_swap, error
-    Respuestas  : POST correcto → 204 con HX-Redirect a next · incorrecto → 422 con el diálogo (HX-Retarget #dialog)
+    HX-target   : #dialog
+    Respuestas  : GET → 200 con el diálogo
+                  POST correcto → 204 con HX-Redirect a next
+                  POST incorrecto → 422 con el diálogo (HX-Retarget: #dialog)
     """
     module_label = request.GET.get("module", "")
     next_url = request.POST.get("next") or request.GET.get("next", "")
@@ -50,8 +66,34 @@ def admin_pin(request):
     response["HX-Redirect"] = next_url
     return response
 
+
 @require_http_methods(["GET", "POST"])
 def activate_device(request):
+    """
+    CONTRATO VISTA–PLANTILLA — SGFT (activación de dispositivo).
+
+    URL name    : accounts:activate_device
+    Método      : GET (muestra el PIN) · POST (valida y activa)
+    Roles       : anónimo (la vista inicia la sesión del cajero al activar)
+    Plantilla   : GET normal → accounts/activate_device.html, que incluye
+                  components/pin_dialog.html
+                  HTMX → components/pin_dialog.html [fragmento, en #dialog]
+    Contexto    : module_label, pin_url, pin_dialog
+                  Diálogo: module_label, next_url, post_url, hx_target,
+                  hx_swap, error
+    HX-target   : #dialog
+    Respuestas  : GET sin activar → 200 con el diálogo
+                  GET ya activado → redirección a /pos/
+                  POST correcto (HTMX) → 204 con HX-Redirect: /pos/
+                  POST correcto (normal) → redirección a /pos/
+                  POST incorrecto (HTMX) → 422 con HX-Retarget: #dialog
+                  POST bloqueado por 5 intentos → 422 con mensaje de espera
+                  POST sin cajero disponible → 422 con mensaje de error
+                  POST ya activado → 409
+    Nota        : el contador y el bloqueo viven en la sesión; borrar la
+                  cookie reinicia el límite. Es provisional hasta implementar
+                  el bloqueo con caché y el estado persistente del dispositivo.
+    """
     activation_url = reverse("accounts:activate_device")
     sales_url = reverse("pos:order_builder")
 
@@ -128,7 +170,7 @@ def activate_device(request):
                     )
 
     dialog_context = preview.pin_dialog_context(
-        module_label="Activar dispositivo",
+        module_label="Nueva venta",
         next_url=sales_url,
         error=error,
     )
@@ -156,7 +198,7 @@ def activate_device(request):
         request,
         "accounts/activate_device.html",
         {
-            "module_label": "Activar dispositivo",
+            "module_label": "Nueva venta",
             "pin_url": activation_url,
             "pin_dialog": pin_dialog,
         },
