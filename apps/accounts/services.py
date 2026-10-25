@@ -32,7 +32,7 @@ def change_role(user, role):
     Devuelve la instancia de User actualizada.
     """
     user.role = role
-    user.is_staff = role == Role.ADMIN
+    user.is_staff = role == Role.ADMIN or user.is_superuser
     user.save(update_fields=["role", "is_staff"])
     return user
 

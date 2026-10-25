@@ -1,6 +1,6 @@
 # CLAUDE.md — Sistema de Gestión de Food Truck (SGFT)
 
-> Contexto y reglas de trabajo para agentes y personas. Actualizado el 11-oct-2026 (DEC-01 a DEC-35 y DEC-38).
+> Contexto y reglas de trabajo para agentes y personas. Actualizado el 24-oct-2026 (DEC-01 a DEC-39).
 > Dónde va cada archivo y de quién es: skill `.claude/skills/sgft-organizacion-entregables/`, que se consulta con `scripts/dueno_de_ruta.py <ruta>`. Las decisiones `DEC-nn` están registradas en `references/decisiones-y-pendientes.md` de la misma skill.
 >
 > **No modifiques este archivo sin comentarlo antes con el usuario** y sin su aprobación explícita.
@@ -107,7 +107,7 @@ python manage.py check && python manage.py test
 python manage.py runserver
 tailwindcss -i static/core/css/input.css -o static/core/css/app.css --minify   # tras cambiar clases o tokens (--watch al desarrollar)
 node --test tests_e2e/parity/            # si tocaste precios
-python manage.py makemigrations          # SOLO Jesús
+python manage.py makemigrations          # quien escribe el modelo, avisando antes a Jesús (DEC-37)
 git diff --name-only --diff-filter=d origin/main...HEAD | python .claude/skills/sgft-organizacion-entregables/scripts/dueno_de_ruta.py --revisar
 ```
 
@@ -151,10 +151,10 @@ tests_fixtures/    pricing_cases.json          tests_e2e/   Playwright + parity/
 - **Commits dentro de la rama:** libres. Los PR se fusionan con _Squash and merge_: a `main` llega un solo commit con el título del PR en la primera línea y los commits, incluido `Co-authored-by`, en el cuerpo.
 - **Pull Requests:**
   - nunca push a `main`;
-  - `CODEOWNERS` avisa al dueño de cada archivo;
-  - **Tarín es la máxima autoridad: aprueba y es el único que fusiona**, incluidos sus propios PR, que no requieren otra aprobación (GitHub no deja aprobar el PR propio, así que los fusiona como administrador);
+  - **Tarín es la máxima autoridad y el único revisor** (DEC-39): es el único code owner, su aprobación es la única que cuenta y es el único que fusiona, incluidos sus propios PR, que no requieren otra aprobación (GitHub no deja aprobar el PR propio, así que los fusiona como administrador);
+  - GitHub ya no pide revisión a los dueños: quien abre el PR menciona en la plantilla al dueño de cada archivo que tocó, para que esté enterado;
   - hay que usar la plantilla de PR y tener el CI en verde.
-- **Un archivo, un dueño**, según el mapa de la skill. `CODEOWNERS` se genera con `dueno_de_ruta.py --codeowners --salida .github/CODEOWNERS`; no se edita a mano.
+- **Un archivo, un dueño**, según el mapa de la skill. El mapa dice de quién es cada archivo y a quién avisar; `CODEOWNERS` se genera con `dueno_de_ruta.py --codeowners --salida .github/CODEOWNERS` (una sola regla, `* @T4R1N256`) y no se edita a mano.
 - **`static/pos/` se programa en pareja**, con ambos autores en el commit (`Co-authored-by:`).
 
 ## 9. Convenciones de código
@@ -163,7 +163,7 @@ tests_fixtures/    pricing_cases.json          tests_e2e/   Playwright + parity/
   - interfaz, mensajes y errores en español;
   - identificadores, tablas, comentarios y **nombres de archivos y carpetas de código y pruebas** en inglés (DEC-17). La app es `pos`, no `pdv`;
 - **Excepción DEC-01:** el módulo de precios y el lote de sincronización van en español: `calcular_total()`, `calcularTotal()`, y llaves como `pedido`, `lineas`, `platillo_id`, `precio_base_centavos`, `ajuste_centavos`, `total_cobrado_centavos`.
-- **Glosario:** punto de venta `pos` · venta `sale` · platillo `dish` · insumo `ingredient` · receta `recipe` · pedido `order` · personalización `modifier` · existencia `stock` · nivel mínimo `min_stock` · merma `waste` · corte `cash_close` · turno `cash_session` · roles `admin`/`cashier` · ajuste `sale_adjustment` · cuarentena `quarantined_sale`/`quarantined_cash_session` · efectivo inicial/final/esperado `opening_amount`/`closing_amount`/`expected_amount` · diferencia `cash_difference` · bandeja de revisión `review`.
+- **Glosario:** punto de venta `pos` · venta `sale` · platillo `dish` · insumo `ingredient` · receta `recipe` · pedido `order` · personalización `modifier` · existencia `stock` · nivel mínimo `min_stock` · merma `waste` · corte `cash_close` · turno `cash_session` · roles `admin`/`cashier` · ajuste `sale_adjustment` · cuarentena `quarantined_operation` (envoltura genérica para toda operación sincronizada que no se pudo aplicar, DEC-36) · efectivo inicial/final/esperado `opening_amount`/`closing_amount`/`expected_amount` · diferencia `cash_difference` · bandeja de revisión `review`.
 - **Dinero:**
   - nunca en punto flotante;
   - en el servidor, `DecimalField(max_digits=10, decimal_places=2)`;
@@ -179,9 +179,9 @@ tests_fixtures/    pricing_cases.json          tests_e2e/   Playwright + parity/
   - no hay `.js` propios fuera de `static/pos/`;
   - estilos con utilidades de Tailwind y los tokens del sistema (`bg-marca-primario`, `p-lg`): la paleta por defecto de Tailwind no existe y no se usan colores arbitrarios (`bg-[#…]`). Tras cambiar clases, compila y sube `app.css` en el mismo commit.
 - **Autorización:** en el servidor, en cada vista, con el mixin de `apps/core/mixins.py`. Ocultar un botón no es control de acceso. Al sincronizar se revalida el rol de cada operación.
-- **Modelos:** solo Jesús edita `models.py` y genera migraciones. Los demás piden el campo por issue. Una migración aplicada nunca se edita.
+- **Modelos y migraciones** (DEC-37): Jesús es el dueño del esquema y se le avisa de todo PR que toque `models.py` o `migrations/`; lo revisa y aprueba Tarín (DEC-39). Quien escribe un modelo genera su migración en la misma rama, **después de avisar a Jesús**, para que nadie más genere migraciones de esa app en paralelo. Si dos ramas generan migraciones de la misma app, la segunda en fusionarse rehace la suya sobre `main`. Una migración aplicada nunca se edita ni se borra: se agrega otra.
 - **Pruebas:** las de servicios van en `apps/<app>/tests.py` y las de vistas y contrato vista–plantilla en `apps/<app>/tests_views.py` (DEC-31). Quien implementa un servicio o una vista escribe sus pruebas, a partir de los criterios de aceptación del requisito.
-- **Dependencias:** una nueva se justifica en el PR y la aprueban Jesús (dueño de `requirements.txt`) y Tarín.
+- **Dependencias:** una nueva se justifica en el PR, se avisa a Jesús (dueño de `requirements.txt`) y la aprueba Tarín.
 
 ## 10. Seguridad y datos
 
@@ -201,7 +201,7 @@ tests_fixtures/    pricing_cases.json          tests_e2e/   Playwright + parity/
 2. **No hagas:**
    - ampliar el alcance;
    - crear archivos fuera del mapa o de paquetes en evaluación (hoy: 3.3.7, vista de cocina);
-   - correr `makemigrations` si no eres Jesús;
+   - correr `makemigrations` sin avisar antes a Jesús, o sobre una app con migraciones de otra rama sin fusionar;
    - hacer push a `main`, usar `--force` o fusionar PR;
    - agregar dependencias sin justificarlas;
    - simplificar el diseño offline;
@@ -209,7 +209,7 @@ tests_fixtures/    pricing_cases.json          tests_e2e/   Playwright + parity/
 3. **Si tocas un archivo de otra persona,** díselo al desarrollador.
 4. **Terminado significa:**
    - `check` y `test` en verde;
-   - `makemigrations --check --dry-run` sin cambios, salvo que Jesús genere una migración;
+   - `makemigrations --check --dry-run` sin cambios (la migración del modelo va en la misma rama);
    - `--revisar` sin bloqueos;
    - `.env` fuera de `git status`;
    - aviso al usuario si el comportamiento se aparta de lo que pide el requisito;

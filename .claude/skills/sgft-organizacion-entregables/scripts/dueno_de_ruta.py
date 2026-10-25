@@ -95,17 +95,10 @@ def resolver(ruta, mapa):
 
 
 def aprobadores(regla, mapa):
-    """Quienes pueden aprobar un PR sobre la ruta: dueño, colaboradores, revisores y el
-    aprobador general (DEC-18), sin duplicados y en ese orden."""
-    claves = [regla["dueno"]] + regla.get("colaboradores", []) + regla.get("revisor", [])
+    """Quien aprueba un PR sobre la ruta: solo el aprobador general (DEC-39). El dueño, los
+    colaboradores y los revisores del mapa se mencionan en el PR para avisarles, sin aprobar."""
     general = mapa.get("aprobador_general")
-    if general:
-        claves.append(general)
-    vistos = []
-    for c in claves:
-        if c not in vistos:
-            vistos.append(c)
-    return vistos
+    return [general] if general else [regla["dueno"]]
 
 
 # ---------------------------------------------------------------- presentación
@@ -130,7 +123,7 @@ def imprimir_ruta(ruta, mapa):
     print(f"  Colaboradores    : {lista(regla.get('colaboradores', []), mapa)}")
     print(f"  Revisor          : {lista(regla.get('revisor', []), mapa)}")
     if mapa.get("aprobador_general"):
-        print(f"  Aprobador general: {nombre(mapa['aprobador_general'], mapa)} — su aprobación basta (DEC-18)")
+        print(f"  Aprobador general: {nombre(mapa['aprobador_general'], mapa)} — único revisor y code owner (DEC-39)")
     print(f"  Paquetes WBS     : {', '.join(regla.get('wbs', [])) or '—'}")
     if regla.get("en_evaluacion"):
         print("  ⏸ EN EVALUACIÓN : paquete fuera de la línea base; NO crear el archivo hasta que el equipo lo apruebe")
@@ -146,7 +139,7 @@ def imprimir_persona(clave, mapa):
         sys.exit(f"Persona desconocida: {clave}. Opciones: {', '.join(mapa['integrantes'])}")
     print(f"\n{nombre(clave, mapa)} — {mapa['integrantes'][clave]['rol_scrum']}")
     if mapa.get("aprobador_general") == clave:
-        print("  Aprobador general: puede aprobar un PR sobre cualquier ruta (DEC-18).")
+        print("  Aprobador general: único revisor y code owner de todo el repositorio (DEC-39).")
     secciones = {"Dueño de": [], "Colabora / pareja en": [], "Revisor obligatorio de": [], "Escribe funciones en archivos ajenos": []}
     for r in mapa["reglas"]:
         if r["patron"] == "**":
@@ -186,20 +179,6 @@ def imprimir_wbs(codigo, mapa):
         print("  Sin rutas registradas. Revisar references/matriz-wbs-responsables.md (puede ser un entregable fuera del repositorio).")
 
 
-def code_owners(regla, mapa):
-    """Code owners de la ruta: dueño, colaboradores y el aprobador general (DEC-35). Los revisores
-    no entran: el aprobador general fusiona sus propios PR sin otra aprobación."""
-    claves = [regla["dueno"]] + regla.get("colaboradores", [])
-    general = mapa.get("aprobador_general")
-    if general:
-        claves.append(general)
-    vistos = []
-    for c in claves:
-        if c not in vistos:
-            vistos.append(c)
-    return vistos
-
-
 def generar_codeowners(mapa):
     lineas = [
         "# CODEOWNERS — SGFT",
@@ -207,18 +186,14 @@ def generar_codeowners(mapa):
         "# No editar a mano: modificar assets/ownership.json de la skill y regenerar.",
         "# Los usuarios de GitHub se definen en assets/ownership.json (campo \"github\" de cada integrante).",
         "# Si ves @TODO_<nombre>, complétalo AHÍ y regenera; si lo editas aquí, la próxima generación lo borra.",
-        "# GitHub aplica la ÚLTIMA regla que coincide; las reglas están ordenadas de general a específica.",
-        "# Cada ruta lista a su dueño, a sus colaboradores y al integrador (Tarín), que figura en TODAS:",
-        "# su aprobación basta para cualquier archivo y es el único que fusiona. Es la máxima autoridad",
-        "# (DEC-35): sus propios PR no requieren otra aprobación y los fusiona como administrador.",
-        "# Los revisores del mapa no son code owners; se piden a mano cuando hacen falta.",
+        "# El integrador (Tarín) es el ÚNICO code owner y revisor de todo el repositorio (DEC-39): su",
+        "# aprobación es la única que cuenta y es el único que fusiona; sus propios PR los fusiona como",
+        "# administrador. El dueño de cada ruta sigue en assets/ownership.json y en --revisar: se le",
+        "# menciona a mano en el PR cuando se toca su código, pero GitHub ya no le pide revisión.",
         "",
     ]
-    ordenadas = sorted(enumerate(mapa["reglas"]), key=lambda t: clave_orden(*t))
-    for _, r in ordenadas:
-        cuentas = " ".join(mapa["integrantes"][c]["github"] for c in code_owners(r, mapa))
-        patron = "*" if r["patron"] == "**" else "/" + r["patron"]
-        lineas.append(f"{patron:<52} {cuentas}")
+    general = mapa["integrantes"][mapa["aprobador_general"]]["github"]
+    lineas.append(f"{'*':<52} {general}")
     return "\n".join(lineas) + "\n"
 
 
@@ -232,7 +207,7 @@ def revisar(rutas, mapa):
         return 0
     bloqueos, avisos = [], []
     ancho = min(max(len(r) for r in rutas), 60)
-    print(f"\n{'Ruta':<{ancho}}  {'Dueño':<7} {'Pueden aprobar':<50} Estado")
+    print(f"\n{'Ruta':<{ancho}}  {'Dueño':<7} {'Aprueba':<50} Estado")
     print("-" * (ancho + 78))
     for ruta in rutas:
         r = resolver(ruta, mapa)

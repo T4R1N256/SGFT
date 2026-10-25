@@ -1,6 +1,6 @@
 """
-Admin PIN dialog. Stand-in ONLY for the local integration branch (tarin/integracion-pantallas): the real view is
-WBS 3.1.x (Yahir) and validates the PIN hash. Here any 6 digits unlock the modules (see apps/core/preview.py).
+Admin PIN dialog. TEMPORARY stand-in (apps/core/preview.py, PR #44): any 6 digits unlock the modules. The real view
+is WBS 3.1.x (Yahir) and validates the PIN hash with Diego's service.
 """
 from datetime import timedelta
 
