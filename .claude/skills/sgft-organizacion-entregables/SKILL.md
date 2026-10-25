@@ -46,7 +46,7 @@ Esta distribución es la de la **WBS Revisión 4** (DEC-11), que reemplaza los r
 
 **8. Toda ruta tiene al menos dos personas que pueden aprobarla.** Con la revisión obligatoria de code owners en `main` (DEC-10), el autor de un PR no puede aprobarlo; por eso cada ruta lista una segunda persona. En `models.py` esa segunda persona (Diego) solo aprueba los PR de Jesús: nadie más edita el esquema.
 
-**9. Tarín es el integrador: aprueba y fusiona todos los PR (DEC-16, DEC-18).** Figura en todas las rutas de `CODEOWNERS`, así que su aprobación basta para cualquier archivo, y es el único que fusiona en `main`. Los dueños siguen recibiendo la solicitud de revisión automáticamente, pero ya no se exige su aprobación. Los PR que abre el propio Tarín los aprueba otra de las personas listadas, porque GitHub no deja aprobar el PR propio. Toda ruta nueva fuera del mapa se le consulta a él.
+**9. Tarín es el integrador y el único revisor: aprueba y fusiona todos los PR (DEC-16, DEC-39).** `CODEOWNERS` tiene una sola regla, `* @T4R1N256`: GitHub solo le pide revisión a él y solo su aprobación cuenta. Los dueños ya no reciben la solicitud automática; quien abre el PR los menciona en la plantilla para avisarles. Sus propios PR los fusiona como administrador, sin otra aprobación. Toda ruta nueva fuera del mapa se le consulta a él.
 
 ## Mapa rápido de propiedad
 
