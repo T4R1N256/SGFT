@@ -1,6 +1,6 @@
 # CLAUDE.md — Sistema de Gestión de Food Truck (SGFT)
 
-> Contexto y reglas de trabajo para agentes y personas. Actualizado el 11-oct-2026 (DEC-01 a DEC-38).
+> Contexto y reglas de trabajo para agentes y personas. Actualizado el 24-oct-2026 (DEC-01 a DEC-39).
 > Dónde va cada archivo y de quién es: skill `.claude/skills/sgft-organizacion-entregables/`, que se consulta con `scripts/dueno_de_ruta.py <ruta>`. Las decisiones `DEC-nn` están registradas en `references/decisiones-y-pendientes.md` de la misma skill.
 >
 > **No modifiques este archivo sin comentarlo antes con el usuario** y sin su aprobación explícita.
@@ -151,10 +151,10 @@ tests_fixtures/    pricing_cases.json          tests_e2e/   Playwright + parity/
 - **Commits dentro de la rama:** libres. Los PR se fusionan con _Squash and merge_: a `main` llega un solo commit con el título del PR en la primera línea y los commits, incluido `Co-authored-by`, en el cuerpo.
 - **Pull Requests:**
   - nunca push a `main`;
-  - `CODEOWNERS` avisa al dueño de cada archivo;
-  - **Tarín es la máxima autoridad: aprueba y es el único que fusiona**, incluidos sus propios PR, que no requieren otra aprobación (GitHub no deja aprobar el PR propio, así que los fusiona como administrador);
+  - **Tarín es la máxima autoridad y el único revisor** (DEC-39): es el único code owner, su aprobación es la única que cuenta y es el único que fusiona, incluidos sus propios PR, que no requieren otra aprobación (GitHub no deja aprobar el PR propio, así que los fusiona como administrador);
+  - GitHub ya no pide revisión a los dueños: quien abre el PR menciona en la plantilla al dueño de cada archivo que tocó, para que esté enterado;
   - hay que usar la plantilla de PR y tener el CI en verde.
-- **Un archivo, un dueño**, según el mapa de la skill. `CODEOWNERS` se genera con `dueno_de_ruta.py --codeowners --salida .github/CODEOWNERS`; no se edita a mano.
+- **Un archivo, un dueño**, según el mapa de la skill. El mapa dice de quién es cada archivo y a quién avisar; `CODEOWNERS` se genera con `dueno_de_ruta.py --codeowners --salida .github/CODEOWNERS` (una sola regla, `* @T4R1N256`) y no se edita a mano.
 - **`static/pos/` se programa en pareja**, con ambos autores en el commit (`Co-authored-by:`).
 
 ## 9. Convenciones de código
@@ -179,9 +179,9 @@ tests_fixtures/    pricing_cases.json          tests_e2e/   Playwright + parity/
   - no hay `.js` propios fuera de `static/pos/`;
   - estilos con utilidades de Tailwind y los tokens del sistema (`bg-marca-primario`, `p-lg`): la paleta por defecto de Tailwind no existe y no se usan colores arbitrarios (`bg-[#…]`). Tras cambiar clases, compila y sube `app.css` en el mismo commit.
 - **Autorización:** en el servidor, en cada vista, con el mixin de `apps/core/mixins.py`. Ocultar un botón no es control de acceso. Al sincronizar se revalida el rol de cada operación.
-- **Modelos y migraciones** (DEC-37): Jesús es el dueño del esquema y revisa todo PR que toque `models.py` o `migrations/`. Quien escribe un modelo genera su migración en la misma rama, **después de avisar a Jesús**, para que nadie más genere migraciones de esa app en paralelo. Si dos ramas generan migraciones de la misma app, la segunda en fusionarse rehace la suya sobre `main`. Una migración aplicada nunca se edita ni se borra: se agrega otra.
+- **Modelos y migraciones** (DEC-37): Jesús es el dueño del esquema y se le avisa de todo PR que toque `models.py` o `migrations/`; lo revisa y aprueba Tarín (DEC-39). Quien escribe un modelo genera su migración en la misma rama, **después de avisar a Jesús**, para que nadie más genere migraciones de esa app en paralelo. Si dos ramas generan migraciones de la misma app, la segunda en fusionarse rehace la suya sobre `main`. Una migración aplicada nunca se edita ni se borra: se agrega otra.
 - **Pruebas:** las de servicios van en `apps/<app>/tests.py` y las de vistas y contrato vista–plantilla en `apps/<app>/tests_views.py` (DEC-31). Quien implementa un servicio o una vista escribe sus pruebas, a partir de los criterios de aceptación del requisito.
-- **Dependencias:** una nueva se justifica en el PR y la aprueban Jesús (dueño de `requirements.txt`) y Tarín.
+- **Dependencias:** una nueva se justifica en el PR, se avisa a Jesús (dueño de `requirements.txt`) y la aprueba Tarín.
 
 ## 10. Seguridad y datos
 
