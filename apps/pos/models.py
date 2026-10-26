@@ -108,6 +108,13 @@ class CashRegisterSession(models.Model):
                 condition=Q(status="open"),
                 name="pos_session_single_open",
             ),
+            models.CheckConstraint(
+                condition=Q(opening_amount__gte=0), name="pos_session_opening_amount_gte_0"
+            ),
+            models.CheckConstraint(
+                condition=Q(closing_amount__isnull=True) | Q(closing_amount__gte=0),
+                name="pos_session_closing_amount_gte_0",
+            ),
         ]
 
     def __str__(self):
@@ -144,6 +151,9 @@ class OrderItem(models.Model):
         verbose_name_plural = "líneas de pedido"
         constraints = [
             models.CheckConstraint(condition=Q(quantity__gt=0), name="pos_orderitem_quantity_gt_0"),
+            models.CheckConstraint(
+                condition=Q(unit_price__gte=0), name="pos_orderitem_unit_price_gte_0"
+            ),
         ]
 
     def __str__(self):
@@ -173,6 +183,9 @@ class Modifier(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["dish", "ingredient", "kind"], name="pos_modifier_unique_combo"
+            ),
+            models.CheckConstraint(
+                condition=Q(quantity__gte=0), name="pos_modifier_quantity_gte_0"
             ),
         ]
 
@@ -236,6 +249,14 @@ class Sale(models.Model):
         db_table = "sales"
         verbose_name = "venta"
         verbose_name_plural = "ventas"
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(charged_total__gte=0), name="pos_sale_charged_total_gte_0"
+            ),
+            models.CheckConstraint(
+                condition=Q(server_total__gte=0), name="pos_sale_server_total_gte_0"
+            ),
+        ]
 
     def __str__(self):
         return f"Venta {self.uuid} (${self.charged_total})"

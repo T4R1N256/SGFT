@@ -70,6 +70,20 @@ class CashRegisterSessionTests(PosModelsBase):
         self.make_session(business_date=date(2026, 10, 2), status="closed")
         self.assertEqual(CashRegisterSession.objects.count(), 2)
 
+    def test_opening_amount_cannot_be_negative(self):
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            self.make_session(opening_amount=Decimal("-0.01"))
+
+    def test_closing_amount_cannot_be_negative(self):
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            self.make_session(status="closed", closing_amount=Decimal("-0.01"))
+
+    def test_zero_amounts_are_accepted(self):
+        session = self.make_session(
+            status="closed", opening_amount=Decimal("0.00"), closing_amount=Decimal("0.00")
+        )
+        self.assertEqual(session.closing_amount, Decimal("0.00"))
+
 
 class OrderItemTests(PosModelsBase):
     def test_quantity_zero_is_rejected(self):
@@ -91,6 +105,18 @@ class OrderItemTests(PosModelsBase):
         with self.assertRaises(ProtectedError):
             self.dish.delete()
 
+    def test_unit_price_cannot_be_negative(self):
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            OrderItem.objects.create(
+                order=self.make_order(), dish=self.dish, quantity=1, unit_price=Decimal("-0.01")
+            )
+
+    def test_unit_price_zero_is_accepted(self):
+        item = OrderItem.objects.create(
+            order=self.make_order(), dish=self.dish, quantity=1, unit_price=Decimal("0.00")
+        )
+        self.assertEqual(item.unit_price, Decimal("0.00"))
+
 
 class ModifierTests(PosModelsBase):
     def test_same_dish_ingredient_kind_is_rejected(self):
@@ -102,6 +128,13 @@ class ModifierTests(PosModelsBase):
         Modifier.objects.create(dish=self.dish, ingredient=self.ingredient, kind="add")
         Modifier.objects.create(dish=self.dish, ingredient=self.ingredient, kind="remove")
         self.assertEqual(Modifier.objects.count(), 2)
+
+    def test_quantity_cannot_be_negative(self):
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            Modifier.objects.create(
+                dish=self.dish, ingredient=self.ingredient, kind="add",
+                quantity=Decimal("-0.001"),
+            )
 
 
 class SaleTests(PosModelsBase):
@@ -130,6 +163,18 @@ class SaleTests(PosModelsBase):
     def test_review_reasons_must_be_a_list(self):
         with self.assertRaises(ValidationError):
             validate_review_reasons("precio_distinto")
+
+    def test_charged_total_cannot_be_negative(self):
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            self.make_sale(charged_total=Decimal("-0.01"))
+
+    def test_server_total_cannot_be_negative(self):
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            self.make_sale(server_total=Decimal("-0.01"))
+
+    def test_zero_totals_are_accepted(self):
+        sale = self.make_sale(charged_total=Decimal("0.00"), server_total=Decimal("0.00"))
+        self.assertEqual(sale.charged_total, Decimal("0.00"))
 
 
 class QuarantinedOperationTests(PosModelsBase):
