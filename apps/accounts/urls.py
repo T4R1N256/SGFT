@@ -6,4 +6,6 @@ from . import views
 app_name = "accounts"
 urlpatterns = [
     path("pin/", views.admin_pin, name="admin_pin"),  # temporary stand-in (apps/core/preview.py)
+    path("activate/", views.activate_device, name="activate_device"),
+
 ]

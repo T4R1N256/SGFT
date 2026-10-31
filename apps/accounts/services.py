@@ -35,3 +35,46 @@ def change_role(user, role):
     user.is_staff = role == Role.ADMIN or user.is_superuser
     user.save(update_fields=["role", "is_staff"])
     return user
+
+
+class InvalidPinError(Exception):
+    """El PIN no coincide con una cuenta administradora activa."""
+
+
+class NoCashierAvailableError(Exception):
+    """No existe una cuenta de cajero activa."""
+
+
+def activate_device(pin):
+    """Valida el PIN de un administrador y devuelve una cuenta de cajero activa.
+
+    No devuelve ni revela qué administrador validó el PIN.
+    """
+    if not isinstance(pin, str) or len(pin) != 6 or not pin.isascii() or not pin.isdigit():
+        raise InvalidPinError
+
+    admins = User.objects.filter(
+        role=Role.ADMIN,
+        is_active=True,
+    )
+
+    valid_pin = False
+
+    # No detenernos en el primer administrador evita revelar cuál coincidió
+    # mediante una diferencia obvia en el número de comprobaciones.
+    for admin in admins.iterator():
+        if admin.check_password(pin):
+            valid_pin = True
+
+    if not valid_pin:
+        raise InvalidPinError
+
+    cashier = User.objects.filter(
+        role=Role.CASHIER,
+        is_active=True,
+    ).first()
+
+    if cashier is None:
+        raise NoCashierAvailableError
+
+    return cashier
