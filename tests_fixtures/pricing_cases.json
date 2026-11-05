@@ -1,0 +1,697 @@
+{
+  "_nota": "Casos compartidos por calcular_total() (Python) y calcularTotal() (JS). Importes en enteros de centavos; no uses números como 1.0, que JS no distingue de 1.",
+  "casos": [
+    {
+      "nombre": "pedido vacío",
+      "pedido": {
+        "lineas": []
+      },
+      "total_esperado_centavos": 0
+    },
+    {
+      "nombre": "una línea sin modificadores",
+      "pedido": {
+        "lineas": [
+          {
+            "platillo_id": 1,
+            "precio_base_centavos": 8500,
+            "cantidad": 1,
+            "modificadores": []
+          }
+        ]
+      },
+      "total_esperado_centavos": 8500
+    },
+    {
+      "nombre": "cantidad multiplica el precio base",
+      "pedido": {
+        "lineas": [
+          {
+            "platillo_id": 1,
+            "precio_base_centavos": 8500,
+            "cantidad": 3,
+            "modificadores": []
+          }
+        ]
+      },
+      "total_esperado_centavos": 25500
+    },
+    {
+      "nombre": "línea sin la llave modificadores",
+      "pedido": {
+        "lineas": [
+          {
+            "platillo_id": 2,
+            "precio_base_centavos": 2500,
+            "cantidad": 2
+          }
+        ]
+      },
+      "total_esperado_centavos": 5000
+    },
+    {
+      "nombre": "un extra suma su ajuste por unidad",
+      "pedido": {
+        "lineas": [
+          {
+            "platillo_id": 1,
+            "precio_base_centavos": 8500,
+            "cantidad": 2,
+            "modificadores": [
+              {
+                "tipo": "agregar",
+                "insumo_id": 7,
+                "ajuste_centavos": 1500
+              }
+            ]
+          }
+        ]
+      },
+      "total_esperado_centavos": 20000
+    },
+    {
+      "nombre": "varios extras en la misma línea",
+      "pedido": {
+        "lineas": [
+          {
+            "platillo_id": 6,
+            "precio_base_centavos": 8500,
+            "cantidad": 1,
+            "modificadores": [
+              {
+                "tipo": "agregar",
+                "insumo_id": 3,
+                "ajuste_centavos": 1500
+              },
+              {
+                "tipo": "agregar",
+                "insumo_id": 4,
+                "ajuste_centavos": 1000
+              }
+            ]
+          }
+        ]
+      },
+      "total_esperado_centavos": 11000
+    },
+    {
+      "nombre": "quitar no cambia el precio",
+      "pedido": {
+        "lineas": [
+          {
+            "platillo_id": 1,
+            "precio_base_centavos": 7500,
+            "cantidad": 2,
+            "modificadores": [
+              {
+                "tipo": "quitar",
+                "insumo_id": 5,
+                "ajuste_centavos": 0
+              }
+            ]
+          }
+        ]
+      },
+      "total_esperado_centavos": 15000
+    },
+    {
+      "nombre": "quitar con ajuste distinto de cero se ignora",
+      "pedido": {
+        "lineas": [
+          {
+            "platillo_id": 1,
+            "precio_base_centavos": 7500,
+            "cantidad": 1,
+            "modificadores": [
+              {
+                "tipo": "quitar",
+                "insumo_id": 5,
+                "ajuste_centavos": 500
+              }
+            ]
+          }
+        ]
+      },
+      "total_esperado_centavos": 7500
+    },
+    {
+      "nombre": "quitar y agregar en la misma línea",
+      "pedido": {
+        "lineas": [
+          {
+            "platillo_id": 1,
+            "precio_base_centavos": 7500,
+            "cantidad": 2,
+            "modificadores": [
+              {
+                "tipo": "quitar",
+                "insumo_id": 5,
+                "ajuste_centavos": 0
+              },
+              {
+                "tipo": "agregar",
+                "insumo_id": 7,
+                "ajuste_centavos": 1500
+              }
+            ]
+          }
+        ]
+      },
+      "total_esperado_centavos": 18000
+    },
+    {
+      "nombre": "extra sin la llave ajuste_centavos cuenta como cero",
+      "pedido": {
+        "lineas": [
+          {
+            "platillo_id": 1,
+            "precio_base_centavos": 7500,
+            "cantidad": 1,
+            "modificadores": [
+              {
+                "tipo": "agregar",
+                "insumo_id": 7
+              }
+            ]
+          }
+        ]
+      },
+      "total_esperado_centavos": 7500
+    },
+    {
+      "nombre": "platillo gratis con extra cobrado",
+      "pedido": {
+        "lineas": [
+          {
+            "platillo_id": 9,
+            "precio_base_centavos": 0,
+            "cantidad": 2,
+            "modificadores": [
+              {
+                "tipo": "agregar",
+                "insumo_id": 7,
+                "ajuste_centavos": 500
+              }
+            ]
+          }
+        ]
+      },
+      "total_esperado_centavos": 1000
+    },
+    {
+      "nombre": "pedido de Figma: 8 piezas, $480.00",
+      "pedido": {
+        "lineas": [
+          {
+            "platillo_id": 1,
+            "precio_base_centavos": 7500,
+            "cantidad": 2,
+            "modificadores": [
+              {
+                "tipo": "quitar",
+                "insumo_id": 5,
+                "ajuste_centavos": 0
+              },
+              {
+                "tipo": "agregar",
+                "insumo_id": 7,
+                "ajuste_centavos": 1000
+              }
+            ]
+          },
+          {
+            "platillo_id": 2,
+            "precio_base_centavos": 7500,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 6,
+            "precio_base_centavos": 8500,
+            "cantidad": 1,
+            "modificadores": [
+              {
+                "tipo": "agregar",
+                "insumo_id": 3,
+                "ajuste_centavos": 1500
+              }
+            ]
+          },
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 2,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 9,
+            "precio_base_centavos": 3000,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 4,
+            "precio_base_centavos": 5000,
+            "cantidad": 1,
+            "modificadores": [
+              {
+                "tipo": "agregar",
+                "insumo_id": 8,
+                "ajuste_centavos": 500
+              }
+            ]
+          }
+        ]
+      },
+      "total_esperado_centavos": 48000
+    },
+    {
+      "nombre": "muchas líneas iguales",
+      "pedido": {
+        "lineas": [
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 1,
+            "modificadores": []
+          },
+          {
+            "platillo_id": 8,
+            "precio_base_centavos": 2500,
+            "cantidad": 1,
+            "modificadores": []
+          }
+        ]
+      },
+      "total_esperado_centavos": 100000
+    },
+    {
+      "nombre": "importe grande sigue exacto",
+      "pedido": {
+        "lineas": [
+          {
+            "platillo_id": 1,
+            "precio_base_centavos": 999999,
+            "cantidad": 99,
+            "modificadores": [
+              {
+                "tipo": "agregar",
+                "insumo_id": 7,
+                "ajuste_centavos": 99999
+              }
+            ]
+          }
+        ]
+      },
+      "total_esperado_centavos": 108899802
+    }
+  ],
+  "invalidos": [
+    {
+      "nombre": "sin lineas",
+      "pedido": {}
+    },
+    {
+      "nombre": "lineas no es lista",
+      "pedido": {
+        "lineas": {}
+      }
+    },
+    {
+      "nombre": "cantidad cero",
+      "pedido": {
+        "lineas": [
+          {
+            "platillo_id": 1,
+            "precio_base_centavos": 8500,
+            "cantidad": 0,
+            "modificadores": []
+          }
+        ]
+      }
+    },
+    {
+      "nombre": "cantidad negativa",
+      "pedido": {
+        "lineas": [
+          {
+            "platillo_id": 1,
+            "precio_base_centavos": 8500,
+            "cantidad": -1,
+            "modificadores": []
+          }
+        ]
+      }
+    },
+    {
+      "nombre": "precio negativo",
+      "pedido": {
+        "lineas": [
+          {
+            "platillo_id": 1,
+            "precio_base_centavos": -1,
+            "cantidad": 1,
+            "modificadores": []
+          }
+        ]
+      }
+    },
+    {
+      "nombre": "precio con decimales",
+      "pedido": {
+        "lineas": [
+          {
+            "platillo_id": 1,
+            "precio_base_centavos": 85.5,
+            "cantidad": 1,
+            "modificadores": []
+          }
+        ]
+      }
+    },
+    {
+      "nombre": "precio como texto",
+      "pedido": {
+        "lineas": [
+          {
+            "platillo_id": 1,
+            "precio_base_centavos": "8500",
+            "cantidad": 1,
+            "modificadores": []
+          }
+        ]
+      }
+    },
+    {
+      "nombre": "falta el precio",
+      "pedido": {
+        "lineas": [
+          {
+            "platillo_id": 1,
+            "cantidad": 1
+          }
+        ]
+      }
+    },
+    {
+      "nombre": "cantidad booleana",
+      "pedido": {
+        "lineas": [
+          {
+            "platillo_id": 1,
+            "precio_base_centavos": 8500,
+            "cantidad": true,
+            "modificadores": []
+          }
+        ]
+      }
+    },
+    {
+      "nombre": "ajuste negativo",
+      "pedido": {
+        "lineas": [
+          {
+            "platillo_id": 1,
+            "precio_base_centavos": 8500,
+            "cantidad": 1,
+            "modificadores": [
+              {
+                "tipo": "agregar",
+                "insumo_id": 7,
+                "ajuste_centavos": -100
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "nombre": "tipo de modificador desconocido",
+      "pedido": {
+        "lineas": [
+          {
+            "platillo_id": 1,
+            "precio_base_centavos": 8500,
+            "cantidad": 1,
+            "modificadores": [
+              {
+                "tipo": "doble",
+                "insumo_id": 7,
+                "ajuste_centavos": 100
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "nombre": "modificadores nulo",
+      "pedido": {
+        "lineas": [
+          {
+            "platillo_id": 1,
+            "precio_base_centavos": 8500,
+            "cantidad": 1,
+            "modificadores": null
+          }
+        ]
+      }
+    },
+    {
+      "nombre": "línea que no es objeto",
+      "pedido": {
+        "lineas": [
+          8500
+        ]
+      }
+    }
+  ]
+}

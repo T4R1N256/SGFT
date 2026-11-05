@@ -1,8 +1,10 @@
 """Unit tests for apps.pos. Whoever implements a service writes its tests."""
 
+import json
 from datetime import date
 from decimal import Decimal
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
@@ -11,6 +13,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from apps.catalog.models import Category, Dish, Ingredient, Units
+from apps.pos.services_pricing import calcular_total
 from apps.pos.models import (
     AdjustmentKind, AdjustmentReason, CashRegisterSession, Modifier, Order, OrderItem, QuarantinedOperation,
     QuarantineReason, ReviewReason, Sale, SaleAdjustment, validate_review_reasons,
@@ -256,3 +259,31 @@ class QuarantinedOperationTests(PosModelsBase):
             {"usuario_sin_permiso", "turno_ya_abierto", "turno_invalido",
              "platillo_desconocido", "receta_faltante", "total_inconsistente"},
         )
+
+class PricingParityTest(TestCase):
+    """WBS 3.3.4 y 3.4.5 — calcular_total() contra los casos compartidos con pricing.js (autor: Jesús)."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        with open(settings.BASE_DIR / "tests_fixtures" / "pricing_cases.json", encoding="utf-8") as fixture:
+            cls.cases = json.load(fixture)
+
+    def test_every_shared_case_gives_its_total(self):
+        for case in self.cases["casos"]:
+            with self.subTest(case["nombre"]):
+                self.assertEqual(calcular_total(case["pedido"]), case["total_esperado_centavos"])
+
+    def test_every_malformed_order_is_rejected(self):
+        for case in self.cases["invalidos"]:
+            with self.subTest(case["nombre"]), self.assertRaises(ValueError):
+                calcular_total(case["pedido"])
+
+    def test_result_is_an_int_in_cents(self):
+        total = calcular_total({"lineas": [{"platillo_id": 1, "precio_base_centavos": 8500, "cantidad": 2}]})
+        self.assertIs(type(total), int)
+        self.assertEqual(total, 17000)
+
+    def test_true_is_not_a_quantity(self):
+        with self.assertRaises(ValueError):
+            calcular_total({"lineas": [{"platillo_id": 1, "precio_base_centavos": 8500, "cantidad": True}]})
