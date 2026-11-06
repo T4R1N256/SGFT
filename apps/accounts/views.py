@@ -1,205 +1,127 @@
-
 """
-Admin PIN dialog and device activation views.
+Access views (WBS 3.1.2): device activation and the admin PIN dialog. Owner: Yahir.
 
-The admin PIN view is a TEMPORARY stand-in (apps/core/preview.py, PR #44):
-any 6 digits unlock the modules. The real admin PIN validation is planned
-for WBS 3.1.x (Yahir) and will validate the PIN hash using Diego's service.
-
-The activate_device view performs device activation using the accounts
-service, authenticates the cashier, and stores provisional activation and
-PIN lockout state in the session. The session-based state is temporary
-pending persistent device tracking and cache-based lockout.
+There is no login page (DEC-34). The device is activated once with an Administrator's PIN and keeps a permanent
+session of the cashier account; the modules with a padlock ask for the PIN again and stay unlocked 30 minutes.
+The rules (which PIN is valid, the attempt limit) live in apps.accounts.services; the padlock in apps.core.mixins.
 """
-from datetime import timedelta
+from urllib.parse import urlencode
 
-from django.conf import settings
 from django.contrib.auth import login
 from django.http import HttpResponse
 from django.shortcuts import redirect, render
-from django.template.loader import render_to_string
 from django.urls import reverse
-from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_http_methods
 
 from apps.accounts import services
-from apps.core import preview
+from apps.accounts.models import is_pin
+from apps.core.mixins import pin_dialog_context, role_required, unlock_admin
+
+INCOMPLETE_PIN = "Escribe los 6 dígitos del PIN."
+NO_CASHIER = "No hay una cuenta de cajero activa. Pide al administrador que la cree en Django Admin."
 
 
-MAX_PIN_ATTEMPTS = 5
-PIN_LOCKOUT_SECONDS = 300
-
-
-@require_http_methods(["GET", "POST"])
-def admin_pin(request):
-    """
-    CONTRATO VISTA–PLANTILLA — SGFT (simulacro).
-
-    URL name    : accounts:admin_pin
-    Método      : GET (diálogo) · POST (valida)
-    Roles       : usuarios que pueden acceder a la vista; el PIN es
-                  provisional y cualquier secuencia de 6 dígitos es válida
-    Plantilla   : components/pin_dialog.html [fragmento, en #dialog]
-    Contexto    : module_label, next_url, post_url, hx_target, hx_swap, error
-    HX-target   : #dialog
-    Respuestas  : GET → 200 con el diálogo
-                  POST correcto → 204 con HX-Redirect a next
-                  POST incorrecto → 422 con el diálogo (HX-Retarget: #dialog)
-    """
-    module_label = request.GET.get("module", "")
+def _safe_next(request, default):
     next_url = request.POST.get("next") or request.GET.get("next", "")
-    if not url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
-        next_url = "/pos/"
-    if request.method == "GET":
-        return render(request, "components/pin_dialog.html", preview.pin_dialog_context(module_label, next_url))
-    pin = "".join(request.POST.getlist("pin"))
-    if len(pin) != 6 or not pin.isdigit():
-        response = render(request, "components/pin_dialog.html",
-                          preview.pin_dialog_context(module_label, next_url, "Escribe los 6 dígitos del PIN."),
-                          status=422)
-        response["HX-Retarget"] = "#dialog"
-        response["HX-Reswap"] = "innerHTML"
+    if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()},
+                                                    require_https=request.is_secure()):
+        return next_url
+    return default
+
+
+def _done(request, next_url):
+    """HTMX gets 204 + HX-Redirect; a normal form, a redirect."""
+    if request.htmx:
+        response = HttpResponse(status=204)
+        response["HX-Redirect"] = next_url
         return response
-    preview.unlock(request)
-    response = HttpResponse(status=204)
-    response["HX-Redirect"] = next_url
+    return redirect(next_url)
+
+
+def _dialog_error(request, template, context):
+    response = render(request, template, context, status=422)
+    response["HX-Retarget"] = "#dialog"
+    response["HX-Reswap"] = "innerHTML"
     return response
+
+
+def _pin_error(pin):
+    """Checks the PIN with the service; returns the user or the message for the dialog."""
+    try:
+        return services.verify_admin_pin(pin), ""
+    except services.InvalidPinError as error:  # PinLockedError too: its message says how many minutes are left
+        return None, str(error)
 
 
 @require_http_methods(["GET", "POST"])
 def activate_device(request):
     """
-    CONTRATO VISTA–PLANTILLA — SGFT (activación de dispositivo).
-
-    URL name    : accounts:activate_device
-    Método      : GET (muestra el PIN) · POST (valida y activa)
-    Roles       : anónimo (la vista inicia la sesión del cajero al activar)
-    Plantilla   : GET normal → accounts/activate_device.html, que incluye
-                  components/pin_dialog.html
-                  HTMX → components/pin_dialog.html [fragmento, en #dialog]
-    Contexto    : module_label, pin_url, pin_dialog
-                  Diálogo: module_label, next_url, post_url, hx_target,
-                  hx_swap, error
-    HX-target   : #dialog
-    Respuestas  : GET sin activar → 200 con el diálogo
-                  GET ya activado → redirección a /pos/
-                  POST correcto (HTMX) → 204 con HX-Redirect: /pos/
-                  POST correcto (normal) → redirección a /pos/
-                  POST incorrecto (HTMX) → 422 con HX-Retarget: #dialog
-                  POST bloqueado por 5 intentos → 422 con mensaje de espera
-                  POST sin cajero disponible → 422 con mensaje de error
-                  POST ya activado → 409
-    Nota        : el contador y el bloqueo viven en la sesión; borrar la
-                  cookie reinicia el límite. Es provisional hasta implementar
-                  el bloqueo con caché y el estado persistente del dispositivo.
+    CONTRATO VISTA–PLANTILLA — Activar este dispositivo (WBS 3.1.2, DEC-34)
+    URL         : /accounts/activate/ (accounts:activate_device; es el LOGIN_URL)
+    Roles       : sin sesión. Con sesión, GET redirige a next (o a Nueva venta) y POST responde 409.
+    Plantillas  : GET normal → accounts/activate_device.html (página sin menú ni barra superior, con el diálogo
+                  abierto) · HTMX → accounts/partials/activate_dialog.html [fragmento, en #dialog]
+    Contexto    : post_url, hx_target, hx_swap, next_url, error; la página además activate_url
+    hx-target   : #dialog (innerHTML)
+    Respuestas  : POST con el PIN de un Administrador activo → inicia la sesión del cajero; 204 + HX-Redirect a
+                  next (o redirección sin HTMX) · PIN incompleto, incorrecto, bloqueado o sin cajero → 422 con el
+                  diálogo y el error (HX-Retarget #dialog)
+    El límite de intentos (5 fallos, 15 minutos) lo aplica services.activate_device en la caché: borrar la cookie
+    no lo reinicia.
     """
-    activation_url = reverse("accounts:activate_device")
-    sales_url = reverse("pos:order_builder")
-
-    # Provisional: el estado se conserva en la sesión, no en un registro
-    # permanente del dispositivo.
-    if request.session.get("device_activated"):
+    next_url = _safe_next(request, reverse("pos:order_builder"))
+    if request.user.is_authenticated:
         if request.method == "POST":
-            return HttpResponse(status=409)
-        return redirect(sales_url)
+            return HttpResponse("Este dispositivo ya está activado.", status=409)
+        return redirect(next_url)
 
-    error = None
+    activate_url = reverse("accounts:activate_device")
+    context = {"post_url": activate_url, "hx_target": "#dialog", "hx_swap": "innerHTML", "next_url": next_url,
+               "error": ""}
+    if request.method == "GET":
+        if request.htmx:
+            return render(request, "accounts/partials/activate_dialog.html", context)
+        reopen_url = activate_url + "?" + urlencode({"next": next_url})  # «Escribir PIN» reopens the dialog
+        return render(request, "accounts/activate_device.html", {**context, "activate_url": reopen_url})
 
-    if request.method == "POST":
-        now = timezone.now()
-        locked_until = request.session.get("pin_locked_until")
+    pin = "".join(request.POST.getlist("pin"))
+    if not is_pin(pin):
+        context["error"] = INCOMPLETE_PIN
+        return _dialog_error(request, "accounts/partials/activate_dialog.html", context)
+    try:
+        cashier = services.activate_device(pin)
+    except services.InvalidPinError as error:
+        context["error"] = str(error)
+    except services.NoCashierAvailableError:
+        context["error"] = NO_CASHIER
+    else:
+        login(request, cashier)  # the session belongs to the cashier account, not to the Administrator
+        return _done(request, next_url)
+    return _dialog_error(request, "accounts/partials/activate_dialog.html", context)
 
-        if locked_until and now.timestamp() < locked_until:
-            error = "Demasiados intentos. Espera cinco minutos antes de volver a intentarlo."
-        else:
-            if locked_until:
-                request.session.pop("pin_locked_until", None)
-                request.session["pin_attempts"] = 0
 
-            pin = "".join(request.POST.getlist("pin"))
-            attempts = request.session.get("pin_attempts", 0)
-
-            if len(pin) != 6 or not pin.isascii() or not pin.isdigit():
-                error = "Escribe los 6 dígitos del PIN."
-            else:
-                try:
-                    cashier = services.activate_device(pin)
-
-                    # La sesión debe corresponder al cajero, no al administrador.
-                    login(
-                        request,
-                        cashier,
-                        backend=settings.AUTHENTICATION_BACKENDS[0],
-                    )
-
-                    request.session["device_activated"] = True
-                    request.session["pin_attempts"] = 0
-                    request.session.pop("pin_locked_until", None)
-
-                    # Compatible con formularios HTMX y formularios normales.
-                    if request.headers.get("HX-Request") == "true":
-                        response = HttpResponse(status=204)
-                        response["HX-Redirect"] = sales_url
-                        return response
-
-                    return redirect(sales_url)
-
-                except services.InvalidPinError:
-                    attempts += 1
-                    request.session["pin_attempts"] = attempts
-
-                    if attempts >= MAX_PIN_ATTEMPTS:
-                        request.session["pin_locked_until"] = (
-                            now + timedelta(seconds=PIN_LOCKOUT_SECONDS)
-                        ).timestamp()
-                        error = (
-                            "Demasiados intentos fallidos. "
-                            "Espera cinco minutos antes de volver a intentarlo."
-                        )
-                    else:
-                        error = (
-                            "El PIN no es válido. "
-                            "Verifica los datos e inténtalo de nuevo."
-                        )
-
-                except services.NoCashierAvailableError:
-                    error = (
-                        "No hay una cuenta de cajero activa. "
-                        "Contacta al administrador."
-                    )
-
-    dialog_context = preview.pin_dialog_context(
-        module_label="Nueva venta",
-        next_url=sales_url,
-        error=error,
-    )
-    dialog_context["post_url"] = activation_url
-
-    if request.headers.get("HX-Request") == "true":
-        response = render(
-            request,
-            "components/pin_dialog.html",
-            dialog_context,
-            status=422 if error else 200,
-        )
-        if error:
-            response["HX-Retarget"] = "#dialog"
-            response["HX-Reswap"] = "innerHTML"
-        return response
-
-    pin_dialog = render_to_string(
-        "components/pin_dialog.html",
-        dialog_context,
-        request=request,
-    )
-
-    return render(
-        request,
-        "accounts/activate_device.html",
-        {
-            "module_label": "Nueva venta",
-            "pin_url": activation_url,
-            "pin_dialog": pin_dialog,
-        },
-    )
+@require_http_methods(["GET", "POST"])
+@role_required()
+def admin_pin(request):
+    """
+    CONTRATO VISTA–PLANTILLA — PIN de administrador (WBS 3.1.2, DEC-32)
+    URL         : /accounts/pin/?module=<módulo>&next=<url> (accounts:admin_pin)
+    Roles       : cualquier sesión activa (el dispositivo ya activado); sin sesión → activar el dispositivo
+    Plantilla   : components/pin_dialog.html [fragmento, en #dialog]
+    Contexto    : post_url, hx_target, hx_swap, module_label, next_url, error
+    hx-target   : #dialog (innerHTML)
+    Respuestas  : GET → 200 con el diálogo · POST con el PIN de un Administrador activo → abre el candado
+                  30 minutos a su nombre (unlock_admin) y responde 204 + HX-Redirect a next · PIN incompleto,
+                  incorrecto o bloqueado → 422 con el diálogo y el error (HX-Retarget #dialog)
+    """
+    module_label = request.GET.get("module", "")
+    next_url = _safe_next(request, reverse("pos:order_builder"))
+    if request.method == "GET":
+        return render(request, "components/pin_dialog.html", pin_dialog_context(module_label, next_url))
+    pin = "".join(request.POST.getlist("pin"))
+    admin, error = (None, INCOMPLETE_PIN) if not is_pin(pin) else _pin_error(pin)
+    if admin is None:
+        return _dialog_error(request, "components/pin_dialog.html", pin_dialog_context(module_label, next_url, error))
+    unlock_admin(request, admin)
+    return _done(request, next_url)
