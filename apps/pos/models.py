@@ -53,6 +53,18 @@ class QuarantineStatus(models.TextChoices):
     RESOLVED = "resolved", "Resuelta"
 
 
+class AdjustmentKind(models.TextChoices):
+    CANCELLATION = "cancellation", "Cancelación"
+    ADJUSTMENT = "adjustment", "Ajuste"
+
+
+class AdjustmentReason(models.TextChoices):
+    """The reason decides what is reverted (rule 11)."""
+    CAPTURE_ERROR = "error_captura", "Error de captura"  # reverts money and inventory
+    RETURN = "devolucion", "Devolución"  # reverts money; the ingredient is recorded as waste
+    PAYMENT_CORRECTION = "correccion_pago", "Corrección de método de pago"  # reverts nothing
+
+
 class QuarantineResolution(models.TextChoices):
     APPLY = "apply", "Aplicar"
     APPLY_NO_DEDUCTION = "apply_no_deduction", "Aplicar sin descontar inventario"
@@ -260,6 +272,65 @@ class Sale(models.Model):
 
     def __str__(self):
         return f"Venta {self.uuid} (${self.charged_total})"
+
+
+# ---------- Ajustes y cancelaciones ----------
+class SaleAdjustment(models.Model):
+    """
+    A sale is immutable (rule 7): it is corrected with a row here that points to the original. A cancellation
+    covers the whole sale; an adjustment covers quantity units of one line, or, for correccion_pago, only changes
+    the payment method the cash close attributes the sale to. amount is the money reverted. The service
+    (pos.services.cancel_sale / adjust_sale) applies the effects; this model only keeps them consistent.
+    """
+    sale = models.ForeignKey(Sale, on_delete=models.PROTECT, related_name="adjustments", verbose_name="venta")
+    kind = models.CharField("tipo", max_length=12, choices=AdjustmentKind.choices)
+    reason = models.CharField("motivo", max_length=20, choices=AdjustmentReason.choices)
+    order_item = models.ForeignKey(
+        OrderItem, on_delete=models.PROTECT, null=True, blank=True, related_name="adjustments",
+        verbose_name="línea ajustada",
+    )
+    quantity = models.PositiveIntegerField("unidades ajustadas", null=True, blank=True)
+    amount = models.DecimalField("importe revertido", max_digits=10, decimal_places=2, default=0)
+    new_payment_method = models.CharField(
+        "nuevo método de pago", max_length=10, choices=PaymentMethod.choices, blank=True
+    )
+    note = models.CharField("nota", max_length=255, blank=True)
+    authorized_by = models.ForeignKey(
+        User, on_delete=models.PROTECT, related_name="sale_adjustments", verbose_name="autorizado por"
+    )
+    created_at = models.DateTimeField("fecha", auto_now_add=True)
+
+    class Meta:
+        db_table = "sale_adjustments"
+        verbose_name = "ajuste de venta"
+        verbose_name_plural = "ajustes de venta"
+        constraints = [
+            models.CheckConstraint(condition=Q(amount__gte=0), name="pos_adjustment_amount_gte_0"),
+            models.UniqueConstraint(
+                fields=["sale"], condition=Q(kind="cancellation"), name="pos_adjustment_one_cancellation"
+            ),
+            models.CheckConstraint(
+                condition=~Q(kind="cancellation") | Q(order_item__isnull=True, quantity__isnull=True),
+                name="pos_cancellation_covers_whole_sale",
+            ),
+            models.CheckConstraint(
+                condition=~Q(reason="correccion_pago")
+                | (Q(kind="adjustment", amount=0, order_item__isnull=True) & ~Q(new_payment_method="")),
+                name="pos_payment_correction_only_changes_method",
+            ),
+            models.CheckConstraint(
+                condition=Q(reason="correccion_pago") | Q(new_payment_method=""),
+                name="pos_only_payment_correction_changes_method",
+            ),
+            models.CheckConstraint(
+                condition=~Q(kind="adjustment") | Q(reason="correccion_pago")
+                | Q(order_item__isnull=False, quantity__gt=0),
+                name="pos_adjustment_names_line_and_quantity",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.get_kind_display()} de {self.sale_id} ({self.get_reason_display()})"
 
 
 # ---------- Cuarentena ----------

@@ -2,16 +2,20 @@
 import base64
 import hashlib
 
+from django.contrib.admin.sites import site
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.test import TestCase, override_settings
+from django.urls import reverse
+from django.utils import timezone
 
+from apps.accounts.admin import UserAdmin
 from apps.accounts.models import DEFAULT_PIN_VERIFIER_ITERATIONS, Role
 from apps.accounts.services import (
-    activate_device, change_role, create_user, deactivate,
-    verify_admin_pin, InvalidPinError, NoCashierAvailableError, PinLockedError
+    MAX_PIN_ATTEMPTS, InvalidPinError, NoCashierAvailableError, PinLockedError, activate_device, change_role,
+    create_user, deactivate_user, pin_minutes_locked, verify_admin_pin,
 )
 
 class UserModelTests(TestCase):
@@ -164,7 +168,6 @@ class RoleTests(TestCase):
             role=Role.CASHIER,
         )
 
-    
 
     # The is_admin property is True only for ADMIN role.
     def test_is_admin_property(self):
@@ -214,85 +217,128 @@ class ChangeRoleTests(TestCase):
         self.assertTrue(change_role(root, Role.CASHIER).is_staff)
 
 
-class ActivateDeviceTests(TestCase):
-    """Pruebas unitarias del servicio de activación de dispositivos."""
-
-    PIN_ADMIN = "482915"
-    PASSWORD_CASHIER = "Clave12345"
+@override_settings(PASSWORD_HASHERS=FAST_HASHERS, SGFT_PIN_VERIFIER_ITERATIONS=1000)
+class VerifyAdminPinTests(TestCase):
+    """WBS 3.1.2 y 4.4 — PIN de Administrador con límite de intentos (autor: Diego)."""
 
     def setUp(self):
         cache.clear()
-        self.admin = User.objects.create_user(
-            username="admin_test",
-            password=self.PIN_ADMIN,
-            role=Role.ADMIN,
-        )
+        self.admin = create_user("dueno", "482915", role=Role.ADMIN)
+        self.cashier = create_user("caja", "730264")
 
-        self.cashier = User.objects.create_user(
-            username="cajero_test",
-            password=self.PASSWORD_CASHIER,
-            role=Role.CASHIER,
-        )
+    def test_right_pin_returns_the_admin(self):
+        self.assertEqual(verify_admin_pin("482915"), self.admin)
 
-    def test_valid_admin_pin_activates_device(self):
-        cashier = activate_device(self.PIN_ADMIN)
-        self.assertEqual(cashier, self.cashier)
-
-    def test_invalid_pin_does_not_activate_device(self):
+    def test_cashier_pin_is_not_an_admin_pin(self):
         with self.assertRaises(InvalidPinError):
-            activate_device("654321")
+            verify_admin_pin("730264")
 
-    def test_incomplete_pin_is_rejected(self):
-        with self.assertRaises(InvalidPinError):
-            activate_device("123")
-
-    def test_pin_with_letters_is_rejected(self):
-        with self.assertRaises(InvalidPinError):
-            activate_device("12AB56")
-
-    def test_inactive_admin_cannot_activate_device(self):
+    def test_inactive_admin_pin_is_rejected(self):
+        create_user("otro", "591736", role=Role.ADMIN)
         self.admin.is_active = False
-        self.admin.save(update_fields=["is_active"])
+        self.admin.save()
         with self.assertRaises(InvalidPinError):
-            activate_device(self.PIN_ADMIN)
+            verify_admin_pin("482915")
 
-    def test_activation_fails_without_cashier(self):
-        self.cashier.delete()
+    def test_malformed_pin_counts_as_a_failure(self):
+        for pin in ("", "12345", "abcdef", None):
+            with self.assertRaises(InvalidPinError):
+                verify_admin_pin(pin)
+
+    def test_five_failures_lock_the_pin_even_for_the_right_one(self):
+        for _ in range(MAX_PIN_ATTEMPTS - 1):
+            with self.assertRaises(InvalidPinError):
+                verify_admin_pin("000001")
+        with self.assertRaises(PinLockedError) as locked:
+            verify_admin_pin("000001")
+        self.assertEqual(locked.exception.minutes_left, 15)
+        with self.assertRaises(PinLockedError):
+            verify_admin_pin("482915")
+        self.assertEqual(pin_minutes_locked(), 15)
+
+    def test_lock_expires(self):
+        for _ in range(MAX_PIN_ATTEMPTS):
+            with self.assertRaises(InvalidPinError):
+                verify_admin_pin("000001")
+        cache.set("accounts:pin_locked_until", timezone.now().timestamp() - 1)
+        self.assertEqual(verify_admin_pin("482915"), self.admin)
+
+    def test_success_resets_the_counter(self):
+        for _ in range(MAX_PIN_ATTEMPTS - 1):
+            with self.assertRaises(InvalidPinError):
+                verify_admin_pin("000001")
+        verify_admin_pin("482915")
+        with self.assertRaises(InvalidPinError) as error:
+            verify_admin_pin("000001")
+        self.assertNotIsInstance(error.exception, PinLockedError)
+
+    def test_activate_device_returns_the_cashier_account(self):
+        self.assertEqual(activate_device("482915"), self.cashier)
+
+    def test_activate_device_without_cashier(self):
+        self.cashier.is_active = False
+        self.cashier.save()
         with self.assertRaises(NoCashierAvailableError):
-            activate_device(self.PIN_ADMIN)
+            activate_device("482915")
 
-    def test_cashier_password_cannot_activate_device(self):
+    def test_activate_device_with_wrong_pin(self):
         with self.assertRaises(InvalidPinError):
-            activate_device(self.PASSWORD_CASHIER)
+            activate_device("730264")
 
 
-class SecurityServicesTests(TestCase):
-    """Pruebas del bloqueo por caché, verificación de PIN y desactivación."""
+@override_settings(PASSWORD_HASHERS=FAST_HASHERS, SGFT_PIN_VERIFIER_ITERATIONS=1000)
+class DeactivateUserTests(TestCase):
+    """WBS 3.1.5 — las cuentas se desactivan, nunca se borran (autor: Diego)."""
 
     def setUp(self):
-        cache.clear()
-        self.admin = User.objects.create_user(
-            username="admin_sec", password="123456", role=Role.ADMIN
-        )
+        self.admin = create_user("dueno", "482915", role=Role.ADMIN)
 
-    def test_pin_lockout_after_five_attempts(self):
-        # 5 intentos fallidos
-        for _ in range(5):
-            with self.assertRaises(InvalidPinError):
-                verify_admin_pin("000000")
-        
-        # El 6to intento debe lanzar PinLockedError (incluso si el PIN es correcto)
-        with self.assertRaises(PinLockedError):
-            verify_admin_pin("123456")
+    def test_deactivates_without_deleting(self):
+        cashier = create_user("caja", "730264")
+        deactivate_user(cashier)
+        cashier.refresh_from_db()
+        self.assertFalse(cashier.is_active)
 
-    def test_verify_admin_pin_returns_correct_admin(self):
-        admin = verify_admin_pin("123456")
-        self.assertEqual(admin, self.admin)
+    def test_last_active_admin_cannot_be_deactivated(self):
+        with self.assertRaises(ValidationError):
+            deactivate_user(self.admin)
+        self.admin.refresh_from_db()
+        self.assertTrue(self.admin.is_active)
 
-    def test_deactivate_does_not_delete_account(self):
-        user = User.objects.create_user(username="temp", password="123456")
-        deactivate(user)
-        
+    def test_an_admin_can_go_if_another_remains(self):
+        create_user("socio", "591736", role=Role.ADMIN)
+        self.assertFalse(deactivate_user(self.admin).is_active)
+
+
+@override_settings(PASSWORD_HASHERS=FAST_HASHERS, SGFT_PIN_VERIFIER_ITERATIONS=1000)
+class UserAdminTests(TestCase):
+    """WBS 3.1.5 — Django Admin de cuentas (autor: Diego)."""
+
+    def setUp(self):
+        self.admin = get_user_model().objects.create_superuser("root", password="730261")
+        self.client.force_login(self.admin)
+        self.cashier = create_user("caja", "730264")
+
+    def test_accounts_cannot_be_deleted(self):
+        response = self.client.get(reverse("admin:accounts_user_delete", args=[self.cashier.pk]))
+        self.assertEqual(response.status_code, 403)
+        changelist = self.client.get(reverse("admin:accounts_user_changelist"))
+        self.assertNotContains(changelist, "delete_selected")
+
+    def test_deactivate_action(self):
+        self.client.post(reverse("admin:accounts_user_changelist"),
+                         {"action": "deactivate", "_selected_action": [self.cashier.pk]})
+        self.cashier.refresh_from_db()
+        self.assertFalse(self.cashier.is_active)
+
+    def test_verifier_is_not_shown(self):
+        response = self.client.get(reverse("admin:accounts_user_change", args=[self.cashier.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "pin_verifier")
+
+    def test_saving_a_cashier_as_admin_gives_admin_access(self):
+        user = get_user_model().objects.get(pk=self.cashier.pk)
+        user.role = Role.ADMIN
+        UserAdmin(get_user_model(), site).save_model(None, user, None, True)
         user.refresh_from_db()
-        self.assertFalse(user.is_active)
-        self.assertTrue(User.objects.filter(username="temp").exists())
+        self.assertTrue(user.is_staff)

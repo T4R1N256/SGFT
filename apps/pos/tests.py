@@ -1,8 +1,10 @@
 """Unit tests for apps.pos. Whoever implements a service writes its tests."""
 
+import json
 from datetime import date
 from decimal import Decimal
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
@@ -11,9 +13,10 @@ from django.test import TestCase
 from django.utils import timezone
 
 from apps.catalog.models import Category, Dish, Ingredient, Units
+from apps.pos.services_pricing import calcular_total
 from apps.pos.models import (
-    CashRegisterSession, Modifier, Order, OrderItem, QuarantinedOperation,
-    QuarantineReason, ReviewReason, Sale, validate_review_reasons,
+    AdjustmentKind, AdjustmentReason, CashRegisterSession, Modifier, Order, OrderItem, QuarantinedOperation,
+    QuarantineReason, ReviewReason, Sale, SaleAdjustment, validate_review_reasons,
 )
 
 
@@ -177,6 +180,59 @@ class SaleTests(PosModelsBase):
         self.assertEqual(sale.charged_total, Decimal("0.00"))
 
 
+class SaleAdjustmentTests(PosModelsBase):
+    """WBS 3.3.8 — ajustes y cancelaciones que dejan rastro (autor: Jesús)."""
+
+    def setUp(self):
+        super().setUp()
+        self.sale = self.make_sale()
+        self.item = OrderItem.objects.create(order=self.sale.order, dish=self.dish, quantity=2,
+                                             unit_price=Decimal("50.00"))
+
+    def adjust(self, **kwargs):
+        data = dict(sale=self.sale, kind=AdjustmentKind.ADJUSTMENT, reason=AdjustmentReason.CAPTURE_ERROR,
+                    order_item=self.item, quantity=1, amount=Decimal("50.00"), authorized_by=self.user)
+        data.update(kwargs)
+        return SaleAdjustment.objects.create(**data)
+
+    def assertRejected(self, **kwargs):
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            self.adjust(**kwargs)
+
+    def test_line_adjustment_points_to_the_original_sale(self):
+        adjustment = self.adjust()
+        self.assertEqual(list(self.sale.adjustments.all()), [adjustment])
+
+    def test_cancellation_covers_the_whole_sale_once(self):
+        self.adjust(kind=AdjustmentKind.CANCELLATION, order_item=None, quantity=None, amount=Decimal("100.00"))
+        self.assertRejected(kind=AdjustmentKind.CANCELLATION, order_item=None, quantity=None)
+
+    def test_cancellation_cannot_name_a_line(self):
+        self.assertRejected(kind=AdjustmentKind.CANCELLATION)
+
+    def test_payment_correction_only_changes_the_method(self):
+        self.adjust(reason=AdjustmentReason.PAYMENT_CORRECTION, order_item=None, quantity=None, amount=0,
+                    new_payment_method="transfer")
+        self.assertRejected(reason=AdjustmentReason.PAYMENT_CORRECTION, order_item=None, quantity=None, amount=0)
+        self.assertRejected(reason=AdjustmentReason.PAYMENT_CORRECTION, order_item=None, quantity=None,
+                            new_payment_method="transfer")
+
+    def test_only_payment_correction_sets_a_new_method(self):
+        self.assertRejected(new_payment_method="transfer")
+
+    def test_line_adjustment_needs_line_and_quantity(self):
+        self.assertRejected(order_item=None)
+        self.assertRejected(quantity=0)
+
+    def test_amount_cannot_be_negative(self):
+        self.assertRejected(amount=Decimal("-1.00"))
+
+    def test_adjusted_sale_cannot_be_deleted(self):
+        self.adjust()
+        with self.assertRaises(ProtectedError):
+            self.sale.delete()
+
+
 class QuarantinedOperationTests(PosModelsBase):
     def make_quarantine(self, **kwargs):
         data = dict(
@@ -203,3 +259,31 @@ class QuarantinedOperationTests(PosModelsBase):
             {"usuario_sin_permiso", "turno_ya_abierto", "turno_invalido",
              "platillo_desconocido", "receta_faltante", "total_inconsistente"},
         )
+
+class PricingParityTest(TestCase):
+    """WBS 3.3.4 y 3.4.5 — calcular_total() contra los casos compartidos con pricing.js (autor: Jesús)."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        with open(settings.BASE_DIR / "tests_fixtures" / "pricing_cases.json", encoding="utf-8") as fixture:
+            cls.cases = json.load(fixture)
+
+    def test_every_shared_case_gives_its_total(self):
+        for case in self.cases["casos"]:
+            with self.subTest(case["nombre"]):
+                self.assertEqual(calcular_total(case["pedido"]), case["total_esperado_centavos"])
+
+    def test_every_malformed_order_is_rejected(self):
+        for case in self.cases["invalidos"]:
+            with self.subTest(case["nombre"]), self.assertRaises(ValueError):
+                calcular_total(case["pedido"])
+
+    def test_result_is_an_int_in_cents(self):
+        total = calcular_total({"lineas": [{"platillo_id": 1, "precio_base_centavos": 8500, "cantidad": 2}]})
+        self.assertIs(type(total), int)
+        self.assertEqual(total, 17000)
+
+    def test_true_is_not_a_quantity(self):
+        with self.assertRaises(ValueError):
+            calcular_total({"lineas": [{"platillo_id": 1, "precio_base_centavos": 8500, "cantidad": True}]})

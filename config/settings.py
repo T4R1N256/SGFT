@@ -83,6 +83,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "apps.core.context_processors.shell",  # menu and top bar of base.html (WBS 3.1.3)
             ],
         },
     },
@@ -109,7 +110,20 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "apps.accounts.validators.SixDigitPasswordValidator"},
 ]
 
-# LOGIN_URL / LOGIN_REDIRECT_URL are set by WBS 3.1.2 once the login view exists.
+# No login page (DEC-34): without a session, apps.core.mixins sends the device to its activation (WBS 3.1.2).
+LOGIN_URL = "accounts:activate_device"
+
+# The device stays signed in as the cashier: a one-year session, renewed on every request.
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 365
+SESSION_SAVE_EVERY_REQUEST = True
+
+# --- Cache ------------------------------------------------------------------------------------
+
+# Shared by every Gunicorn worker: holds the admin PIN attempt counter (WBS 4.4). Create the table once with
+# `python manage.py createcachetable` (the test runner creates it by itself).
+CACHES = {
+    "default": {"BACKEND": "django.core.cache.backends.db.DatabaseCache", "LOCATION": "sgft_cache"},
+}
 
 # --- Language and time ------------------------------------------------------------
 

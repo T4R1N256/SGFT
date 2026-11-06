@@ -1,12 +1,45 @@
-"""Servicios de cuentas de personal (WBS 3.1.1).
+"""Servicios de cuentas de personal (WBS 3.1.1, 3.1.2, 3.1.5).
 
 Los servicios concentran la lógica de negocio del módulo de usuarios.
 Regla del repo: quien escribe el servicio, escribe sus pruebas.
 """
+import math
+
 from django.contrib.auth.password_validation import validate_password
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
+from django.utils import timezone
 
-from apps.accounts.models import Role, User
+from apps.accounts.models import Role, User, is_pin
+
+# Límite de intentos del PIN (WBS 4.4): 5 fallos seguidos bloquean el PIN 15 minutos. Vive en la caché y no en la
+# sesión, para que borrar la cookie no lo reinicie. Hay un solo dispositivo, así que el contador es único.
+MAX_PIN_ATTEMPTS = 5
+PIN_LOCKOUT_MINUTES = 15
+_ATTEMPTS_KEY = "accounts:pin_attempts"
+_LOCKED_UNTIL_KEY = "accounts:pin_locked_until"
+
+
+class InvalidPinError(Exception):
+    """El PIN no es de ningún Administrador activo."""
+
+    def __init__(self, message="PIN incorrecto."):
+        super().__init__(message)
+
+
+class PinLockedError(InvalidPinError):
+    """Demasiados intentos fallidos; minutes_left dice cuánto falta para volver a intentar."""
+
+    def __init__(self, minutes_left):
+        self.minutes_left = minutes_left
+        super().__init__(f"Demasiados intentos. Intenta de nuevo en {minutes_left} min.")
+
+
+class NoCashierAvailableError(Exception):
+    """No hay una cuenta de cajero activa con la cual activar el dispositivo."""
+
+    def __init__(self, message="No hay una cuenta de cajero activa. Créala en Django Admin."):
+        super().__init__(message)
 
 CACHE_KEY_PIN_ATTEMPTS = "sgft_pin_attempts"
 PIN_MAX_ATTEMPTS = 5
@@ -42,92 +75,61 @@ def change_role(user, role):
     return user
 
 
-class InvalidPinError(Exception):
-    """El PIN no coincide con una cuenta administradora activa."""
-
-
-class NoCashierAvailableError(Exception):
-    """No existe una cuenta de cajero activa."""
-
-
-class PinLockedError(InvalidPinError):
-    """Se superaron los intentos fallidos permitidos."""
-
-
-def activate_device(pin):
-    """Valida el PIN de un administrador y devuelve una cuenta de cajero activa.
-
-    No devuelve ni revela qué administrador validó el PIN.
-    """
-    if not isinstance(pin, str) or len(pin) != 6 or not pin.isascii() or not pin.isdigit():
-        raise InvalidPinError
-
-    admins = User.objects.filter(
-        role=Role.ADMIN,
-        is_active=True,
-    )
-
-    valid_pin = False
-
-    # No detenernos en el primer administrador evita revelar cuál coincidió
-    # mediante una diferencia obvia en el número de comprobaciones.
-    for admin in admins.iterator():
-        if admin.check_password(pin):
-            valid_pin = True
-
-    if not valid_pin:
-        raise InvalidPinError
-
-    cashier = User.objects.filter(
-        role=Role.CASHIER,
-        is_active=True,
-    ).first()
-
-    if cashier is None:
-        raise NoCashierAvailableError
-
-    return cashier
-
-
-# --- Bloqueo por caché y nuevas funciones (Tarea de Diego) ---
-
-
-def _check_pin_lockout():
-    """Lanza PinLockedError si se excedieron los intentos."""
-    attempts = cache.get(CACHE_KEY_PIN_ATTEMPTS, 0)
-    if attempts >= PIN_MAX_ATTEMPTS:
-        raise PinLockedError("Demasiados intentos. Espera 15 minutos.")
-
-
-def _register_failed_attempt():
-    """Suma un intento fallido. Si se llega al máximo, se queda bloqueado hasta que expire."""
-    try:
-        cache.incr(CACHE_KEY_PIN_ATTEMPTS)
-    except ValueError:
-        # Si la llave no existe, incr lanza ValueError
-        cache.set(CACHE_KEY_PIN_ATTEMPTS, 1, timeout=PIN_LOCKOUT_SECONDS)
-
-
-def verify_admin_pin(pin):
-    """Devuelve el Administrador al que corresponde el PIN, o lanza error."""
-    _check_pin_lockout()
-
-    if not isinstance(pin, str) or len(pin) != 6 or not pin.isascii() or not pin.isdigit():
-        _register_failed_attempt()
-        raise InvalidPinError
-
-    admins = User.objects.filter(role=Role.ADMIN, is_active=True)
-    for admin in admins.iterator():
-        if admin.check_password(pin):
-            cache.delete(CACHE_KEY_PIN_ATTEMPTS)  # Éxito, limpiamos intentos
-            return admin
-
-    _register_failed_attempt()
-    raise InvalidPinError
-
-
-def deactivate(user):
-    """Desactiva la cuenta sin borrarla de la base de datos."""
+def deactivate_user(user):
+    """Desactiva una cuenta; nunca se borra (WBS 3.1.5). Siempre debe quedar un Administrador activo."""
+    if user.is_admin and not User.objects.filter(role=Role.ADMIN, is_active=True).exclude(pk=user.pk).exists():
+        raise ValidationError("Debe quedar al menos un administrador activo.")
     user.is_active = False
     user.save(update_fields=["is_active"])
     return user
+
+
+def pin_minutes_locked():
+    """Minutos que faltan para poder volver a escribir el PIN; 0 si no está bloqueado."""
+    until = cache.get(_LOCKED_UNTIL_KEY)
+    remaining = (until or 0) - timezone.now().timestamp()
+    return math.ceil(remaining / 60) if remaining > 0 else 0
+
+
+def _register_failure():
+    attempts = cache.get(_ATTEMPTS_KEY, 0) + 1
+    if attempts >= MAX_PIN_ATTEMPTS:
+        cache.set(_LOCKED_UNTIL_KEY, timezone.now().timestamp() + PIN_LOCKOUT_MINUTES * 60, PIN_LOCKOUT_MINUTES * 60)
+        cache.delete(_ATTEMPTS_KEY)
+    else:
+        cache.set(_ATTEMPTS_KEY, attempts, PIN_LOCKOUT_MINUTES * 60)
+
+
+def verify_admin_pin(pin):
+    """
+    Devuelve el Administrador activo cuyo PIN (la contraseña de 6 dígitos) es pin.
+
+    Lanza PinLockedError si el PIN está bloqueado por intentos fallidos e InvalidPinError si no coincide; cada
+    fallo cuenta para el bloqueo y un acierto reinicia el contador.
+    """
+    minutes = pin_minutes_locked()
+    if minutes:
+        raise PinLockedError(minutes)
+    if is_pin(pin):
+        for admin in User.objects.filter(role=Role.ADMIN, is_active=True):
+            if admin.check_password(pin):
+                cache.delete(_ATTEMPTS_KEY)
+                return admin
+    _register_failure()
+    minutes = pin_minutes_locked()
+    if minutes:
+        raise PinLockedError(minutes)
+    raise InvalidPinError()
+
+
+def activate_device(pin):
+    """
+    Activa el dispositivo (DEC-34): con el PIN de un Administrador devuelve la cuenta de cajero con la que el
+    dispositivo queda en sesión permanente. Lanza los mismos errores que verify_admin_pin y, si no hay cajero
+    activo, NoCashierAvailableError.
+    """
+    verify_admin_pin(pin)
+    cashier = User.objects.filter(role=Role.CASHIER, is_active=True).order_by("pk").first()
+    if cashier is None:
+        raise NoCashierAvailableError()
+    return cashier
