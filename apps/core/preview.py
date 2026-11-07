@@ -1,28 +1,25 @@
 """
-TEMPORARY stand-in for the admin PIN and the cash session, merged to main on purpose (PR #44) so the team can walk
-through every screen. It validates NOTHING: any 6-digit PIN unlocks the modules with a padlock.
+TEMPORARY stand-in for the cash session and the screens' shell, merged to main on purpose (PR #44) so the team can
+walk through every screen. The admin PIN is no longer simulated: is_unlocked asks the real padlock of
+apps/core/mixins.py, which accounts.views.admin_pin opens with an Administrator's PIN (WBS 3.1.2).
 
 Remove it, with every «preview.» call in the views, once the real pieces exist (rutas-pendientes.md):
   - the role/PIN mixin of apps/core/mixins.py (Jesús, J3), which replaces require_admin_pin;
   - the shell context processor of apps/core (Jesús, J2), which replaces apply_to_shell and each app's _shell_context;
-  - the PIN hash field in the user model (Jesús, J4), the PIN service (Diego) and the PIN view of apps/accounts (Yahir);
   - the cash session services (Jared and Jesús), which replace is_cash_open and set_cash_open.
 
-State lives in the Django session. Any 6-digit PIN unlocks the modules with a padlock for 30 minutes. Without a
-session (views called with RequestFactory in the tests) everything stays unlocked and the cash open, as in the
-contract drafts, so the view tests keep their meaning.
+State lives in the Django session. Without a session (views called with RequestFactory in the tests) everything
+stays unlocked and the cash open, as in the contract drafts, so the view tests keep their meaning.
 """
-from datetime import timedelta
 from functools import wraps
 from urllib.parse import urlencode
 
 from django.shortcuts import render
 from django.template.loader import render_to_string
 from django.urls import reverse
-from django.utils import timezone
 
-UNLOCK_MINUTES = 30
-_UNLOCKED_UNTIL = "preview_admin_unlocked_until"
+from apps.core.mixins import is_admin_unlocked
+
 _CASH_OPEN = "preview_cash_session_open"
 
 
@@ -31,15 +28,7 @@ def _session(request):
 
 
 def is_unlocked(request):
-    session = _session(request)
-    if session is None:
-        return True
-    until = session.get(_UNLOCKED_UNTIL)
-    return bool(until) and timezone.now().timestamp() < until
-
-
-def unlock(request):
-    request.session[_UNLOCKED_UNTIL] = (timezone.now() + timedelta(minutes=UNLOCK_MINUTES)).timestamp()
+    return True if _session(request) is None else is_admin_unlocked(request)
 
 
 def is_cash_open(request):

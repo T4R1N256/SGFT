@@ -1,0 +1,12 @@
+{% extends "components/pin_dialog.html" %}
+{% comment %}
+accounts/partials/activate_dialog.html — Diálogo del PIN para activar el dispositivo (WBS 3.1.2)
+Igual que components/pin_dialog.html; cambian el subtítulo, la nota y el botón.
+Contexto: post_url, hx_target, hx_swap, next_url, error. Con el PIN correcto la vista responde HX-Redirect a next_url.
+{% endcomment %}
+{% block subtitle %}<p class="sgft-texto-cuerpo-pequeno text-texto-secundario">Para activar este dispositivo</p>{% endblock %}
+{% block submit %}<span class="inline-flex">{% include "components/icons/lock.html" with size=20 only %}</span>Activar{% endblock %}
+{% block fields %}
+  <input type="hidden" name="next" value="{{ next_url }}">
+  {% include "components/pin_boxes.html" with legend="PIN de administrador" error=error note="Se pide una sola vez. Después, este dispositivo queda con la cuenta de cajero." only %}
+{% endblock %}
