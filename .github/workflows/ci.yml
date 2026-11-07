@@ -66,3 +66,12 @@ jobs:
           BASE_REF: ${{ github.base_ref }}
         run: |
           git diff --name-only --diff-filter=d "origin/$BASE_REF...HEAD" | python .claude/skills/sgft-organizacion-entregables/scripts/dueno_de_ruta.py --revisar
+
+      # Paridad de precios: calcularTotal() de static/pos/pricing.js debe dar lo mismo que calcular_total()
+      # para cada caso de tests_fixtures/pricing_cases.json (WBS 3.4.5). Node solo corre aquí, en el CI.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: 5. Paridad de precios entre Python y JavaScript
+        run: node --test "tests_e2e/parity/*.mjs"
