@@ -136,3 +136,16 @@ class RecipeServicesTests(CatalogServicesBase):
 
     def test_dish_without_recipe_costs_zero(self):
         self.assertEqual(services.dish_cost(self.dish), Decimal("0.00"))
+
+
+class DemoFixtureTests(TestCase):
+    """WBS 4.5 — fictitious demo data (apps/catalog/fixtures/demo.json): it loads and every dish can be sold."""
+    fixtures = ["demo"]
+
+    def test_every_active_dish_has_a_recipe_and_a_positive_margin(self):
+        dishes = Dish.objects.filter(is_active=True)
+        self.assertGreaterEqual(dishes.count(), 10)
+        for dish in dishes:
+            with self.subTest(dish=dish.name):
+                self.assertTrue(dish.recipes.exists())
+                self.assertLess(services.dish_cost(dish), dish.price)
