@@ -109,3 +109,61 @@ def revert_sale_deduction(sale_uuid, lines, user, note):
     units of one line. Returns the ingredients that changed.
     """
     return _apply(required_quantities(lines), MovementKind.ADJUSTMENT, user, sale_uuid=sale_uuid, note=note)
+
+
+
+class InvalidQuantityError(ValueError):
+    """A purchase or waste quantity must be greater than zero, in the ingredient's unit, with up to 3 decimals."""
+
+
+# ---------- Compras, mermas y alertas (WBS 3.2.5, 3.2.7, 3.2.8) ----------
+def _positive(value, field, places):
+    try:
+        value = Decimal(value)
+    except (ArithmeticError, TypeError, ValueError):
+        raise InvalidQuantityError(f"{field} debe ser un número.") from None
+    if not value.is_finite() or value <= 0 or value != value.quantize(Decimal(1).scaleb(-places)):
+        raise InvalidQuantityError(f"{field} debe ser mayor que cero y tener a lo más {places} decimales.")
+    return value
+
+
+@transaction.atomic
+def register_purchase(ingredient, quantity, unit_cost, user, note=""):
+    """
+    Brings quantity (in the ingredient's unit) into the stock. unit_cost is what one unit cost in this purchase;
+    it becomes the ingredient's unit_cost, so the dish cost follows the latest price. Returns the movement.
+    """
+    quantity = _positive(quantity, "La cantidad", 3)
+    unit_cost = Decimal(unit_cost)
+    if not unit_cost.is_finite() or unit_cost < 0 or unit_cost != unit_cost.quantize(Decimal("0.01")):
+        raise InvalidQuantityError("El costo unitario no puede ser negativo y lleva a lo más 2 decimales.")
+    Ingredient.objects.select_for_update().filter(pk=ingredient.pk).update(stock=F("stock") + quantity,
+                                                                           unit_cost=unit_cost)
+    ingredient.refresh_from_db(fields=["stock", "unit_cost"])
+    return StockMovement.objects.create(ingredient=ingredient, kind=MovementKind.PURCHASE, quantity=quantity,
+                                        unit_cost=unit_cost, note=note, created_by=user)
+
+
+@transaction.atomic
+def register_waste(ingredient, quantity, user, note):
+    """
+    Takes quantity out of the stock as waste (spoiled, burnt, returned). The reason is required. The stock may
+    go negative, as with a sale (rule 10). Returns the movement.
+    """
+    quantity = _positive(quantity, "La cantidad", 3)
+    if not note or not note.strip():
+        raise InvalidQuantityError("Escribe el motivo de la merma.")
+    Ingredient.objects.select_for_update().filter(pk=ingredient.pk).update(stock=F("stock") - quantity)
+    ingredient.refresh_from_db(fields=["stock"])
+    return StockMovement.objects.create(ingredient=ingredient, kind=MovementKind.WASTE, quantity=-quantity,
+                                        note=note.strip(), created_by=user)
+
+
+def is_low_stock(ingredient):
+    """Rule 3: the alert shows when stock <= min_stock. It is only visual; it never blocks a sale."""
+    return ingredient.stock <= ingredient.min_stock
+
+
+def check_min_stock():
+    """Ingredients at or below their minimum (rule 3), the most urgent first: negative stock, then by name."""
+    return Ingredient.objects.filter(stock__lte=F("min_stock")).order_by("stock", "name")
