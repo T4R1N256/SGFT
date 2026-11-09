@@ -1,7 +1,7 @@
 """Unit tests for apps.pos. Whoever implements a service writes its tests."""
 
 import json
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from uuid import uuid4
 
@@ -13,7 +13,9 @@ from django.db.models import ProtectedError
 from django.test import TestCase
 from django.utils import timezone
 
-from apps.catalog.models import Category, Dish, Ingredient, Units
+from apps.catalog.models import Category, Dish, Ingredient, Recipe, Units
+from apps.inventory.models import MovementKind, StockMovement
+from apps.pos import services as sales
 from apps.pos import services_cash_session as cash
 from apps.pos.services_pricing import calcular_total
 from apps.pos.models import (
@@ -398,3 +400,203 @@ class CashSessionServiceTests(PosModelsBase):
     def test_close_without_open_session(self):
         with self.assertRaises(cash.NoOpenSessionError):
             cash.close_session(self.admin, Decimal("500.00"))
+
+
+class SaleServiceTests(TestCase):
+    """WBS 3.3.5 y 3.3.8 — confirmar, cancelar y ajustar una venta (reglas 1, 2, 7 a 12 y 14)."""
+
+    def setUp(self):
+        users = get_user_model().objects
+        self.admin = users.create_user(username="dueno", password="x-9Lq!pr2", role="admin")
+        self.cashier = users.create_user(username="caja", password="x-9Lq!pr3", role="cashier")
+        category = Category.objects.create(name="Burritos")
+        self.burrito = Dish.objects.create(name="Burrito de asada", category=category, price=Decimal("85.00"))
+        self.soda = Dish.objects.create(name="Refresco", category=category, price=Decimal("25.00"))
+        self.tortilla = Ingredient.objects.create(name="Tortilla", unit=Units.PIECE, stock=Decimal("10"))
+        self.beef = Ingredient.objects.create(name="Asada", unit=Units.G, stock=Decimal("1000"))
+        self.onion = Ingredient.objects.create(name="Cebolla", unit=Units.G, stock=Decimal("200"))
+        self.cheese = Ingredient.objects.create(name="Queso", unit=Units.G, stock=Decimal("100"))
+        self.can = Ingredient.objects.create(name="Lata", unit=Units.PIECE, stock=Decimal("5"))
+        for dish, ingredient, quantity in [(self.burrito, self.tortilla, "1"), (self.burrito, self.beef, "150"),
+                                           (self.burrito, self.onion, "20"), (self.soda, self.can, "1")]:
+            Recipe.objects.create(dish=dish, ingredient=ingredient, quantity=Decimal(quantity))
+        Modifier.objects.create(dish=self.burrito, ingredient=self.cheese, kind="add",
+                                price_adjustment=Decimal("15.00"), quantity=Decimal("30"))
+        Modifier.objects.create(dish=self.burrito, ingredient=self.onion, kind="remove")
+        self.session = cash.open_session(self.admin, Decimal("500.00"))
+
+    def stock(self, ingredient):
+        ingredient.refresh_from_db()
+        return ingredient.stock
+
+    def order(self, burritos=2, extra_cheese=True, no_onion=False, sodas=0, burrito_price=8500):
+        modifiers = []
+        if extra_cheese:
+            modifiers.append({"tipo": "agregar", "insumo_id": self.cheese.pk, "ajuste_centavos": 1500})
+        if no_onion:
+            modifiers.append({"tipo": "quitar", "insumo_id": self.onion.pk})
+        lines = [{"platillo_id": self.burrito.pk, "precio_base_centavos": burrito_price, "cantidad": burritos,
+                  "modificadores": modifiers}]
+        if sodas:
+            lines.append({"platillo_id": self.soda.pk, "precio_base_centavos": 2500, "cantidad": sodas})
+        return {"lineas": lines}
+
+    def sell(self, pedido=None, total=20000, method="efectivo", user=None, **kwargs):
+        return sales.confirm_sale(user or self.cashier, pedido or self.order(), method, total, **kwargs)
+
+    # ----- Confirmar -----
+    def test_online_sale_records_what_was_charged_and_deducts_inventory(self):
+        sale = self.sell(self.order(no_onion=True))
+        self.assertEqual((sale.charged_total, sale.server_total, sale.payment_method, sale.cash_session),
+                         (Decimal("200.00"), Decimal("200.00"), "cash", self.session))
+        self.assertEqual((sale.created_by, sale.needs_review, sale.review_reasons), (self.cashier, False, []))
+        item = sale.order.items.get()
+        self.assertEqual((item.dish, item.quantity, item.unit_price), (self.burrito, 2, Decimal("85.00")))
+        self.assertEqual(sorted((m.kind, m.price_adjustment) for m in item.modifiers.all()),
+                         [("add", Decimal("15.00")), ("remove", Decimal("0.00"))])
+        self.assertEqual(self.stock(self.beef), Decimal("700"))
+        self.assertEqual(self.stock(self.cheese), Decimal("40"))  # extra: 30 g x 2 (rule 2)
+        self.assertEqual(self.stock(self.onion), Decimal("200"))  # removed: not deducted (rule 2)
+
+    def test_needs_an_open_session_and_checks_it_before_pricing(self):
+        cash.close_session(self.admin, Decimal("500.00"))
+        with self.assertRaises(cash.NoOpenSessionError):
+            self.sell(pedido={"lineas": "mal formado"})
+        self.assertFalse(Sale.objects.exists())
+
+    def test_offline_sale_keeps_its_uuid_and_device_time_and_is_applied_once(self):
+        uuid, when = uuid4(), timezone.now() - timedelta(hours=2)
+        sale = self.sell(uuid=uuid, session_uuid=self.session.uuid, device_timestamp=when)
+        self.assertEqual((sale.uuid, sale.device_timestamp), (uuid, when))
+        with self.assertRaises(sales.DuplicateSaleError) as raised:
+            self.sell(uuid=uuid, session_uuid=self.session.uuid, device_timestamp=when)
+        self.assertEqual(raised.exception.sale, sale)
+        self.assertEqual(Sale.objects.count(), 1)
+        self.assertEqual(self.stock(self.beef), Decimal("700"))
+
+    def test_quarantine_reasons(self):
+        closed = CashRegisterSession.objects.create(
+            business_date=date(2026, 1, 2), opened_by=self.admin, opening_amount=Decimal("0"),
+            status="closed", device_timestamp=timezone.now())
+        unknown_dish = {"lineas": [{"platillo_id": 999, "precio_base_centavos": 100, "cantidad": 1}]}
+        unknown_modifier = {"lineas": [{"platillo_id": self.soda.pk, "precio_base_centavos": 2500, "cantidad": 1,
+                                        "modificadores": [{"tipo": "agregar", "insumo_id": self.cheese.pk,
+                                                           "ajuste_centavos": 0}]}]}
+        cases = [
+            (dict(session_uuid=closed.uuid), "turno_invalido"),
+            (dict(session_uuid=uuid4()), "turno_invalido"),
+            (dict(pedido=unknown_dish, total=100), "platillo_desconocido"),
+            (dict(pedido=unknown_modifier, total=2500), "platillo_desconocido"),
+            (dict(total=19999), "total_inconsistente"),
+        ]
+        for kwargs, reason in cases:
+            with self.subTest(reason=reason, kwargs=kwargs), self.assertRaises(sales.SaleError) as raised:
+                self.sell(uuid=uuid4(), **kwargs)
+            self.assertEqual(raised.exception.quarantine_reason, reason)
+        self.assertFalse(Sale.objects.exists())
+        self.assertFalse(StockMovement.objects.exists())
+
+    def test_user_without_permission(self):
+        self.cashier.is_active = False
+        self.cashier.save()
+        with self.assertRaises(sales.UserWithoutPermissionError) as raised:
+            self.sell()
+        self.assertEqual(raised.exception.quarantine_reason, "usuario_sin_permiso")
+
+    def test_missing_recipe_goes_to_quarantine_or_applies_without_deduction(self):
+        Recipe.objects.filter(dish=self.soda).delete()
+        pedido = {"lineas": [{"platillo_id": self.soda.pk, "precio_base_centavos": 2500, "cantidad": 1}]}
+        with self.assertRaises(sales.MissingRecipeError) as raised:
+            self.sell(pedido, total=2500)
+        self.assertEqual(raised.exception.quarantine_reason, "receta_faltante")
+        sale = self.sell(pedido, total=2500, deduct_inventory=False)
+        self.assertEqual(sale.charged_total, Decimal("25.00"))
+        self.assertFalse(StockMovement.objects.exists())
+
+    def test_malformed_order_or_payment_method(self):
+        for kwargs in [dict(method="tarjeta"), dict(pedido={"lineas": []}, total=0),
+                       dict(pedido={"lineas": [{"precio_base_centavos": 1, "cantidad": 1}]}, total=1),
+                       dict(total=Decimal("200.00"))]:
+            with self.subTest(kwargs=kwargs), self.assertRaises(sales.InvalidOrderError):
+                self.sell(**kwargs)
+
+    def test_what_was_charged_wins_over_the_current_catalog(self):
+        self.burrito.price = Decimal("90.00")
+        self.burrito.save()
+        sale = self.sell(uuid=uuid4(), session_uuid=self.session.uuid)
+        self.assertEqual((sale.charged_total, sale.server_total), (Decimal("200.00"), Decimal("210.00")))
+        self.assertEqual((sale.needs_review, sale.review_reasons), (True, ["precio_distinto"]))
+
+    def test_negative_stock_is_kept_and_marked_for_review(self):
+        sale = self.sell(self.order(burritos=1, extra_cheese=False, sodas=6), total=8500 + 6 * 2500)
+        self.assertEqual(self.stock(self.can), Decimal("-1"))
+        self.assertEqual((sale.needs_review, sale.review_reasons), (True, ["existencia_negativa"]))
+
+    # ----- Cancelar -----
+    def test_cancel_for_capture_error_gives_money_and_inventory_back(self):
+        sale = self.sell()
+        adjustment = sales.cancel_sale(self.admin, sale, "error_captura", "Se marcó dos veces")
+        self.assertEqual((adjustment.kind, adjustment.amount, adjustment.authorized_by),
+                         ("cancellation", Decimal("200.00"), self.admin))
+        self.assertEqual((self.stock(self.beef), self.stock(self.cheese)), (Decimal("1000"), Decimal("100")))
+        self.assertEqual(cash.sales_totals(self.session)["cash"], Decimal("0.00"))
+        self.assertEqual(Sale.objects.get(pk=sale.pk).charged_total, Decimal("200.00"))  # immutable (rule 7)
+
+    def test_cancel_for_return_records_waste_and_keeps_stock(self):
+        sale = self.sell()
+        sales.cancel_sale(self.admin, sale, "devolucion")
+        self.assertEqual(self.stock(self.beef), Decimal("700"))
+        waste = StockMovement.objects.get(ingredient=self.beef, kind=MovementKind.WASTE)
+        self.assertEqual((waste.quantity, waste.sale_uuid, waste.note), (Decimal("-300"), sale.uuid, "Devolución"))
+        self.assertEqual(cash.sales_totals(self.session)["cash"], Decimal("0.00"))
+
+    def test_cancel_needs_an_admin_a_valid_reason_and_happens_once(self):
+        sale = self.sell()
+        with self.assertRaises(sales.NotAdminError):
+            sales.cancel_sale(self.cashier, sale, "error_captura")
+        with self.assertRaises(sales.AdjustmentError):
+            sales.cancel_sale(self.admin, sale, "correccion_pago")
+        sales.cancel_sale(self.admin, sale, "error_captura")
+        with self.assertRaises(sales.AdjustmentError):
+            sales.cancel_sale(self.admin, sale, "error_captura")
+        with self.assertRaises(sales.AdjustmentError):
+            sales.adjust_sale(self.admin, sale, "correccion_pago", new_payment_method="transferencia")
+
+    def test_cancel_of_a_sale_applied_without_deduction_leaves_inventory_alone(self):
+        sale = self.sell(deduct_inventory=False)
+        sales.cancel_sale(self.admin, sale, "error_captura")
+        self.assertFalse(StockMovement.objects.exists())
+
+    def test_sale_of_a_closed_session_cannot_be_changed(self):
+        sale = self.sell()
+        cash.close_session(self.admin, Decimal("700.00"))
+        with self.assertRaises(sales.AdjustmentError):
+            sales.cancel_sale(self.admin, sale, "error_captura")
+
+    # ----- Ajustar -----
+    def test_adjust_units_of_a_line_and_then_cancel_the_rest(self):
+        sale = self.sell()
+        item = sale.order.items.get()
+        adjustment = sales.adjust_sale(self.admin, sale, "error_captura", order_item=item, quantity=1)
+        self.assertEqual((adjustment.amount, adjustment.quantity), (Decimal("100.00"), 1))  # 85 + 15 of cheese
+        self.assertEqual((self.stock(self.beef), self.stock(self.cheese)), (Decimal("850"), Decimal("70")))
+        with self.assertRaises(sales.AdjustmentError):
+            sales.adjust_sale(self.admin, sale, "error_captura", order_item=item, quantity=2)
+        cancellation = sales.cancel_sale(self.admin, sale, "error_captura")
+        self.assertEqual(cancellation.amount, Decimal("100.00"))
+        self.assertEqual(self.stock(self.beef), Decimal("1000"))
+        self.assertEqual(cash.sales_totals(self.session)["cash"], Decimal("0.00"))
+
+    def test_adjust_rejects_a_line_of_another_sale(self):
+        sale, other = self.sell(), self.sell()
+        with self.assertRaises(sales.AdjustmentError):
+            sales.adjust_sale(self.admin, sale, "devolucion", order_item=other.order.items.get(), quantity=1)
+
+    def test_payment_correction_only_moves_the_sale_to_the_other_method(self):
+        sale = self.sell()
+        adjustment = sales.adjust_sale(self.admin, sale, "correccion_pago", new_payment_method="transferencia")
+        self.assertEqual((adjustment.amount, adjustment.new_payment_method), (Decimal("0.00"), "transfer"))
+        self.assertEqual(cash.sales_totals(self.session), {"cash": Decimal("0.00"), "transfer": Decimal("200.00")})
+        self.assertEqual(self.stock(self.beef), Decimal("700"))
+        with self.assertRaises(sales.AdjustmentError):
+            sales.adjust_sale(self.admin, sale, "correccion_pago", new_payment_method="transfer")
