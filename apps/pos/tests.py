@@ -1,8 +1,9 @@
 """Unit tests for apps.pos. Whoever implements a service writes its tests."""
 
 import json
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
+from uuid import uuid4
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -13,6 +14,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from apps.catalog.models import Category, Dish, Ingredient, Units
+from apps.pos import services_cash_session as cash
 from apps.pos.services_pricing import calcular_total
 from apps.pos.models import (
     AdjustmentKind, AdjustmentReason, CashRegisterSession, Modifier, Order, OrderItem, QuarantinedOperation,
@@ -287,3 +289,112 @@ class PricingParityTest(TestCase):
     def test_true_is_not_a_quantity(self):
         with self.assertRaises(ValueError):
             calcular_total({"lineas": [{"platillo_id": 1, "precio_base_centavos": 8500, "cantidad": True}]})
+
+
+class CashSessionServiceTests(PosModelsBase):
+    """WBS 3.5.1 — apertura y cierre del turno de caja (reglas 5, 12 y 13)."""
+
+    def setUp(self):
+        super().setUp()
+        self.admin = get_user_model().objects.create_user(username="dueno", password="x-9Lq!pr2", role="admin")
+
+    def sale(self, session, total, method="cash", **adjustment):
+        sale = self.make_sale(session=session, charged_total=Decimal(total), server_total=Decimal(total),
+                              payment_method=method)
+        if adjustment:
+            data = dict(sale=sale, kind=AdjustmentKind.ADJUSTMENT, authorized_by=self.admin)
+            data.update(adjustment)
+            SaleAdjustment.objects.create(**data)
+        return sale
+
+    def test_admin_opens_the_session_in_their_name(self):
+        session = cash.open_session(self.admin, Decimal("500.00"))
+        self.assertEqual((session.opened_by, session.status, session.opening_amount),
+                         (self.admin, "open", Decimal("500.00")))
+        self.assertEqual(session.business_date, timezone.localdate())
+        self.assertEqual(cash.current_session(), session)
+
+    def test_cashier_cannot_open_or_close(self):
+        with self.assertRaises(cash.NotAdminError):
+            cash.open_session(self.user, Decimal("500.00"))
+        cash.open_session(self.admin, Decimal("500.00"))
+        with self.assertRaises(cash.NotAdminError):
+            cash.close_session(self.user, Decimal("500.00"))
+
+    def test_inactive_admin_cannot_open(self):
+        self.admin.is_active = False
+        self.admin.save()
+        with self.assertRaises(cash.NotAdminError):
+            cash.open_session(self.admin, Decimal("500.00"))
+
+    def test_only_one_open_session(self):
+        cash.open_session(self.admin, Decimal("500.00"), business_date=date(2026, 11, 2))
+        with self.assertRaises(cash.SessionAlreadyOpenError):
+            cash.open_session(self.admin, Decimal("500.00"), business_date=date(2026, 11, 3))
+
+    def test_only_one_session_per_day(self):
+        cash.open_session(self.admin, Decimal("500.00"))
+        cash.close_session(self.admin, Decimal("500.00"))
+        with self.assertRaises(cash.DayAlreadyHasSessionError):
+            cash.open_session(self.admin, Decimal("300.00"))
+
+    def test_invalid_opening_amounts(self):
+        for amount in ["-1", "10.001", "abc", "NaN"]:
+            with self.subTest(amount=amount), self.assertRaises(cash.InvalidAmountError):
+                cash.open_session(self.admin, amount)
+        self.assertIsNone(cash.current_session())
+
+    def test_offline_opening_keeps_its_uuid_and_device_time(self):
+        uuid = uuid4()
+        device_time = timezone.make_aware(datetime(2026, 11, 2, 7, 30))
+        session = cash.open_session(self.admin, Decimal("400.00"), uuid=uuid, device_timestamp=device_time)
+        self.assertEqual((session.uuid, session.device_timestamp, session.business_date),
+                         (uuid, device_time, date(2026, 11, 2)))
+
+    def test_repeated_uuid_is_discarded(self):
+        uuid = uuid4()
+        first = cash.open_session(self.admin, Decimal("400.00"), uuid=uuid)
+        with self.assertRaises(cash.DuplicateOperationError) as error:
+            cash.open_session(self.admin, Decimal("400.00"), uuid=uuid)
+        self.assertEqual(error.exception.session, first)
+        self.assertEqual(CashRegisterSession.objects.count(), 1)
+
+    def test_require_open_session(self):
+        with self.assertRaises(cash.NoOpenSessionError):
+            cash.require_open_session()
+        session = cash.open_session(self.admin, Decimal("500.00"))
+        self.assertEqual(cash.require_open_session(), session)
+
+    def test_totals_by_method_net_of_reversions(self):
+        session = cash.open_session(self.admin, Decimal("500.00"))
+        self.sale(session, "100.00")
+        self.sale(session, "80.00", method="transfer")
+        sold = self.sale(session, "60.00")
+        item = OrderItem.objects.create(order=sold.order, dish=self.dish, quantity=2, unit_price=Decimal("30.00"))
+        SaleAdjustment.objects.create(sale=sold, kind=AdjustmentKind.ADJUSTMENT, reason=AdjustmentReason.RETURN,
+                                      order_item=item, quantity=1, amount=Decimal("30.00"), authorized_by=self.admin)
+        self.sale(session, "45.00", reason=AdjustmentReason.PAYMENT_CORRECTION, new_payment_method="transfer")
+        self.sale(session, "20.00", kind=AdjustmentKind.CANCELLATION, reason=AdjustmentReason.CAPTURE_ERROR,
+                  amount=Decimal("20.00"))
+        self.assertEqual(cash.sales_totals(session), {"cash": Decimal("130.00"), "transfer": Decimal("125.00")})
+        self.assertEqual(cash.expected_cash(session), Decimal("630.00"))
+
+    def test_close_records_the_difference_without_blocking(self):
+        session = cash.open_session(self.admin, Decimal("500.00"))
+        self.sale(session, "100.00")
+        closed = cash.close_session(self.admin, Decimal("590.00"))
+        self.assertEqual((closed.status, closed.closed_by), ("closed", self.admin))
+        self.assertEqual((closed.expected_amount, closed.closing_amount, closed.cash_difference),
+                         (Decimal("600.00"), Decimal("590.00"), Decimal("-10.00")))
+        self.assertIsNone(cash.current_session())
+
+    def test_close_is_refused_with_unsynced_sales(self):
+        cash.open_session(self.admin, Decimal("500.00"))
+        with self.assertRaises(cash.PendingSalesError) as error:
+            cash.close_session(self.admin, Decimal("500.00"), pending_sales=3)
+        self.assertEqual(str(error.exception), "No se puede cerrar la caja: faltan 3 ventas por sincronizar.")
+        self.assertIsNotNone(cash.current_session())
+
+    def test_close_without_open_session(self):
+        with self.assertRaises(cash.NoOpenSessionError):
+            cash.close_session(self.admin, Decimal("500.00"))
