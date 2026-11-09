@@ -5,17 +5,20 @@ The dishes and modifiers come from the catalog, the order in progress lives in t
 charged, the total is calcular_total over today's prices, and «Confirmar compra» calls services.confirm_sale, the
 only write path of a sale. Opening and closing the till use services_cash_session behind the admin padlock: the
 PIN dialog of apps/core/mixins.py identifies the Administrator (DEC-27, DEC-32), and unlocked_admin says who.
+service_worker serves static/pos/sw.js from /pos/.
 The views never compute money: Decimal amounts come from the catalog and the total from calcular_total.
 sync_operations lives in views_sync.py (Jesús + Jared).
 """
 from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
+from django.contrib.staticfiles import finders
 from django.db.models import Prefetch
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
+from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from apps.catalog.models import Category, Dish
@@ -600,4 +603,20 @@ def close_session(request):
     messages.success(request, f"Caja cerrada, {detail}. El corte del turno quedó guardado.")
     response = HttpResponse(status=204)
     response["HX-Redirect"] = _url("pos:order_builder")
+    return response
+
+
+@never_cache
+@require_GET
+def service_worker(request):
+    """
+    Paquete WBS : 3.4.1, 3.4.2
+    URL name    : pos:service_worker         Método: GET · sin sesión (el navegador lo pide solo)
+    Respuesta   : el contenido de static/pos/sw.js como application/javascript, con «Service-Worker-Allowed: /» para
+                  que controle todo el sitio y sin caché HTTP, para que el navegador vea cada versión nueva.
+                  Desde /static/pos/ solo controlaría /static/pos/ (spike, hallazgo 1).
+    """
+    with open(finders.find("pos/sw.js"), encoding="utf-8") as source:
+        response = HttpResponse(source.read(), content_type="application/javascript; charset=utf-8")
+    response["Service-Worker-Allowed"] = "/"
     return response
