@@ -11,7 +11,8 @@ from apps.catalog.models import Category, Dish, Ingredient, Recipe, Units
 from apps.inventory.models import MovementKind, StockMovement
 from apps.inventory.services import (
     AlreadyDeductedError, InvalidQuantityError, MissingRecipeError, UnknownDishError, check_min_stock,
-    deduct_for_sale, is_low_stock, register_purchase, register_waste, revert_sale_deduction,
+    deduct_for_sale, is_low_stock, record_sale_return, register_purchase, register_waste, revert_sale_deduction,
+    sale_was_deducted,
 )
 
 class StockMovementModelTests(TestCase):
@@ -149,6 +150,20 @@ class DeductForSaleTests(TestCase):
         adjustment = StockMovement.objects.get(ingredient=self.beef, kind=MovementKind.ADJUSTMENT)
         self.assertEqual((adjustment.quantity, adjustment.sale_uuid, adjustment.note),
                          (Decimal("150"), self.uuid, "Error de captura"))
+
+    def test_return_records_the_ingredients_as_waste_without_changing_stock(self):
+        deduct_for_sale(self.uuid, [{"dish_id": self.burrito.pk, "quantity": 2}], self.user)
+        record_sale_return(self.uuid, [{"dish_id": self.burrito.pk, "quantity": 1}], self.user, "Devolución")
+        self.assertEqual(self.stock(self.beef), Decimal("700"))
+        waste = StockMovement.objects.get(ingredient=self.beef, kind=MovementKind.WASTE)
+        adjustment = StockMovement.objects.get(ingredient=self.beef, kind=MovementKind.ADJUSTMENT)
+        self.assertEqual((waste.quantity, waste.sale_uuid, adjustment.quantity),
+                         (Decimal("-150"), self.uuid, Decimal("150")))
+
+    def test_sale_was_deducted(self):
+        self.assertFalse(sale_was_deducted(self.uuid))
+        deduct_for_sale(self.uuid, [{"dish_id": self.soda.pk, "quantity": 1}], self.user)
+        self.assertTrue(sale_was_deducted(self.uuid))
 
 
 

@@ -111,6 +111,24 @@ def revert_sale_deduction(sale_uuid, lines, user, note):
     return _apply(required_quantities(lines), MovementKind.ADJUSTMENT, user, sale_uuid=sale_uuid, note=note)
 
 
+@transaction.atomic
+def record_sale_return(sale_uuid, lines, user, note):
+    """
+    A return (devolucion, rule 11): the money goes back but the food is not, so what lines used is recorded as
+    waste instead of a sale. It leaves an adjustment that gives the quantity back and a waste that takes it out
+    again, both linked to the sale: the stock does not change, but the waste report counts it. Returns the
+    waste movements' ingredients.
+    """
+    quantities = required_quantities(lines)
+    _apply(quantities, MovementKind.ADJUSTMENT, user, sale_uuid=sale_uuid, note=note)
+    return _apply({pk: -quantity for pk, quantity in quantities.items()}, MovementKind.WASTE, user,
+                  sale_uuid=sale_uuid, note=note)
+
+
+def sale_was_deducted(sale_uuid):
+    """True if the sale deducted inventory (a sale applied without deduction from quarantine did not)."""
+    return StockMovement.objects.filter(sale_uuid=sale_uuid, kind=MovementKind.SALE).exists()
+
 
 class InvalidQuantityError(ValueError):
     """A purchase or waste quantity must be greater than zero, in the ingredient's unit, with up to 3 decimals."""
