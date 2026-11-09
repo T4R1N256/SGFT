@@ -1,0 +1,746 @@
+[
+  {
+    "model": "catalog.category",
+    "pk": 1,
+    "fields": {
+      "name": "Burritos",
+      "emoji": "🌯"
+    }
+  },
+  {
+    "model": "catalog.category",
+    "pk": 2,
+    "fields": {
+      "name": "Desayunos",
+      "emoji": "🍳"
+    }
+  },
+  {
+    "model": "catalog.category",
+    "pk": 3,
+    "fields": {
+      "name": "Guisados",
+      "emoji": "🍲"
+    }
+  },
+  {
+    "model": "catalog.category",
+    "pk": 4,
+    "fields": {
+      "name": "Bebidas",
+      "emoji": "🥤"
+    }
+  },
+  {
+    "model": "catalog.ingredient",
+    "pk": 1,
+    "fields": {
+      "name": "Tortilla de harina",
+      "unit": "pzas",
+      "stock": "120",
+      "min_stock": "40",
+      "unit_cost": "3.00"
+    }
+  },
+  {
+    "model": "catalog.ingredient",
+    "pk": 2,
+    "fields": {
+      "name": "Carne asada",
+      "unit": "kg",
+      "stock": "8",
+      "min_stock": "3",
+      "unit_cost": "220.00"
+    }
+  },
+  {
+    "model": "catalog.ingredient",
+    "pk": 3,
+    "fields": {
+      "name": "Pollo deshebrado",
+      "unit": "kg",
+      "stock": "5",
+      "min_stock": "2",
+      "unit_cost": "140.00"
+    }
+  },
+  {
+    "model": "catalog.ingredient",
+    "pk": 4,
+    "fields": {
+      "name": "Chile colorado",
+      "unit": "kg",
+      "stock": "4",
+      "min_stock": "1.5",
+      "unit_cost": "180.00"
+    }
+  },
+  {
+    "model": "catalog.ingredient",
+    "pk": 5,
+    "fields": {
+      "name": "Frijol refrito",
+      "unit": "kg",
+      "stock": "6",
+      "min_stock": "2",
+      "unit_cost": "45.00"
+    }
+  },
+  {
+    "model": "catalog.ingredient",
+    "pk": 6,
+    "fields": {
+      "name": "Queso chihuahua",
+      "unit": "kg",
+      "stock": "3",
+      "min_stock": "1",
+      "unit_cost": "190.00"
+    }
+  },
+  {
+    "model": "catalog.ingredient",
+    "pk": 7,
+    "fields": {
+      "name": "Huevo",
+      "unit": "pzas",
+      "stock": "90",
+      "min_stock": "30",
+      "unit_cost": "3.20"
+    }
+  },
+  {
+    "model": "catalog.ingredient",
+    "pk": 8,
+    "fields": {
+      "name": "Machaca",
+      "unit": "kg",
+      "stock": "2.5",
+      "min_stock": "1",
+      "unit_cost": "420.00"
+    }
+  },
+  {
+    "model": "catalog.ingredient",
+    "pk": 9,
+    "fields": {
+      "name": "Totopos",
+      "unit": "kg",
+      "stock": "3",
+      "min_stock": "1",
+      "unit_cost": "60.00"
+    }
+  },
+  {
+    "model": "catalog.ingredient",
+    "pk": 10,
+    "fields": {
+      "name": "Salsa verde",
+      "unit": "L",
+      "stock": "3",
+      "min_stock": "1",
+      "unit_cost": "50.00"
+    }
+  },
+  {
+    "model": "catalog.ingredient",
+    "pk": 11,
+    "fields": {
+      "name": "Crema",
+      "unit": "L",
+      "stock": "2",
+      "min_stock": "0.5",
+      "unit_cost": "70.00"
+    }
+  },
+  {
+    "model": "catalog.ingredient",
+    "pk": 12,
+    "fields": {
+      "name": "Cebolla",
+      "unit": "kg",
+      "stock": "4",
+      "min_stock": "1",
+      "unit_cost": "30.00"
+    }
+  },
+  {
+    "model": "catalog.ingredient",
+    "pk": 13,
+    "fields": {
+      "name": "Papa",
+      "unit": "kg",
+      "stock": "6",
+      "min_stock": "2",
+      "unit_cost": "28.00"
+    }
+  },
+  {
+    "model": "catalog.ingredient",
+    "pk": 14,
+    "fields": {
+      "name": "Arroz",
+      "unit": "kg",
+      "stock": "5",
+      "min_stock": "2",
+      "unit_cost": "32.00"
+    }
+  },
+  {
+    "model": "catalog.ingredient",
+    "pk": 15,
+    "fields": {
+      "name": "Café molido",
+      "unit": "kg",
+      "stock": "1.5",
+      "min_stock": "0.5",
+      "unit_cost": "260.00"
+    }
+  },
+  {
+    "model": "catalog.ingredient",
+    "pk": 16,
+    "fields": {
+      "name": "Piloncillo",
+      "unit": "kg",
+      "stock": "1",
+      "min_stock": "0.3",
+      "unit_cost": "60.00"
+    }
+  },
+  {
+    "model": "catalog.ingredient",
+    "pk": 17,
+    "fields": {
+      "name": "Refresco de lata",
+      "unit": "pzas",
+      "stock": "48",
+      "min_stock": "12",
+      "unit_cost": "12.00"
+    }
+  },
+  {
+    "model": "catalog.ingredient",
+    "pk": 18,
+    "fields": {
+      "name": "Agua natural 600 ml",
+      "unit": "pzas",
+      "stock": "36",
+      "min_stock": "12",
+      "unit_cost": "6.00"
+    }
+  },
+  {
+    "model": "catalog.ingredient",
+    "pk": 19,
+    "fields": {
+      "name": "Vaso desechable",
+      "unit": "pzas",
+      "stock": "150",
+      "min_stock": "50",
+      "unit_cost": "1.50"
+    }
+  },
+  {
+    "model": "catalog.dish",
+    "pk": 1,
+    "fields": {
+      "name": "Burrito de asada",
+      "category": 1,
+      "price": "85.00",
+      "description": "Carne asada, frijol y queso",
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.dish",
+    "pk": 2,
+    "fields": {
+      "name": "Burrito de pollo",
+      "category": 1,
+      "price": "75.00",
+      "description": "Pollo deshebrado con frijol",
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.dish",
+    "pk": 3,
+    "fields": {
+      "name": "Burrito de chile colorado",
+      "category": 1,
+      "price": "80.00",
+      "description": "Guisado de chile colorado",
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.dish",
+    "pk": 4,
+    "fields": {
+      "name": "Burrito de frijol con queso",
+      "category": 1,
+      "price": "55.00",
+      "description": "Frijol refrito y queso chihuahua",
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.dish",
+    "pk": 5,
+    "fields": {
+      "name": "Burrito de machaca con huevo",
+      "category": 1,
+      "price": "85.00",
+      "description": "Machaca con huevo",
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.dish",
+    "pk": 6,
+    "fields": {
+      "name": "Chilaquiles verdes",
+      "category": 2,
+      "price": "90.00",
+      "description": "Totopos en salsa verde con crema y queso",
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.dish",
+    "pk": 7,
+    "fields": {
+      "name": "Huevos con papa",
+      "category": 2,
+      "price": "75.00",
+      "description": "Con frijol y tortillas",
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.dish",
+    "pk": 8,
+    "fields": {
+      "name": "Machaca con huevo",
+      "category": 2,
+      "price": "95.00",
+      "description": "Plato con frijol y tortillas",
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.dish",
+    "pk": 9,
+    "fields": {
+      "name": "Porción de chile colorado",
+      "category": 3,
+      "price": "70.00",
+      "description": "Con arroz y frijol",
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.dish",
+    "pk": 10,
+    "fields": {
+      "name": "Porción de pollo deshebrado",
+      "category": 3,
+      "price": "65.00",
+      "description": "Con arroz y frijol",
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.dish",
+    "pk": 11,
+    "fields": {
+      "name": "Café de olla",
+      "category": 4,
+      "price": "30.00",
+      "description": "Vaso de 12 oz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.dish",
+    "pk": 12,
+    "fields": {
+      "name": "Refresco",
+      "category": 4,
+      "price": "25.00",
+      "description": "Lata de 355 ml",
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.dish",
+    "pk": 13,
+    "fields": {
+      "name": "Agua natural",
+      "category": 4,
+      "price": "20.00",
+      "description": "Botella de 600 ml",
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.recipe",
+    "pk": 1,
+    "fields": {
+      "dish": 1,
+      "ingredient": 1,
+      "quantity": "1"
+    }
+  },
+  {
+    "model": "catalog.recipe",
+    "pk": 2,
+    "fields": {
+      "dish": 1,
+      "ingredient": 2,
+      "quantity": "0.150"
+    }
+  },
+  {
+    "model": "catalog.recipe",
+    "pk": 3,
+    "fields": {
+      "dish": 1,
+      "ingredient": 5,
+      "quantity": "0.050"
+    }
+  },
+  {
+    "model": "catalog.recipe",
+    "pk": 4,
+    "fields": {
+      "dish": 1,
+      "ingredient": 6,
+      "quantity": "0.030"
+    }
+  },
+  {
+    "model": "catalog.recipe",
+    "pk": 5,
+    "fields": {
+      "dish": 1,
+      "ingredient": 12,
+      "quantity": "0.020"
+    }
+  },
+  {
+    "model": "catalog.recipe",
+    "pk": 6,
+    "fields": {
+      "dish": 2,
+      "ingredient": 1,
+      "quantity": "1"
+    }
+  },
+  {
+    "model": "catalog.recipe",
+    "pk": 7,
+    "fields": {
+      "dish": 2,
+      "ingredient": 3,
+      "quantity": "0.150"
+    }
+  },
+  {
+    "model": "catalog.recipe",
+    "pk": 8,
+    "fields": {
+      "dish": 2,
+      "ingredient": 5,
+      "quantity": "0.050"
+    }
+  },
+  {
+    "model": "catalog.recipe",
+    "pk": 9,
+    "fields": {
+      "dish": 3,
+      "ingredient": 1,
+      "quantity": "1"
+    }
+  },
+  {
+    "model": "catalog.recipe",
+    "pk": 10,
+    "fields": {
+      "dish": 3,
+      "ingredient": 4,
+      "quantity": "0.150"
+    }
+  },
+  {
+    "model": "catalog.recipe",
+    "pk": 11,
+    "fields": {
+      "dish": 3,
+      "ingredient": 5,
+      "quantity": "0.040"
+    }
+  },
+  {
+    "model": "catalog.recipe",
+    "pk": 12,
+    "fields": {
+      "dish": 4,
+      "ingredient": 1,
+      "quantity": "1"
+    }
+  },
+  {
+    "model": "catalog.recipe",
+    "pk": 13,
+    "fields": {
+      "dish": 4,
+      "ingredient": 5,
+      "quantity": "0.100"
+    }
+  },
+  {
+    "model": "catalog.recipe",
+    "pk": 14,
+    "fields": {
+      "dish": 4,
+      "ingredient": 6,
+      "quantity": "0.040"
+    }
+  },
+  {
+    "model": "catalog.recipe",
+    "pk": 15,
+    "fields": {
+      "dish": 5,
+      "ingredient": 1,
+      "quantity": "1"
+    }
+  },
+  {
+    "model": "catalog.recipe",
+    "pk": 16,
+    "fields": {
+      "dish": 5,
+      "ingredient": 8,
+      "quantity": "0.060"
+    }
+  },
+  {
+    "model": "catalog.recipe",
+    "pk": 17,
+    "fields": {
+      "dish": 5,
+      "ingredient": 7,
+      "quantity": "2"
+    }
+  },
+  {
+    "model": "catalog.recipe",
+    "pk": 18,
+    "fields": {
+      "dish": 6,
+      "ingredient": 9,
+      "quantity": "0.150"
+    }
+  },
+  {
+    "model": "catalog.recipe",
+    "pk": 19,
+    "fields": {
+      "dish": 6,
+      "ingredient": 10,
+      "quantity": "0.120"
+    }
+  },
+  {
+    "model": "catalog.recipe",
+    "pk": 20,
+    "fields": {
+      "dish": 6,
+      "ingredient": 11,
+      "quantity": "0.030"
+    }
+  },
+  {
+    "model": "catalog.recipe",
+    "pk": 21,
+    "fields": {
+      "dish": 6,
+      "ingredient": 6,
+      "quantity": "0.030"
+    }
+  },
+  {
+    "model": "catalog.recipe",
+    "pk": 22,
+    "fields": {
+      "dish": 7,
+      "ingredient": 7,
+      "quantity": "2"
+    }
+  },
+  {
+    "model": "catalog.recipe",
+    "pk": 23,
+    "fields": {
+      "dish": 7,
+      "ingredient": 13,
+      "quantity": "0.120"
+    }
+  },
+  {
+    "model": "catalog.recipe",
+    "pk": 24,
+    "fields": {
+      "dish": 7,
+      "ingredient": 5,
+      "quantity": "0.080"
+    }
+  },
+  {
+    "model": "catalog.recipe",
+    "pk": 25,
+    "fields": {
+      "dish": 7,
+      "ingredient": 1,
+      "quantity": "2"
+    }
+  },
+  {
+    "model": "catalog.recipe",
+    "pk": 26,
+    "fields": {
+      "dish": 8,
+      "ingredient": 8,
+      "quantity": "0.080"
+    }
+  },
+  {
+    "model": "catalog.recipe",
+    "pk": 27,
+    "fields": {
+      "dish": 8,
+      "ingredient": 7,
+      "quantity": "2"
+    }
+  },
+  {
+    "model": "catalog.recipe",
+    "pk": 28,
+    "fields": {
+      "dish": 8,
+      "ingredient": 5,
+      "quantity": "0.080"
+    }
+  },
+  {
+    "model": "catalog.recipe",
+    "pk": 29,
+    "fields": {
+      "dish": 8,
+      "ingredient": 1,
+      "quantity": "2"
+    }
+  },
+  {
+    "model": "catalog.recipe",
+    "pk": 30,
+    "fields": {
+      "dish": 9,
+      "ingredient": 4,
+      "quantity": "0.200"
+    }
+  },
+  {
+    "model": "catalog.recipe",
+    "pk": 31,
+    "fields": {
+      "dish": 9,
+      "ingredient": 14,
+      "quantity": "0.100"
+    }
+  },
+  {
+    "model": "catalog.recipe",
+    "pk": 32,
+    "fields": {
+      "dish": 9,
+      "ingredient": 5,
+      "quantity": "0.080"
+    }
+  },
+  {
+    "model": "catalog.recipe",
+    "pk": 33,
+    "fields": {
+      "dish": 10,
+      "ingredient": 3,
+      "quantity": "0.200"
+    }
+  },
+  {
+    "model": "catalog.recipe",
+    "pk": 34,
+    "fields": {
+      "dish": 10,
+      "ingredient": 14,
+      "quantity": "0.100"
+    }
+  },
+  {
+    "model": "catalog.recipe",
+    "pk": 35,
+    "fields": {
+      "dish": 10,
+      "ingredient": 5,
+      "quantity": "0.080"
+    }
+  },
+  {
+    "model": "catalog.recipe",
+    "pk": 36,
+    "fields": {
+      "dish": 11,
+      "ingredient": 15,
+      "quantity": "0.015"
+    }
+  },
+  {
+    "model": "catalog.recipe",
+    "pk": 37,
+    "fields": {
+      "dish": 11,
+      "ingredient": 16,
+      "quantity": "0.020"
+    }
+  },
+  {
+    "model": "catalog.recipe",
+    "pk": 38,
+    "fields": {
+      "dish": 11,
+      "ingredient": 19,
+      "quantity": "1"
+    }
+  },
+  {
+    "model": "catalog.recipe",
+    "pk": 39,
+    "fields": {
+      "dish": 12,
+      "ingredient": 17,
+      "quantity": "1"
+    }
+  },
+  {
+    "model": "catalog.recipe",
+    "pk": 40,
+    "fields": {
+      "dish": 13,
+      "ingredient": 18,
+      "quantity": "1"
+    }
+  }
+]

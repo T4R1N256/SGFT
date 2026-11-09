@@ -1,0 +1,123 @@
+[
+  {
+    "model": "pos.modifier",
+    "pk": 1,
+    "fields": {
+      "dish": 1,
+      "ingredient": 6,
+      "kind": "add",
+      "price_adjustment": "15.00",
+      "quantity": "0.030"
+    }
+  },
+  {
+    "model": "pos.modifier",
+    "pk": 2,
+    "fields": {
+      "dish": 1,
+      "ingredient": 12,
+      "kind": "remove",
+      "price_adjustment": "0.00",
+      "quantity": "0"
+    }
+  },
+  {
+    "model": "pos.modifier",
+    "pk": 3,
+    "fields": {
+      "dish": 1,
+      "ingredient": 5,
+      "kind": "remove",
+      "price_adjustment": "0.00",
+      "quantity": "0"
+    }
+  },
+  {
+    "model": "pos.modifier",
+    "pk": 4,
+    "fields": {
+      "dish": 2,
+      "ingredient": 6,
+      "kind": "add",
+      "price_adjustment": "15.00",
+      "quantity": "0.030"
+    }
+  },
+  {
+    "model": "pos.modifier",
+    "pk": 5,
+    "fields": {
+      "dish": 2,
+      "ingredient": 5,
+      "kind": "remove",
+      "price_adjustment": "0.00",
+      "quantity": "0"
+    }
+  },
+  {
+    "model": "pos.modifier",
+    "pk": 6,
+    "fields": {
+      "dish": 3,
+      "ingredient": 6,
+      "kind": "add",
+      "price_adjustment": "15.00",
+      "quantity": "0.030"
+    }
+  },
+  {
+    "model": "pos.modifier",
+    "pk": 7,
+    "fields": {
+      "dish": 3,
+      "ingredient": 5,
+      "kind": "remove",
+      "price_adjustment": "0.00",
+      "quantity": "0"
+    }
+  },
+  {
+    "model": "pos.modifier",
+    "pk": 8,
+    "fields": {
+      "dish": 4,
+      "ingredient": 6,
+      "kind": "add",
+      "price_adjustment": "15.00",
+      "quantity": "0.030"
+    }
+  },
+  {
+    "model": "pos.modifier",
+    "pk": 9,
+    "fields": {
+      "dish": 6,
+      "ingredient": 7,
+      "kind": "add",
+      "price_adjustment": "12.00",
+      "quantity": "1"
+    }
+  },
+  {
+    "model": "pos.modifier",
+    "pk": 10,
+    "fields": {
+      "dish": 6,
+      "ingredient": 11,
+      "kind": "remove",
+      "price_adjustment": "0.00",
+      "quantity": "0"
+    }
+  },
+  {
+    "model": "pos.modifier",
+    "pk": 11,
+    "fields": {
+      "dish": 7,
+      "ingredient": 6,
+      "kind": "add",
+      "price_adjustment": "15.00",
+      "quantity": "0.030"
+    }
+  }
+]
