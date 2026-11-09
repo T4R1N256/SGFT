@@ -10,9 +10,9 @@ from django.test import TestCase
 from apps.catalog.models import Category, Dish, Ingredient, Recipe, Units
 from apps.inventory.models import MovementKind, StockMovement
 from apps.inventory.services import (
-    AlreadyDeductedError, MissingRecipeError, UnknownDishError, deduct_for_sale, revert_sale_deduction,
+    AlreadyDeductedError, InvalidQuantityError, MissingRecipeError, UnknownDishError, check_min_stock,
+    deduct_for_sale, is_low_stock, register_purchase, register_waste, revert_sale_deduction,
 )
-
 
 class StockMovementModelTests(TestCase):
     """WBS 3.2.5–3.2.7 — restricciones del modelo de movimientos (autor: Jesús)."""
@@ -149,3 +149,62 @@ class DeductForSaleTests(TestCase):
         adjustment = StockMovement.objects.get(ingredient=self.beef, kind=MovementKind.ADJUSTMENT)
         self.assertEqual((adjustment.quantity, adjustment.sale_uuid, adjustment.note),
                          (Decimal("150"), self.uuid, "Error de captura"))
+
+
+
+class PurchaseWasteAndAlertTests(TestCase):
+    """WBS 3.2.5, 3.2.7 y 3.2.8 — compras, mermas y alerta de mínimo (regla 3)."""
+
+    def setUp(self):
+        self.admin = get_user_model().objects.create_user(username="dueno", password="x-9Lq!pr2", role="admin")
+        self.beans = Ingredient.objects.create(name="Frijoles", unit=Units.KG, stock=Decimal("2"),
+                                               min_stock=Decimal("1.5"), unit_cost=Decimal("30.00"))
+
+    def stock(self):
+        self.beans.refresh_from_db()
+        return self.beans.stock
+
+    def test_purchase_adds_stock_and_updates_the_cost(self):
+        movement = register_purchase(self.beans, Decimal("5.250"), Decimal("32.50"), self.admin, note="Mercado")
+        self.assertEqual(self.stock(), Decimal("7.250"))
+        self.assertEqual(self.beans.unit_cost, Decimal("32.50"))
+        self.assertEqual((movement.kind, movement.quantity, movement.unit_cost, movement.created_by),
+                         (MovementKind.PURCHASE, Decimal("5.250"), Decimal("32.50"), self.admin))
+
+    def test_purchase_rejects_zero_negative_or_too_precise_quantities(self):
+        for quantity in ["0", "-1", "0.0005", "abc"]:
+            with self.subTest(quantity=quantity), self.assertRaises(InvalidQuantityError):
+                register_purchase(self.beans, quantity, Decimal("30.00"), self.admin)
+        self.assertEqual(self.stock(), Decimal("2"))
+        self.assertFalse(StockMovement.objects.exists())
+
+    def test_purchase_rejects_a_negative_cost(self):
+        with self.assertRaises(InvalidQuantityError):
+            register_purchase(self.beans, Decimal("1"), Decimal("-1.00"), self.admin)
+
+    def test_waste_subtracts_with_its_reason(self):
+        movement = register_waste(self.beans, Decimal("0.5"), self.admin, "  Se agrió  ")
+        self.assertEqual(self.stock(), Decimal("1.5"))
+        self.assertEqual((movement.kind, movement.quantity, movement.note),
+                         (MovementKind.WASTE, Decimal("-0.5"), "Se agrió"))
+
+    def test_waste_needs_a_reason(self):
+        with self.assertRaises(InvalidQuantityError):
+            register_waste(self.beans, Decimal("0.5"), self.admin, " ")
+        self.assertEqual(self.stock(), Decimal("2"))
+
+    def test_waste_may_leave_stock_negative(self):
+        register_waste(self.beans, Decimal("3"), self.admin, "Se cayó la olla")
+        self.assertEqual(self.stock(), Decimal("-1"))
+
+    def test_alert_when_stock_reaches_the_minimum(self):
+        self.assertFalse(is_low_stock(self.beans))
+        register_waste(self.beans, Decimal("0.5"), self.admin, "Se agrió")
+        self.assertTrue(is_low_stock(self.beans))  # 1.5 <= 1.5
+
+    def test_check_min_stock_lists_the_most_urgent_first(self):
+        tortilla = Ingredient.objects.create(name="Tortilla", unit=Units.PIECE, stock=Decimal("-3"),
+                                             min_stock=Decimal("20"))
+        cheese = Ingredient.objects.create(name="Queso", unit=Units.KG, stock=Decimal("1"), min_stock=Decimal("1"))
+        Ingredient.objects.create(name="Sal", unit=Units.KG, stock=Decimal("5"), min_stock=Decimal("1"))
+        self.assertEqual(list(check_min_stock()), [tortilla, cheese])
