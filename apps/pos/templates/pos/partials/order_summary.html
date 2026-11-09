@@ -7,8 +7,8 @@ de tamaño (DEC-30).
 En el teléfono el ticket es un acordeón (acordado el 4-oct-2026): plegado muestra el encabezado y la venta (total,
 método de pago, «Confirmar compra»); abierto, también las líneas y el subtotal. Alpine guarda si está abierto en
 sessionStorage para que sobreviva al reemplazo de HTMX. En escritorio el chevrón no aparece y todo se ve siempre.
-Fuera de banda: dish_oob (la tarjeta del platillo tocado) y, tras confirmar (oob_after_sale), el total de la
-sesión, el aviso de stock y la rejilla sin contadores.
+Fuera de banda: dish_oob (la tarjeta del platillo tocado), close_dialog (tras «Personalizar») y, tras confirmar
+(oob_after_sale), el total de la sesión, el aviso de stock y la rejilla sin contadores.
 {% endcomment %}
 <aside id="order-summary" class="sgft-card sgft-card--media gap-sm xl:sticky xl:top-md xl:min-h-[756px]" aria-label="Ticket en curso"
        x-data="{ open: sessionStorage.getItem('sgft-ticket-open') === '1' }"
@@ -35,7 +35,7 @@ sesión, el aviso de stock y la rejilla sin contadores.
 
   <div class="sgft-ticket-lines flex flex-1 flex-col gap-[2px]">
     {% for line in order.lines %}
-      {% include "components/ticket_line.html" with line=line remove_url=line.remove_url hx_target="#order-summary" hx_swap="outerHTML" only %}
+      {% include "components/ticket_line.html" with line=line remove_url=line.remove_url edit_url=line.edit_url hx_target="#order-summary" hx_swap="outerHTML" only %}
     {% empty %}
       {% include "components/empty_state.html" with icon="receipt-sheet" message="Toca un platillo para agregarlo" only %}
     {% endfor %}
@@ -77,6 +77,7 @@ sesión, el aviso de stock y la rejilla sin contadores.
 {% if dish_oob %}
   {% include "components/dish_card.html" with dish=dish_oob quantity=dish_oob.quantity add_url=dish_oob.add_url remove_url=dish_oob.remove_url hx_target="#order-summary" hx_swap="outerHTML" oob=True only %}
 {% endif %}
+{% if close_dialog %}<div id="dialog" hx-swap-oob="true"></div>{% endif %}
 {% if oob_after_sale %}
   {% include "components/session_total.html" with total=session_total oob=True only %}
   <div id="stock-notice-top" class="sgft-app__stock" hx-swap-oob="true">

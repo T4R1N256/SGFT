@@ -10,6 +10,7 @@ urlpatterns = [
     path("dishes/<int:dish_id>/add/", views.add_item, name="add_item"),
     path("dishes/<int:dish_id>/remove/", views.remove_dish, name="remove_dish"),
     path("items/<int:line_id>/remove/", views.remove_item, name="remove_item"),
+    path("items/<int:line_id>/modifiers/", views.edit_line, name="edit_line"),
     path("order/payment-method/", views.set_payment_method, name="set_payment_method"),
     path("order/confirm/", views.confirm_sale, name="confirm_sale"),
     path("cash-session/open/", views.open_session, name="open_session"),

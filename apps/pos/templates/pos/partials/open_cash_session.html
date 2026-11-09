@@ -1,5 +1,6 @@
 {% comment %}
 pos/partials/open_cash_session.html — Diálogo «Abrir caja» (se inserta en #dialog)
-Vista: pos:open_session (GET y 422). Solo el Administrador abre la caja (DEC-27), con PIN de 6 dígitos (DEC-28).
+Vista: pos:open_session (GET y 422). Solo el Administrador abre la caja (DEC-27); en línea el candado del PIN ya lo
+identificó (DEC-32), así que el diálogo solo pide el fondo inicial.
 {% endcomment %}
-{% include "components/open_cash_dialog.html" with post_url=post_url hx_target=hx_target hx_swap=hx_swap shift_label=shift_label opening_amount=opening_amount error=error only %}
+{% include "components/open_cash_dialog.html" with post_url=post_url hx_target=hx_target hx_swap=hx_swap shift_label=shift_label opening_amount=opening_amount error=error ask_pin=ask_pin only %}

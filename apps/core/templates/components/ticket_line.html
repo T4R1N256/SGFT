@@ -4,6 +4,7 @@ Parámetros:
   line        {id, dish_name, emoji, modifiers: list[str], quantity: int, subtotal: Decimal}
               El subtotal es cantidad × precio más recargos y lo calcula el servidor.
   remove_url  vista que resta 1 y elimina la línea al llegar a 0 (hx-post)
+  edit_url    vista del diálogo «Personalizar» (hx-get en #dialog); si no viene, el nombre no es un botón
   hx_target, hx_swap  destino del fragmento que devuelve la vista
   alpine      Fase 6: con True emitirá enlaces x-text sobre `linea` (formatoDinero de static/pos/) con la misma
               estructura y clases. Hoy no hace nada.
@@ -13,10 +14,12 @@ Incluir siempre con «only».
 {% endcomment %}
 <div class="sgft-ticket-line flex h-[60px] items-center gap-[14px]">
   <span class="sgft-thumb relative size-[48px] rounded-md text-[26px]"><span aria-hidden="true">{{ line.emoji }}</span><span class="sgft-dish-card__qty sgft-dish-card__qty--line" aria-hidden="true">{{ line.quantity }}</span></span>
-  <span class="flex min-w-0 flex-1 flex-col gap-px">
+  {% if edit_url %}<button type="button" hx-get="{{ edit_url }}" hx-target="#dialog" hx-swap="innerHTML" aria-label="Personalizar {{ line.dish_name }}"
+    class="flex min-w-0 flex-1 flex-col gap-px text-left focus-visible:shadow-foco-anillo focus-visible:outline-none">{% else %}<span class="flex min-w-0 flex-1 flex-col gap-px">{% endif %}
     <span class="truncate sgft-texto-cuerpo-medio text-texto-primario">{{ line.dish_name }}</span>
-    {% if line.modifiers %}<span class="truncate sgft-texto-cuerpo-descripcion text-texto-secundario">{{ line.modifiers|join:" · " }}</span>{% endif %}
-  </span>
+    {% if line.modifiers %}<span class="truncate sgft-texto-cuerpo-descripcion text-texto-secundario">{{ line.modifiers|join:" · " }}</span>
+    {% elif edit_url %}<span class="truncate sgft-texto-cuerpo-descripcion text-marca-primario-oscuro">Personalizar</span>{% endif %}
+  {% if edit_url %}</button>{% else %}</span>{% endif %}
   <span class="sr-only">{{ line.quantity }} unidad{{ line.quantity|pluralize:"es" }}</span>
   <span class="w-[76px] text-right sgft-texto-numero-precio text-texto-primario">${{ line.subtotal|floatformat:"2g" }}</span>
   {% include "components/icon_button.html" with icon="minus" label="Quitar uno de "|add:line.dish_name variant="peligro" compact=True hx_post=remove_url hx_target=hx_target hx_swap=hx_swap only %}

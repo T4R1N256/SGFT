@@ -1,0 +1,25 @@
+{% extends "components/dialog.html" %}
+{% comment %}
+pos/partials/line_modifiers.html — Diálogo «Personalizar» de una línea del ticket (WBS 3.3.3)
+Vista: pos:edit_line (GET). Una casilla por modificador del platillo: «Sin …» quita un ingrediente y no cambia el
+precio; «Extra …» suma su ajuste (regla 2). Qué opciones hay y cuáles están marcadas lo decide el servidor; el
+precio de la línea lo calcula el servidor al guardar. Envía modifier=<pk> por cada casilla marcada.
+{% endcomment %}
+{% block icon %}<span class="text-[26px]" aria-hidden="true">{{ line.emoji }}</span>{% endblock %}
+{% block title %}Personalizar{% endblock %}
+{% block subtitle %}<p class="truncate sgft-texto-cuerpo-pequeno text-texto-secundario">{{ line.dish_name }} · {{ line.quantity }} unidad{{ line.quantity|pluralize:"es" }}</p>{% endblock %}
+{% block submit %}Guardar{% endblock %}
+{% block fields %}
+  <fieldset class="flex flex-col gap-sm">
+    <legend class="sr-only">Modificadores de {{ line.dish_name }}</legend>
+    {% for option in options %}
+      <label class="flex items-center gap-sm rounded-md border border-borde-sutil bg-superficie-campo px-md py-sm sgft-texto-cuerpo-medio text-texto-primario">
+        <input type="checkbox" name="modifier" value="{{ option.value }}" class="size-[22px] accent-marca-primario-oscuro"{% if option.checked %} checked{% endif %}>
+        <span class="flex-1">{{ option.label }}</span>
+      </label>
+    {% empty %}
+      {% include "components/empty_state.html" with message="Este platillo no tiene modificadores" only %}
+    {% endfor %}
+  </fieldset>
+  <p class="sgft-texto-cuerpo-nota text-texto-secundario">Aplica a todas las unidades de la línea.</p>
+{% endblock %}

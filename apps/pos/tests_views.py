@@ -1,102 +1,166 @@
 """
-View and view–template contract tests for Nueva Venta (WBS 3.3.1, 3.3.5, 3.5.1). Owner: Tarín (DEC-31).
+View and view–template contract tests for Nueva venta (WBS 3.3.1–3.3.3, 3.3.5, 3.5.1, 3.5.7). Owner: Tarín (DEC-31).
 
-The views are called directly with RequestFactory, so the tests do not depend on urls.py (pending, see
-rutas-pendientes.md). HTMX requests are simulated with the HX-Request header and django-htmx's HtmxDetails.
+The device is activated with the cashier account; opening and closing the till open the padlock as an
+Administrator, as accounts:admin_pin does. HTMX requests carry the HX-Request header.
 """
 import re
 from collections import Counter
+from datetime import timedelta
+from decimal import Decimal
 
-from django.contrib.auth.models import AnonymousUser
-from unittest import skipUnless
-
-from django.test import RequestFactory, SimpleTestCase
+from django.contrib.auth import get_user_model
+from django.test import TestCase
 from django.urls import reverse
-from django_htmx.middleware import HtmxDetails
+from django.utils import timezone
 
-from apps.pos import views
+from apps.catalog.models import Category, Dish, Ingredient, Recipe, Units
+from apps.core.mixins import UNLOCKED_BY_KEY, UNLOCKED_UNTIL_KEY
+from apps.inventory.models import MovementKind, StockMovement
+from apps.pos.models import CashRegisterSession, Modifier, ModifierKind, PaymentMethod, Sale, SessionStatus
+from apps.pos.services_cash_session import open_session
+
+HTMX = {"HTTP_HX_REQUEST": "true"}
+BUILDER, DISHES, PAYMENT, CONFIRM = "/pos/", "/pos/dishes/", "/pos/order/payment-method/", "/pos/order/confirm/"
+OPEN, CLOSE = "/pos/cash-session/open/", "/pos/cash-session/close/"
 
 
-class ViewTestCase(SimpleTestCase):
+def add_url(dish):
+    return f"/pos/dishes/{dish.pk}/add/"
+
+
+class ViewTestCase(TestCase):
     def setUp(self):
-        self.factory = RequestFactory()
+        users = get_user_model().objects
+        self.admin = users.create_user(username="dueno", password="x-9Lq!pr2", role="admin")
+        self.cashier = users.create_user(username="caja", password="x-9Lq!pr3", role="cashier")
+        self.client.force_login(self.cashier)
+        self.burritos = Category.objects.create(name="Burritos", emoji="🌯")
+        self.drinks = Category.objects.create(name="Bebidas", emoji="🥤")
+        Category.objects.create(name="Guisados", emoji="🍲")  # no active dish: no chip
+        self.tortilla = Ingredient.objects.create(name="Tortilla de harina", unit=Units.PIECE, stock=Decimal("50"),
+                                                  min_stock=Decimal("10"))
+        self.beef = Ingredient.objects.create(name="Carne asada", unit=Units.KG, stock=Decimal("5"),
+                                              min_stock=Decimal("1"))
+        self.cheese = Ingredient.objects.create(name="Queso chihuahua", unit=Units.KG, stock=Decimal("3"),
+                                                min_stock=Decimal("0.5"))
+        self.onion = Ingredient.objects.create(name="Cebolla", unit=Units.KG, stock=Decimal("2"),
+                                               min_stock=Decimal("0.2"))
+        self.coffee = Ingredient.objects.create(name="Café molido", unit=Units.KG, stock=Decimal("1"),
+                                                min_stock=Decimal("0.2"))
+        self.asada = Dish.objects.create(name="Burrito de asada", category=self.burritos, price=Decimal("75.00"))
+        for ingredient, quantity in ((self.tortilla, "1"), (self.beef, "0.150"), (self.onion, "0.020")):
+            Recipe.objects.create(dish=self.asada, ingredient=ingredient, quantity=Decimal(quantity))
+        self.coffee_dish = Dish.objects.create(name="Café de olla", category=self.drinks, price=Decimal("25.00"))
+        Recipe.objects.create(dish=self.coffee_dish, ingredient=self.coffee, quantity=Decimal("0.020"))
+        Dish.objects.create(name="Tamal", category=self.burritos, price=Decimal("30.00"), is_active=False)
+        self.extra_cheese = Modifier.objects.create(dish=self.asada, ingredient=self.cheese, kind=ModifierKind.ADD,
+                                                    price_adjustment=Decimal("15.00"), quantity=Decimal("0.030"))
+        self.no_onion = Modifier.objects.create(dish=self.asada, ingredient=self.onion, kind=ModifierKind.REMOVE)
 
-    def call(self, view, method="get", htmx=False, data=None, **kwargs):
-        headers = {"HTTP_HX_REQUEST": "true"} if htmx else {}
-        request = getattr(self.factory, method)("/", data or {}, **headers)
-        request.user = AnonymousUser()
-        request.htmx = HtmxDetails(request)
-        return view(request, **kwargs)
+    def unlock(self):
+        session = self.client.session
+        session[UNLOCKED_UNTIL_KEY] = (timezone.now() + timedelta(minutes=30)).timestamp()
+        session[UNLOCKED_BY_KEY] = self.admin.pk
+        session.save()
+
+    def open_cash(self, amount="500.00"):
+        return open_session(self.admin, Decimal(amount))
+
+    def add(self, dish, times=1):
+        for _ in range(times):
+            response = self.client.post(add_url(dish), **HTMX)
+        return response
+
+    def line_id(self):
+        return self.client.session["pos_order"]["lines"][0]["id"]
 
     def assertUniqueIds(self, response):
         ids = Counter(re.findall(r'\sid="([^"]+)"', response.content.decode()))
         repeated = [i for i, n in ids.items() if n > 1]
         self.assertEqual(repeated, [], f"ids repetidos: {repeated}")
 
+    def assertStartsWithId(self, response, tag, dom_id):
+        self.assertTrue(response.content.decode().lstrip().startswith(f'<{tag} id="{dom_id}"'),
+                        "el id destino va en la raíz del fragmento")
 
-class HomeTests(SimpleTestCase):
+
+class HomeTests(TestCase):
     """The site root opens Nueva venta (config/urls.py)."""
 
     def test_root_redirects_to_order_builder(self):
         response = self.client.get("/")
         self.assertRedirects(response, reverse("pos:order_builder"), fetch_redirect_response=False)
-        self.assertEqual(response.status_code, 302, "temporal: la raíz podrá mandar a la activación del dispositivo")
+
+
+class AccessTests(ViewTestCase):
+    def test_without_session_goes_to_activation(self):
+        self.client.logout()
+        self.assertEqual(self.client.get(BUILDER).status_code, 302)
+        self.assertEqual(self.client.post(add_url(self.asada), **HTMX).status_code, 401)
+
+    def test_opening_and_closing_ask_for_the_pin(self):
+        for url in (OPEN, CLOSE):
+            response = self.client.get(url, **HTMX)
+            self.assertEqual((response.status_code, response["HX-Retarget"]), (403, "#dialog"))
+            self.assertTemplateUsed(response, "components/pin_dialog.html")
+        self.client.post(OPEN, {"opening_amount": "500"}, **HTMX)
+        self.assertFalse(CashRegisterSession.objects.exists())
 
 
 class OrderBuilderTests(ViewTestCase):
-    def test_full_page_renders_sale_area_inside_base(self):
-        with self.assertTemplateUsed("pos/order_builder.html"), self.assertTemplateUsed("base.html"):
-            response = self.call(views.order_builder)
-        self.assertEqual(response.status_code, 200)
-        html = response.content.decode()
-        self.assertIn('id="sale-area"', html)
-        self.assertIn('id="order-summary"', html)
-        self.assertIn('id="dialog"', html)
-        self.assertIn("$480.00", html)
-        self.assertIn("Alerta stock", html)
-        self.assertUniqueIds(response)
-
-    def test_htmx_returns_only_the_fragment(self):
-        with self.assertTemplateUsed("pos/partials/sale_area.html"), self.assertTemplateNotUsed("base.html"):
-            response = self.call(views.order_builder, htmx=True)
-        html = response.content.decode()
-        self.assertTrue(html.lstrip().startswith('<div id="sale-area"'), "el id destino va en la raíz del fragmento")
-        self.assertNotIn("<html", html)
-
-    def test_closed_cash_session_disables_content_and_offers_open(self):
-        response = self.call(views.order_builder, data={"estado": "caja-cerrada"})
+    def test_closed_cash_disables_content_and_offers_open(self):
+        response = self.client.get(BUILDER)
+        self.assertTemplateUsed(response, "pos/order_builder.html")
         html = response.content.decode()
         self.assertIn("La caja está cerrada", html)
         self.assertIn("inert", html)
         self.assertRegex(html, r'Caja<span class="sr-only"> cerrada</span>')
-        self.assertNotIn("Alerta stock", html)
+        self.assertNotIn('aria-labelledby="open-cash-title"', html)  # locked: the button asks for the PIN first
+        self.assertUniqueIds(response)
 
-    def test_no_sort_or_filter_buttons(self):
-        html = self.call(views.order_builder).content.decode()
-        self.assertNotIn(">Ordenar", html.replace("\n", ""))
-        self.assertNotIn("Filtros", html)
+    def test_closed_cash_with_the_padlock_open_shows_the_open_dialog(self):
+        self.unlock()
+        html = self.client.get(BUILDER).content.decode()
+        self.assertIn('aria-labelledby="open-cash-title"', html)
+        self.assertNotIn('name="pin"', html)
+        self.assertIn('name="opening_amount"', html)
 
-    def test_quantity_badges_sit_on_the_thumbnails(self):
-        html = self.call(views.order_builder).content.decode()
-        self.assertEqual(html.count("sgft-dish-card__qty--thumb"), 6)
-        self.assertEqual(html.count("sgft-dish-card__qty--line"), 6)
-        self.assertIn('class="sgft-qty-modal"', html)
-
-    def test_empty_ticket_disables_confirm(self):
-        response = self.call(views.order_builder, data={"estado": "ticket-vacio"})
+    def test_open_cash_lists_the_active_dishes_from_the_catalog(self):
+        self.open_cash()
+        response = self.client.get(BUILDER)
         html = response.content.decode()
+        self.assertIn('id="sale-area"', html)
+        self.assertIn("Burrito de asada", html)
+        self.assertIn("$75.00", html)
+        self.assertNotIn("Tamal", html)
+        self.assertNotIn("La caja está cerrada", html)
+        self.assertIn(f"Turno del {timezone.localdate():%d/%m/%Y}", html)
         self.assertIn("Toca un platillo para agregarlo", html)
-        self.assertRegex(html, r'(?s)disabled aria-disabled="true">\s*<span[^>]*>.*?</span>\s*Confirmar compra')
+        self.assertNotIn("Alerta stock", html)
+        self.assertNotIn("Guisados", html)
+        self.assertUniqueIds(response)
+
+    def test_low_stock_shows_the_alert(self):
+        self.open_cash()
+        Ingredient.objects.filter(pk=self.beef.pk).update(stock=Decimal("0.5"))
+        html = self.client.get(BUILDER).content.decode()
+        self.assertIn("Alerta stock", html)
+        self.assertIn("1 insumo bajo · Ver inventario", html)
+
+    def test_htmx_returns_only_the_fragment(self):
+        response = self.client.get(BUILDER, **HTMX)
+        self.assertTemplateUsed(response, "pos/partials/sale_area.html")
+        self.assertTemplateNotUsed(response, "base.html")
+        self.assertStartsWithId(response, "div", "sale-area")
 
 
 class DishListTests(ViewTestCase):
     def test_without_htmx_redirects(self):
-        response = self.call(views.dish_list)
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(self.client.get(DISHES).status_code, 302)
 
     def test_filters_by_category_and_marks_active_chip_out_of_band(self):
-        with self.assertTemplateUsed("pos/partials/dish_list.html"):
-            response = self.call(views.dish_list, htmx=True, data={"category": "bebidas"})
+        response = self.client.get(DISHES, {"category": self.drinks.pk}, **HTMX)
         html = response.content.decode()
         self.assertIn("Café de olla", html)
         self.assertNotIn("Burrito de asada", html)
@@ -104,116 +168,205 @@ class DishListTests(ViewTestCase):
         self.assertRegex(html, r'aria-pressed="true"[^>]*>\s*Bebidas')
         self.assertUniqueIds(response)
 
-    def test_category_without_dishes_shows_centered_message(self):
-        response = self.call(views.dish_list, htmx=True, data={"category": "guisados"})
-        self.assertIn("Agrega platillos para verlos", response.content.decode())
+    def test_search_without_results_shows_centered_message(self):
+        self.assertIn("Agrega platillos para verlos", self.client.get(DISHES, {"q": "pizza"}, **HTMX).content.decode())
 
 
 class OrderSummaryTests(ViewTestCase):
-    def test_add_item_returns_ticket_and_dish_card_out_of_band(self):
-        with self.assertTemplateUsed("pos/partials/order_summary.html"):
-            response = self.call(views.add_item, method="post", htmx=True, dish_id=1)
+    def setUp(self):
+        super().setUp()
+        self.open_cash()
+
+    def test_add_item_without_open_cash_is_409(self):
+        CashRegisterSession.objects.update(status=SessionStatus.CLOSED)
+        response = self.add(self.asada)
+        self.assertEqual((response.status_code, response["HX-Retarget"]), (409, "#messages"))
+
+    def test_add_item_sums_and_returns_ticket_and_card_out_of_band(self):
+        response = self.add(self.asada, 2)
+        self.assertTemplateUsed(response, "pos/partials/order_summary.html")
+        self.assertStartsWithId(response, "aside", "order-summary")
         html = response.content.decode()
-        self.assertTrue(html.lstrip().startswith('<aside id="order-summary"'), "el id destino va en la raíz del fragmento")
-        self.assertIn('id="dish-1" hx-swap-oob="true"', html)
+        self.assertIn(f'id="dish-{self.asada.pk}" hx-swap-oob="true"', html)
+        self.assertIn("2 artículos", html)
+        self.assertIn("$150.00", html)
         self.assertUniqueIds(response)
 
+    def test_inactive_dish_cannot_be_added(self):
+        hidden = Dish.objects.get(name="Tamal")
+        self.assertEqual(self.add(hidden).status_code, 404)
+
     def test_remove_item_and_remove_dish(self):
-        for view, kwargs in ((views.remove_item, {"line_id": 11}), (views.remove_dish, {"dish_id": 1})):
-            response = self.call(view, method="post", htmx=True, **kwargs)
-            self.assertEqual(response.status_code, 200)
-            self.assertIn('id="order-summary"', response.content.decode())
+        self.add(self.asada, 3)
+        self.client.post(f"/pos/items/{self.line_id()}/remove/", **HTMX)
+        response = self.client.post(f"/pos/dishes/{self.asada.pk}/remove/", **HTMX)
+        self.assertIn("1 artículo", response.content.decode())
+        response = self.client.post(f"/pos/dishes/{self.asada.pk}/remove/", **HTMX)
+        self.assertIn("Toca un platillo para agregarlo", response.content.decode())
+
+    def test_modifiers_dialog_and_price(self):
+        self.add(self.asada, 2)
+        url = f"/pos/items/{self.line_id()}/modifiers/"
+        response = self.client.get(url, **HTMX)
+        self.assertTemplateUsed(response, "pos/partials/line_modifiers.html")
+        html = response.content.decode()
+        self.assertIn("Extra queso chihuahua (+$15.00)", html)
+        self.assertIn("Sin cebolla", html)
+        response = self.client.post(url, {"modifier": [self.extra_cheese.pk, self.no_onion.pk]}, **HTMX)
+        html = response.content.decode()
+        self.assertIn("Extra queso chihuahua (+$15.00) · Sin cebolla", html)
+        self.assertIn("$180.00", html)  # (75 + 15) × 2; «sin» does not change the price
+        self.assertIn('id="dialog" hx-swap-oob="true"', html)
+
+    def test_a_line_with_the_same_modifiers_merges(self):
+        self.add(self.asada)
+        self.client.post(f"/pos/items/{self.line_id()}/modifiers/", {"modifier": [self.no_onion.pk]}, **HTMX)
+        self.add(self.asada)  # a plain one: a second line
+        self.assertEqual(len(self.client.session["pos_order"]["lines"]), 2)
+        plain = self.client.session["pos_order"]["lines"][1]["id"]
+        self.client.post(f"/pos/items/{plain}/modifiers/", {"modifier": [self.no_onion.pk]}, **HTMX)
+        lines = self.client.session["pos_order"]["lines"]
+        self.assertEqual([(line["quantity"], line["modifiers"]) for line in lines], [(2, [self.no_onion.pk])])
+
+    def test_dish_without_modifiers_has_no_customize_button(self):
+        html = self.add(self.coffee_dish).content.decode()
+        self.assertNotIn("Personalizar", html)
 
     def test_payment_method_selected_by_server(self):
-        response = self.call(views.set_payment_method, method="post", htmx=True, data={"method": "transferencia"})
-        self.assertRegex(response.content.decode(), r'(?s)sgft-btn--seleccionado.*?value="transferencia"|value="transferencia".*?sgft-btn--seleccionado')
+        self.add(self.asada)
+        response = self.client.post(PAYMENT, {"method": "transferencia"}, **HTMX)
+        selected = r'(?s)sgft-btn--seleccionado.*?value="transferencia"|value="transferencia".*?sgft-btn--seleccionado'
+        self.assertRegex(response.content.decode(), selected)
 
     def test_invalid_payment_method_is_retargeted_to_messages(self):
-        response = self.call(views.set_payment_method, method="post", htmx=True, data={"method": "tarjeta"})
-        self.assertEqual(response.status_code, 422)
-        self.assertEqual(response["HX-Retarget"], "#messages")
+        response = self.client.post(PAYMENT, {"method": "tarjeta"}, **HTMX)
+        self.assertEqual((response.status_code, response["HX-Retarget"]), (422, "#messages"))
         self.assertIn("efectivo o transferencia", response.content.decode())
 
-    def test_confirm_sale_empties_ticket_and_updates_shell_out_of_band(self):
-        response = self.call(views.confirm_sale, method="post", htmx=True)
+
+class ConfirmSaleTests(ViewTestCase):
+    def setUp(self):
+        super().setUp()
+        self.session = self.open_cash()
+
+    def test_confirm_records_the_sale_deducts_and_empties_the_ticket(self):
+        self.add(self.asada, 2)
+        self.client.post(f"/pos/items/{self.line_id()}/modifiers/", {"modifier": [self.extra_cheese.pk]}, **HTMX)
+        self.add(self.coffee_dish)
+        self.client.post(PAYMENT, {"method": "transferencia"}, **HTMX)
+        response = self.client.post(CONFIRM, **HTMX)
+        sale = Sale.objects.get()
+        self.assertEqual((sale.charged_total, sale.payment_method, sale.cash_session, sale.created_by),
+                         (Decimal("205.00"), PaymentMethod.TRANSFER, self.session, self.cashier))
+        self.assertFalse(sale.needs_review)
+        self.assertTrue(StockMovement.objects.filter(sale_uuid=sale.uuid, kind=MovementKind.SALE).exists())
+        self.cheese.refresh_from_db()
+        self.assertEqual(self.cheese.stock, Decimal("2.940"))
         html = response.content.decode()
         self.assertIn("Toca un platillo para agregarlo", html)
         self.assertIn('id="session-total" hx-swap-oob="true"', html)
-        self.assertIn("$5,330.00", html)
+        self.assertIn("$205.00", html)
         self.assertIn('id="dish-list" hx-swap-oob="true"', html)
         self.assertNotIn("sgft-dish-card__qty", html)
+        self.assertNotIn("pos_order", self.client.session)
         self.assertUniqueIds(response)
+
+    def test_empty_ticket_is_422(self):
+        response = self.client.post(CONFIRM, **HTMX)
+        self.assertEqual((response.status_code, response["HX-Retarget"]), (422, "#messages"))
+        self.assertFalse(Sale.objects.exists())
+
+    def test_dish_without_recipe_is_422_and_keeps_the_ticket(self):
+        Recipe.objects.filter(dish=self.coffee_dish).delete()
+        self.add(self.coffee_dish)
+        response = self.client.post(CONFIRM, **HTMX)
+        self.assertEqual(response.status_code, 422)
+        self.assertIn("sin receta", response.content.decode())
+        self.assertFalse(Sale.objects.exists())
+        self.assertIn("pos_order", self.client.session)
+
+    def test_closed_cash_is_409(self):
+        self.add(self.asada)
+        CashRegisterSession.objects.update(status=SessionStatus.CLOSED)
+        self.assertEqual(self.client.post(CONFIRM, **HTMX).status_code, 409)
+        self.assertFalse(Sale.objects.exists())
 
 
 class OpenSessionTests(ViewTestCase):
-    def test_get_returns_dialog_with_six_pin_boxes(self):
-        with self.assertTemplateUsed("pos/partials/open_cash_session.html"):
-            response = self.call(views.open_session, htmx=True)
-        self.assertEqual(response.content.decode().count('name="pin"'), 6)
+    def setUp(self):
+        super().setUp()
+        self.unlock()
 
-    def test_short_pin_is_422_retargeted_to_dialog(self):
-        response = self.call(views.open_session, method="post", htmx=True,
-                             data={"pin": ["1", "2", "3"], "opening_amount": "500"})
-        self.assertEqual(response.status_code, 422)
-        self.assertEqual(response["HX-Retarget"], "#dialog")
-        self.assertIn("6 dígitos", response.content.decode())
-
-    def test_valid_open_returns_sale_area_and_updates_cash_status(self):
-        response = self.call(views.open_session, method="post", htmx=True,
-                             data={"pin": list("123456"), "opening_amount": "500"})
+    def test_get_returns_dialog_without_pin_boxes(self):
+        response = self.client.get(OPEN, **HTMX)
+        self.assertTemplateUsed(response, "pos/partials/open_cash_session.html")
         html = response.content.decode()
+        self.assertNotIn('name="pin"', html)
+        self.assertIn('name="opening_amount"', html)
+
+    def test_invalid_amount_is_422_retargeted_to_dialog(self):
+        response = self.client.post(OPEN, {"opening_amount": "abc"}, **HTMX)
+        self.assertEqual((response.status_code, response["HX-Retarget"]), (422, "#dialog"))
+        self.assertIn("Escribe el fondo inicial", response.content.decode())
+        self.assertFalse(CashRegisterSession.objects.exists())
+
+    def test_valid_open_records_the_admin_and_updates_the_screen(self):
+        response = self.client.post(OPEN, {"opening_amount": "$1,500.00"}, **HTMX)
         self.assertEqual(response.status_code, 200)
+        session = CashRegisterSession.objects.get()
+        self.assertEqual((session.opened_by, session.opening_amount), (self.admin, Decimal("1500.00")))
+        html = response.content.decode()
         self.assertIn('id="cash-status" hx-swap-oob="true"', html)
         self.assertRegex(html, r'Caja<span class="sr-only"> abierta</span>')
         self.assertIn('id="dialog" hx-swap-oob="true"', html)
         self.assertUniqueIds(response)
 
-
-def _template_exists(name):
-    from django.template import TemplateDoesNotExist
-    from django.template.loader import get_template
-    try:
-        get_template(name)
-        return True
-    except TemplateDoesNotExist:
-        return False
-
-
-CLOSE_TEMPLATE = "pos/partials/cash_session_close.html"
+    def test_second_session_of_the_day_is_422(self):
+        self.client.post(OPEN, {"opening_amount": "500"}, **HTMX)
+        CashRegisterSession.objects.update(status=SessionStatus.CLOSED)
+        response = self.client.post(OPEN, {"opening_amount": "500"}, **HTMX)
+        self.assertEqual(response.status_code, 422)
+        self.assertIn("solo hay uno por jornada", response.content.decode())
 
 
 class CloseSessionTests(ViewTestCase):
-    """pos:close_session (3.5.7). Its fragment is Yahir's (DEC-31): the tests that render it wait for that template."""
+    def setUp(self):
+        super().setUp()
+        self.unlock()
 
-    def post_close(self, data):
-        from django.contrib.messages.storage.cookie import CookieStorage
-        request = self.factory.post("/", data, HTTP_HX_REQUEST="true")
-        request.user = AnonymousUser()
-        request.htmx = HtmxDetails(request)
-        request._messages = CookieStorage(request)
-        return views.close_session(request), request
-
-    def test_valid_close_redirects_to_closed_sale_screen_with_message(self):
-        response, request = self.post_close({"closing_amount": "3,600.00"})
-        self.assertEqual(response.status_code, 204)
-        self.assertTrue(response["HX-Redirect"].endswith("?estado=caja-cerrada"))
-        self.assertEqual([m.message for m in request._messages], ["Caja cerrada. El corte del turno se generó con las ventas sincronizadas."])
-
-    @skipUnless(_template_exists(CLOSE_TEMPLATE), "falta la plantilla de Yahir: " + CLOSE_TEMPLATE)
-    def test_get_returns_dialog_with_expected_amount(self):
-        response = self.call(views.close_session, htmx=True)
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("3,620.00", response.content.decode())
-
-    @skipUnless(_template_exists(CLOSE_TEMPLATE), "falta la plantilla de Yahir: " + CLOSE_TEMPLATE)
-    def test_pending_operations_are_409_in_the_dialog(self):
-        response, _ = self.post_close({"closing_amount": "3600", "estado": "pendientes"})
+    def test_without_open_session_is_409(self):
+        response = self.client.get(CLOSE, **HTMX)
         self.assertEqual(response.status_code, 409)
-        self.assertEqual(response["HX-Retarget"], "#dialog")
-        self.assertIn("Faltan 2 operaciones por sincronizar", response.content.decode())
+        self.assertIn("No hay un turno de caja abierto", response.content.decode())
 
-    @skipUnless(_template_exists(CLOSE_TEMPLATE), "falta la plantilla de Yahir: " + CLOSE_TEMPLATE)
+    def test_get_shows_the_expected_cash(self):
+        self.open_cash("500.00")
+        self.add(self.asada)
+        self.client.post(CONFIRM, **HTMX)
+        response = self.client.get(CLOSE, **HTMX)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("$575.00", response.content.decode())
+
+    def test_pending_operations_are_409_in_the_dialog(self):
+        self.open_cash()
+        response = self.client.post(CLOSE, {"closing_amount": "500"}, HTTP_X_PENDIENTES="2", **HTMX)
+        self.assertEqual((response.status_code, response["HX-Retarget"]), (409, "#dialog"))
+        self.assertIn("faltan 2 ventas por sincronizar", response.content.decode())
+        self.assertEqual(CashRegisterSession.objects.get().status, SessionStatus.OPEN)
+
     def test_invalid_amount_is_422_in_the_dialog(self):
-        response, _ = self.post_close({"closing_amount": "abc"})
+        self.open_cash()
+        response = self.client.post(CLOSE, {"closing_amount": "abc"}, **HTMX)
         self.assertEqual(response.status_code, 422)
         self.assertIn("Escribe el efectivo contado", response.content.decode())
+
+    def test_valid_close_records_the_difference_and_redirects(self):
+        self.open_cash("500.00")
+        response = self.client.post(CLOSE, {"closing_amount": "480.00"}, **HTMX)
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(response["HX-Redirect"], BUILDER)
+        session = CashRegisterSession.objects.get()
+        self.assertEqual((session.status, session.closed_by, session.cash_difference),
+                         (SessionStatus.CLOSED, self.admin, Decimal("-20.00")))
+        page = self.client.get(BUILDER).content.decode()
+        self.assertIn("Caja cerrada, diferencia de −$20.00.", page)
