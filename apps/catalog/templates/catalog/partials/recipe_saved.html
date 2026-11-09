@@ -1,6 +1,8 @@
 {% comment %}
 catalog/partials/recipe_saved.html — Respuesta al guardar la receta (catalog:recipe_edit, POST válido)
-Se inserta al inicio de #messages y cierra el diálogo fuera de banda.
+Se inserta al inicio de #messages, cierra el diálogo y actualiza la tarjeta del platillo fuera de banda
+(su disponibilidad depende de la receta).
 {% endcomment %}
 {% include "components/alert.html" with message="Receta de "|add:dish.name|add:" guardada." variant="exito" only %}
 <div id="dialog" hx-swap-oob="true"></div>
+{% include "components/dish_catalog_card.html" with dish=dish recipe_url=dish.recipe_url edit_url=dish.edit_url oob=True only %}

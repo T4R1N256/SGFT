@@ -2,7 +2,8 @@
 {% comment %}
 catalog/partials/ingredient_form.html — Diálogo «Agregar insumo» (pantallas-y-fragmentos.md §10.5)
 Vista: catalog:ingredient_create (GET y 422). Se abre desde el tile «Agregar insumo» de Inventario.
-La unidad elegida se muestra junto a la existencia inicial y al mínimo; Alpine solo la muestra (no calcula nada).
+La unidad elegida se muestra junto al mínimo; Alpine solo la muestra (no calcula nada). El insumo nace con existencia 0:
+la existencia y el costo entran con la primera compra en Inventario.
 {% endcomment %}
 {% block icon %}{% include "components/icons/clipboard-list.html" with size=28 only %}{% endblock %}
 {% block title %}Agregar insumo{% endblock %}
@@ -22,18 +23,6 @@ La unidad elegida se muestra junto a la existencia inicial y al mínimo; Alpine 
     {% if errors.unit %}<span class="sgft-texto-cuerpo-nota text-estado-peligro" role="alert">{{ errors.unit }}</span>
     {% else %}<span class="sgft-texto-cuerpo-nota text-texto-secundario">Compras, mermas y recetas usan esta unidad.</span>{% endif %}
   </label>
-
-  <label class="flex flex-col gap-xs">
-    <span class="sgft-texto-cuerpo-pequeno-medio text-texto-primario">Existencia inicial</span>
-    <span class="sgft-field h-[52px]{% if errors.initial_stock %} border-estado-peligro{% endif %}">
-      <input name="initial_stock" type="text" inputmode="decimal" placeholder="0" value="{{ values.initial_stock }}" class="sgft-texto-cuerpo-base"{% if errors.initial_stock %} aria-invalid="true"{% endif %}>
-      <span class="sgft-texto-cuerpo-pequeno-medio text-texto-secundario" x-text="unit"></span>
-    </span>
-    {% if errors.initial_stock %}<span class="sgft-texto-cuerpo-nota text-estado-peligro" role="alert">{{ errors.initial_stock }}</span>
-    {% else %}<span class="sgft-texto-cuerpo-nota text-texto-secundario">Se registra como compra inicial.</span>{% endif %}
-  </label>
-
-  {% include "components/field.html" with label="Costo total de la existencia inicial" name="initial_cost" kind="money" value=values.initial_cost error=errors.initial_cost conditional=True help="Obligatorio si la existencia inicial es mayor que 0; con él se calcula el margen." only %}
 
   <label class="flex flex-col gap-xs">
     <span class="sgft-texto-cuerpo-pequeno-medio text-texto-primario">Mínimo</span>
