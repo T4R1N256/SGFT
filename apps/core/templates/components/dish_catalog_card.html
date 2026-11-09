@@ -1,15 +1,16 @@
 {% comment %}
 components/dish_catalog_card.html — Tarjeta de producto · Catálogo (Figma 2003:425)
 Parámetros:
-  dish          {id, name, description, price: Decimal, category, emoji, availability: disponible|pocas|agotado}
+  dish          {id, name, description, price: Decimal, category, emoji, availability: disponible|pocas|agotado|sin_receta|inactivo}
                 id da el id «catalog-dish-<id>», que usa la vista de edición para reemplazar solo esta tarjeta.
                 availability la decide el servidor.
+  oob           True: la tarjeta va fuera de banda (hx-swap-oob) y reemplaza a la que tiene su id
   recipe_url    vista del diálogo «Receta» (opcional); edit_url  vista del diálogo «Editar» (opcional)
                 Abren su diálogo en #dialog con hx-get. Si no vienen, no se muestran: qué acciones existen lo
                 decide el servidor. La edición pide PIN.
 Incluir siempre con «only».
 {% endcomment %}
-<article{% if dish.id %} id="catalog-dish-{{ dish.id }}"{% endif %} class="flex w-full flex-col overflow-hidden rounded-lg border border-borde-sutil bg-superficie-tarjeta shadow-tarjeta">
+<article{% if dish.id %} id="catalog-dish-{{ dish.id }}"{% endif %}{% if oob %} hx-swap-oob="true"{% endif %} class="flex w-full flex-col overflow-hidden rounded-lg border border-borde-sutil bg-superficie-tarjeta shadow-tarjeta">
   <div class="relative grid h-[120px] place-items-center bg-gradiente-imagen-catalogo text-[60px]" aria-hidden="true">
     {{ dish.emoji }}
     <span class="absolute left-[12px] top-[12px] rounded-xs bg-categoria-foto-fondo px-[10px] py-[4px] text-[12px] font-medium text-marca-primario-oscuro">{{ dish.category }}</span>
@@ -21,6 +22,8 @@ Incluir siempre con «only».
       <span class="sgft-texto-titulo-h2 text-marca-primario-oscuro">${{ dish.price|floatformat:"2g" }}</span>
       {% if dish.availability == "agotado" %}{% include "components/badge.html" with text="Agotado" variant="peligro" only %}
       {% elif dish.availability == "pocas" %}{% include "components/badge.html" with text="Pocas porciones" variant="alerta" only %}
+      {% elif dish.availability == "sin_receta" %}{% include "components/badge.html" with text="Sin receta" variant="alerta" only %}
+      {% elif dish.availability == "inactivo" %}{% include "components/badge.html" with text="Inactivo" variant="neutral" only %}
       {% else %}{% include "components/badge.html" with text="Disponible" variant="exito" only %}{% endif %}
     </div>
     {% if recipe_url or edit_url %}
