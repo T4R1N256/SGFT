@@ -6,14 +6,15 @@ Parámetros:
   hx_target, hx_swap   destino de la respuesta (por ejemplo, la pantalla de Nueva Venta)
   shift_label   por ejemplo «Turno matutino · 30/09/2026» (lo arma el servidor)
   opening_amount   fondo inicial sugerido (Decimal, opcional)
-  error         mensaje en español si el PIN no es válido (opcional)
-Sin red, la validación la hará static/pos/ con el verificador PBKDF2 (DEC-28, Fase 6). Alpine solo mueve el foco
+  error         mensaje en español: PIN, fondo inicial o turno (opcional)
+  ask_pin       True: muestra las 6 casillas del PIN. En línea no hacen falta: el candado del PIN ya identificó al
+                Administrador (DEC-32). Sin red las pide static/pos/ y las valida con el verificador PBKDF2 (DEC-28). Alpine solo mueve el foco
 entre casillas y cierra el diálogo. Incluir siempre con «only».
 {% endcomment %}
 <div x-data="{ open: true }" x-show="open" x-cloak @keydown.escape.window="open = false" class="fixed inset-0 z-50 grid place-items-center bg-superficie-velo-oscuro p-md">
   <form hx-post="{{ post_url }}" hx-disabled-elt="find button[type=submit]"{% if hx_target %} hx-target="{{ hx_target }}"{% endif %}{% if hx_swap %} hx-swap="{{ hx_swap }}"{% endif %}
         role="dialog" aria-modal="true" aria-labelledby="open-cash-title" @click.outside="open = false"
-        x-init="$nextTick(() => $el.querySelector('input[name=pin]').focus())"
+        x-init="$nextTick(() => $el.querySelector('input[name=pin], input[name=opening_amount]').focus())"
         class="flex w-full max-w-[480px] flex-col gap-canal rounded-xl border border-borde-sutil bg-superficie-tarjeta p-xl shadow-tarjeta">
     <div class="flex items-center justify-between gap-sm">
       <div class="flex items-center gap-md">
@@ -28,7 +29,11 @@ entre casillas y cierra el diálogo. Incluir siempre con «only».
       </button>
     </div>
 
-    {% include "components/pin_boxes.html" with error=error note="Solo un administrador puede abrir o cerrar la caja. Si no hay conexión, el PIN se valida en este dispositivo." only %}
+    {% if ask_pin %}
+      {% include "components/pin_boxes.html" with error=error note="Solo un administrador puede abrir o cerrar la caja. Si no hay conexión, el PIN se valida en este dispositivo." only %}
+    {% elif error %}
+      <p class="rounded-md bg-estado-peligro-fondo px-md py-sm sgft-texto-cuerpo-pequeno text-estado-peligro" role="alert">{{ error }}</p>
+    {% endif %}
 
     <label class="flex flex-col gap-xs">
       <span class="sgft-texto-cuerpo-pequeno-medio text-texto-primario">Fondo inicial en efectivo</span>
@@ -42,7 +47,7 @@ entre casillas y cierra el diálogo. Incluir siempre con «only».
     <div class="flex gap-sm">
       <button type="button" class="sgft-btn sgft-btn--contorno sgft-btn--full" @click="open = false">Cancelar</button>
       <button type="submit" class="sgft-btn sgft-btn--primario sgft-btn--full">
-        <span class="inline-flex">{% include "components/icons/lock.html" with size=20 only %}</span>Abrir caja
+        {% if ask_pin %}<span class="inline-flex">{% include "components/icons/lock.html" with size=20 only %}</span>{% endif %}Abrir caja
       </button>
     </div>
   </form>
