@@ -6,6 +6,7 @@ from . import views
 app_name = "pos"
 urlpatterns = [
     path("", views.order_builder, name="order_builder"),
+    path("sw.js", views.service_worker, name="service_worker"),
     path("dishes/", views.dish_list, name="dish_list"),
     path("dishes/<int:dish_id>/add/", views.add_item, name="add_item"),
     path("dishes/<int:dish_id>/remove/", views.remove_dish, name="remove_dish"),

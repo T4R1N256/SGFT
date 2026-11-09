@@ -370,3 +370,41 @@ class CloseSessionTests(ViewTestCase):
                          (SessionStatus.CLOSED, self.admin, Decimal("-20.00")))
         page = self.client.get(BUILDER).content.decode()
         self.assertIn("Caja cerrada, diferencia de −$20.00.", page)
+
+
+class PwaTests(ViewTestCase):
+    """WBS 3.4.1, 3.4.2: the installable app and its service worker."""
+
+    def test_service_worker_is_served_from_pos_for_the_whole_site(self):
+        self.client.logout()  # the browser fetches it by itself, with or without a session
+        response = self.client.get("/pos/sw.js")
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response["Content-Type"].startswith("application/javascript"))
+        self.assertEqual(response["Service-Worker-Allowed"], "/")
+        self.assertIn("no-cache", response["Cache-Control"])
+        body = response.content.decode()
+        self.assertIn("workbox-sw.js", body)
+        self.assertIn('"/static/pos/pricing.js"', body)
+
+    def test_every_precached_static_file_exists(self):
+        from django.contrib.staticfiles import finders
+        body = self.client.get("/pos/sw.js").content.decode()
+        files = re.findall(r'"/static/([^"]+)"', body)
+        self.assertGreater(len(files), 5)
+        for path in files:
+            self.assertIsNotNone(finders.find(path), path)
+
+    def test_manifest_starts_in_nueva_venta(self):
+        import json
+        from django.contrib.staticfiles import finders
+        with open(finders.find("pos/manifest.json"), encoding="utf-8") as source:
+            manifest = json.load(source)
+        self.assertEqual((manifest["start_url"], manifest["scope"], manifest["display"]), ("/pos/", "/", "standalone"))
+        for icon in manifest["icons"]:
+            self.assertIsNotNone(finders.find(icon["src"].removeprefix("/static/")), icon["src"])
+
+    def test_nueva_venta_links_the_manifest_and_registers_the_worker(self):
+        html = self.client.get(BUILDER).content.decode()
+        self.assertIn('<link rel="manifest" href="/static/pos/manifest.json">', html)
+        self.assertIn('src="/static/pos/pwa.js"', html)
+        self.assertIn('rel="apple-touch-icon"', html)
