@@ -12,6 +12,7 @@ sync_operations lives in views_sync.py (Jesús + Jared).
 from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.staticfiles import finders
 from django.db.models import Prefetch
 from django.http import HttpResponse, HttpResponseRedirect
@@ -23,7 +24,7 @@ from django.views.decorators.http import require_GET, require_http_methods, requ
 
 from apps.catalog.models import Category, Dish
 from apps.core import preview
-from apps.core.mixins import admin_pin_required, is_admin_unlocked, role_required, unlocked_admin
+from apps.core.mixins import ADMIN, admin_pin_required, is_admin_unlocked, role_required, unlocked_admin
 from apps.inventory.services import check_min_stock
 from apps.pos import services, services_cash_session as cash
 from apps.pos.models import Modifier, ModifierKind, Sale
@@ -201,7 +202,43 @@ def _ticket_label(session, order):
 def _top_bar(session):
     return {"cash_session_open": session is not None, "session_total": _session_total(session),
             "search_placeholder": "Buscar platillo por nombre (F2)...", "search_url": _url("pos:dish_list"),
-            "search_target": "#dish-list"}
+            "search_target": "#dish-list", "sync_url": "#sincronizar"}
+
+
+def _offline_data(request, session):
+    """
+    What static/pos/ keeps for working without network (WBS 3.4.3, 3.4.4), with Spanish keys like the contract:
+    the menu with its modifiers in cents, the device's user, the open session and one PIN verifier per active
+    Administrator (DEC-28; never the PIN). It is the read flow that contract v1 §5 leaves out.
+    """
+    dishes = (Dish.objects.filter(is_active=True).select_related("category")
+              .prefetch_related(Prefetch("modifier_set", queryset=Modifier.objects.select_related("ingredient")
+                                         .order_by("kind", "ingredient__name")))
+              .order_by("category__name", "name"))
+    categories = {}
+    platillos = []
+    for dish in dishes:
+        categories.setdefault(dish.category_id, dish.category.name)
+        platillos.append({
+            "id": dish.pk, "nombre": dish.name, "categoria_id": dish.category_id, "categoria": dish.category.name,
+            "emoji": _emoji(dish.category), "precio_centavos": _cents(dish.price),
+            "modificadores": [{"id": m.pk, "tipo": "agregar" if m.kind == ModifierKind.ADD else "quitar",
+                               "insumo_id": m.ingredient_id, "nombre": _modifier_label(m),
+                               "ajuste_centavos": _cents(m.price_adjustment) if m.kind == ModifierKind.ADD else 0}
+                              for m in dish.modifier_set.all()],
+        })
+    admins = get_user_model().objects.filter(is_active=True, role=ADMIN).exclude(pin_verifier="").order_by("pk")
+    return {
+        "generado": timezone.now().isoformat(),
+        "usuario": {"id": request.user.pk, "nombre": request.user.get_full_name() or request.user.get_username()},
+        "turno": {"uuid": str(session.uuid), "fecha": session.business_date.isoformat()} if session else None,
+        "catalogo": {"categorias": [{"id": pk, "nombre": name} for pk, name in sorted(categories.items(),
+                                                                                      key=lambda c: c[1])],
+                     "platillos": platillos},
+        "verificadores": [{"usuario_id": a.pk, "nombre": a.get_full_name() or a.get_username(),
+                           "sal": a.pin_verifier_salt, "iteraciones": a.pin_verifier_iterations,
+                           "verificador": a.pin_verifier} for a in admins],
+    }
 
 
 def _sale_context(request, category="todos", query=""):
@@ -281,15 +318,25 @@ def order_builder(request):
         order.lines        list    {id, dish_id, dish_name, emoji, modifiers: list[str], quantity, subtotal: Decimal,
                                     remove_url, edit_url}; edit_url vacío si el platillo no tiene modificadores
         payment_methods    list    {value, label, icon}; payment_url, confirm_url  str
-        + menú (procesador de contexto) y barra superior
+        offline_data       dict    solo en la página completa, como JSON (json_script «datos-sin-red») para
+                                   static/pos/: {generado, usuario {id, nombre}, turno {uuid, fecha}|None,
+                                   catalogo {categorias [{id, nombre}], platillos [{id, nombre, categoria_id, categoria,
+                                   emoji, precio_centavos, modificadores [{id, tipo, insumo_id, nombre,
+                                   ajuste_centavos}]}]}, verificadores [{usuario_id, nombre, sal, iteraciones,
+                                   verificador}]}; importes en centavos y llaves en español (DEC-01)
+        + menú (procesador de contexto) y barra superior, con sync_url «#sincronizar» (lo atiende offline.js)
+    Sin red     : la página sale de la caché del service worker y static/pos/offline.js pinta
+                  pos/partials/offline_sale.html con lo guardado en el dispositivo
     Controles (HATEOAS):
         order.can_confirm  -> «Confirmar compra» habilitado (pos:confirm_sale); si no, se ve deshabilitado
         not cash_session_open -> contenido deshabilitado y «Abrir caja» (pos:open_session)
     Errores     : 401/redirección sin sesión (dispositivo sin activar) · 403 sin rol
     """
     context, session = _screen_context(request)
-    if session is None and not request.htmx and is_admin_unlocked(request):
-        context["open_cash"] = _open_cash_dialog()
+    if not request.htmx:
+        context["offline_data"] = _offline_data(request, session)
+        if session is None and is_admin_unlocked(request):
+            context["open_cash"] = _open_cash_dialog()
     template = "pos/partials/sale_area.html" if request.htmx else "pos/order_builder.html"
     return render(request, template, context)
 

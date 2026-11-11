@@ -121,15 +121,15 @@ class OrderBuilderTests(ViewTestCase):
 
     def test_closed_cash_with_the_padlock_open_shows_the_open_dialog(self):
         self.unlock()
-        html = self.client.get(BUILDER).content.decode()
-        self.assertIn('aria-labelledby="open-cash-title"', html)
-        self.assertNotIn('name="pin"', html)
-        self.assertIn('name="opening_amount"', html)
+        dialog = self.client.get(BUILDER).content.decode().split('<div id="dialog">')[1]
+        self.assertIn('aria-labelledby="open-cash-title"', dialog)
+        self.assertNotIn('name="pin"', dialog)  # online the padlock already identified the Administrator
+        self.assertIn('name="opening_amount"', dialog)
 
     def test_open_cash_lists_the_active_dishes_from_the_catalog(self):
         self.open_cash()
         response = self.client.get(BUILDER)
-        html = response.content.decode()
+        html = response.content.decode().split('<template x-if="sinRed">')[0]  # the server's area, not the offline one
         self.assertIn('id="sale-area"', html)
         self.assertIn("Burrito de asada", html)
         self.assertIn("$75.00", html)
@@ -408,3 +408,62 @@ class PwaTests(ViewTestCase):
         self.assertIn('<link rel="manifest" href="/static/pos/manifest.json">', html)
         self.assertIn('src="/static/pos/pwa.js"', html)
         self.assertIn('rel="apple-touch-icon"', html)
+
+
+class OfflineDataTests(ViewTestCase):
+    """WBS 3.4.3, 3.4.4: what Nueva venta leaves on the device for working without network."""
+
+    def data(self):
+        import json
+        html = self.client.get(BUILDER).content.decode()
+        match = re.search(r'<script id="datos-sin-red" type="application/json">(.*?)</script>', html, re.S)
+        self.assertIsNotNone(match, "la página completa trae los datos sin red")
+        return json.loads(match.group(1))
+
+    def test_menu_in_cents_with_modifiers_and_spanish_keys(self):
+        data = self.data()
+        dishes = {p["nombre"]: p for p in data["catalogo"]["platillos"]}
+        self.assertNotIn("Tamal", dishes)
+        asada = dishes["Burrito de asada"]
+        self.assertEqual((asada["precio_centavos"], asada["categoria_id"], asada["emoji"]),
+                         (7500, self.burritos.pk, "🌯"))
+        self.assertIn({"id": self.extra_cheese.pk, "tipo": "agregar", "insumo_id": self.cheese.pk,
+                       "nombre": "Extra queso chihuahua (+$15.00)", "ajuste_centavos": 1500}, asada["modificadores"])
+        self.assertIn({"id": self.no_onion.pk, "tipo": "quitar", "insumo_id": self.onion.pk,
+                       "nombre": "Sin cebolla", "ajuste_centavos": 0}, asada["modificadores"])
+        self.assertEqual([c["nombre"] for c in data["catalogo"]["categorias"]], ["Bebidas", "Burritos"])
+        self.assertEqual(data["usuario"]["id"], self.cashier.pk)
+
+    def test_session_and_verifiers_of_active_admins_only(self):
+        self.assertIsNone(self.data()["turno"])
+        session = self.open_cash()
+        get_user_model().objects.create_user(username="exdueno", password="135790", role="admin", is_active=False)
+        data = self.data()
+        self.assertEqual(data["turno"], {"uuid": str(session.uuid), "fecha": session.business_date.isoformat()})
+        self.assertEqual(data["verificadores"], [])  # the admin of setUp has no 6-digit PIN
+        self.admin.set_password("482913")
+        self.admin.save()
+        [verifier] = self.data()["verificadores"]
+        self.assertEqual(verifier["usuario_id"], self.admin.pk)
+        self.assertEqual((verifier["sal"], verifier["verificador"]),
+                         (self.admin.pin_verifier_salt, self.admin.pin_verifier))
+        self.assertNotIn("482913", self.client.get(BUILDER).content.decode())
+
+    def test_offline_client_is_loaded_and_htmx_fragments_skip_the_data(self):
+        html = self.client.get(BUILDER).content.decode()
+        for script in ("dexie@4.0.10", "/static/pos/pricing.js", "/static/pos/db.js", "/static/pos/offline.js"):
+            self.assertIn(script, html)
+        self.assertIn('x-data="ventaSinRed"', html)
+        self.assertIn('href="#sincronizar"', html)
+        self.assertIn("data-sgft-pendientes", html)
+        self.assertNotIn("datos-sin-red", self.client.get(BUILDER, **HTMX).content.decode())
+
+    def test_every_page_with_a_session_loads_the_offline_client(self):
+        # Caja closes the till from another page: it must also sync and send X-Pendientes (rule 5).
+        self.assertIn("/static/pos/offline.js", self.client.get("/catalog/").content.decode())
+        self.assertNotIn("/static/pos/offline.js", self.client_class().get("/accounts/activate/").content.decode())
+
+    def test_service_worker_precaches_the_offline_client(self):
+        body = self.client.get("/pos/sw.js").content.decode()
+        for path in ('"/static/pos/db.js"', '"/static/pos/offline.js"', "dexie@4.0.10"):
+            self.assertIn(path, body)

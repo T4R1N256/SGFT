@@ -5,8 +5,9 @@ Parámetros:
   modules        lista de {key, label, icon, url, requires_pin, pin_url}; la arma el servidor (qué módulos, con qué
                  candado y, mientras sigan bloqueados, la vista del PIN en pin_url)
   active         key del módulo actual
-  sync_pending   operaciones sin sincronizar (entero; sin red lo actualiza static/pos/ en la Fase 6)
-  sync_url       destino de «Sincronizar» (opcional)
+  sync_pending   operaciones sin sincronizar (entero); en Nueva venta static/pos/offline.js lo cambia con la
+                 cola del dispositivo ([data-sgft-pendientes])
+  sync_url       destino de «Sincronizar» (opcional); «#sincronizar» lo atiende static/pos/offline.js
   admin_mode_url destino de «Activar modo admin» (opcional; si no viene, no se muestra)
   user_name, user_detail, user_initials, logout_url   datos del pie (opcionales)
 El estado «En línea / Sin conexión» es visual y lo lleva Alpine. Incluir siempre con «only».
@@ -42,7 +43,7 @@ El estado «En línea / Sin conexión» es visual y lo lleva Alpine. Incluir sie
   <p class="flex items-center gap-xs pl-[56px] sgft-texto-etiqueta-chip text-sidebar-icono"
      x-data="{ online: navigator.onLine }" @online.window="online = true" @offline.window="online = false">
     <span class="size-[8px] rounded-full" :class="online ? 'bg-indicador-en-linea' : 'bg-estado-alerta'" aria-hidden="true"></span>
-    <span x-text="online ? 'En línea' : 'Sin conexión'">En línea</span> · {{ sync_pending|default:0 }} pendientes
+    <span x-text="online ? 'En línea' : 'Sin conexión'">En línea</span> · <span data-sgft-pendientes>{{ sync_pending|default:0 }}</span> pendientes
   </p>
 </div>
 
