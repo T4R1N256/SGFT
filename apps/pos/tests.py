@@ -10,7 +10,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.db.models import ProtectedError
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.utils import timezone
 
 from apps.catalog.models import Category, Dish, Ingredient, Recipe, Units
@@ -600,3 +600,123 @@ class SaleServiceTests(TestCase):
         self.assertEqual(self.stock(self.beef), Decimal("700"))
         with self.assertRaises(sales.AdjustmentError):
             sales.adjust_sale(self.admin, sale, "correccion_pago", new_payment_method="transfer")
+
+
+class SyncOperationsTests(TestCase):
+    """WBS 3.4.6 — POST /pos/sync/, contrato v1 §6 (reglas 1, 8, 9, 10, 12 y 14)."""
+
+    def setUp(self):
+        users = get_user_model().objects
+        self.admin = users.create_user(username="dueno", password="x-9Lq!pr2", role="admin")
+        self.cashier = users.create_user(username="caja", password="x-9Lq!pr3", role="cashier")
+        category = Category.objects.create(name="Burritos")
+        self.burrito = Dish.objects.create(name="Burrito de asada", category=category, price=Decimal("85.00"))
+        self.beef = Ingredient.objects.create(name="Asada", unit=Units.G, stock=Decimal("1000"))
+        Recipe.objects.create(dish=self.burrito, ingredient=self.beef, quantity=Decimal("150"))
+        self.client.force_login(self.cashier)
+        self.url = "/pos/sync/"
+
+    def opening(self, uuid=None, user=None, minute=0):
+        return {"uuid": str(uuid or uuid4()), "tipo": "apertura_turno", "usuario_id": (user or self.admin).pk,
+                "marca_tiempo_dispositivo": f"2026-11-04T08:{minute:02d}:00-07:00", "efectivo_inicial_centavos": 50000}
+
+    def sale(self, session_uuid, uuid=None, burritos=2, total=None, minute=15, user=None):
+        return {"uuid": str(uuid or uuid4()), "tipo": "venta", "usuario_id": (user or self.cashier).pk,
+                "marca_tiempo_dispositivo": f"2026-11-04T09:{minute:02d}:00-07:00", "turno_uuid": str(session_uuid),
+                "metodo_pago": "efectivo", "total_cobrado_centavos": 8500 * burritos if total is None else total,
+                "pedido": {"lineas": [{"platillo_id": self.burrito.pk, "precio_base_centavos": 8500,
+                                       "cantidad": burritos}]}}
+
+    def send(self, *operations, version=1):
+        return self.client.post(self.url, json.dumps({"version_contrato": version, "operaciones": list(operations)}),
+                                content_type="application/json")
+
+    def states(self, response):
+        self.assertEqual(response.status_code, 200)
+        return [(r["estado"], r.get("motivo") or r.get("motivos")) for r in response.json()["resultados"]]
+
+    def test_opening_and_its_sales_in_any_order(self):
+        opening = self.opening()
+        response = self.send(self.sale(opening["uuid"], minute=30), self.sale(opening["uuid"]), opening)
+        self.assertEqual(self.states(response), [("aplicada", None)] * 3)
+        session = CashRegisterSession.objects.get(uuid=opening["uuid"])
+        self.assertEqual((session.opened_by, session.opening_amount), (self.admin, Decimal("500.00")))
+        self.assertEqual(Sale.objects.filter(cash_session=session).count(), 2)
+        self.beef.refresh_from_db()
+        self.assertEqual(self.beef.stock, Decimal("400"))
+
+    def test_the_same_batch_twice_applies_once(self):
+        opening = self.opening()
+        batch = [opening, self.sale(opening["uuid"])]
+        self.send(*batch)
+        self.assertEqual(self.states(self.send(*batch)), [("duplicada", None)] * 2)
+        self.assertEqual(Sale.objects.count(), 1)
+        self.assertEqual(StockMovement.objects.filter(kind=MovementKind.SALE).count(), 1)
+
+    def test_a_uuid_already_used_in_another_table_is_a_duplicate(self):
+        opening = self.opening()
+        self.send(opening)
+        clash = self.sale(opening["uuid"], uuid=opening["uuid"])
+        self.assertEqual(self.states(self.send(clash)), [("duplicada", None)])
+        self.assertFalse(Sale.objects.exists())
+
+    def test_quarantine_reasons(self):
+        opening = self.opening()
+        self.send(opening)
+        unknown = self.sale(opening["uuid"])
+        unknown["pedido"]["lineas"][0]["platillo_id"] = 999
+        no_recipe_dish = Dish.objects.create(name="Agua", category=self.burrito.category, price=Decimal("20.00"))
+        no_recipe = self.sale(opening["uuid"])
+        no_recipe["pedido"]["lineas"][0]["platillo_id"] = no_recipe_dish.pk
+        malformed = self.sale(opening["uuid"])
+        malformed["pedido"] = {"lineas": "x"}
+        inactive = get_user_model().objects.create_user(username="ex", password="x-9Lq!pr4", role="cashier",
+                                                        is_active=False)
+        response = self.send(
+            self.opening(user=self.cashier, minute=1), self.opening(minute=2), self.sale(uuid4()), unknown, no_recipe,
+            self.sale(opening["uuid"], total=1), malformed, self.sale(opening["uuid"], user=inactive),
+        )
+        self.assertEqual(self.states(response), [
+            ("cuarentena", "usuario_sin_permiso"), ("cuarentena", "turno_ya_abierto"),
+            ("cuarentena", "turno_invalido"), ("cuarentena", "platillo_desconocido"),
+            ("cuarentena", "receta_faltante"), ("cuarentena", "total_inconsistente"),
+            ("cuarentena", "total_inconsistente"), ("cuarentena", "usuario_sin_permiso"),
+        ])
+        self.assertEqual(QuarantinedOperation.objects.count(), 8)
+        self.assertEqual(QuarantinedOperation.objects.get(uuid=unknown["uuid"]).payload, unknown)
+        self.assertEqual(Sale.objects.count(), 0)
+        self.assertEqual(self.states(self.send(unknown)), [("duplicada", None)])
+
+    def test_review_reasons(self):
+        opening = self.opening()
+        self.send(opening)
+        self.burrito.price = Decimal("90.00")
+        self.burrito.save()
+        response = self.send(self.sale(opening["uuid"], burritos=7))  # 1050 g of 1000
+        self.assertEqual(self.states(response), [("aplicada_con_revision", ["precio_distinto", "existencia_negativa"])])
+        self.assertEqual(Sale.objects.get().charged_total, Decimal("595.00"))  # what was charged wins
+
+    def test_one_failure_does_not_revert_the_others(self):
+        opening = self.opening()
+        response = self.send(opening, self.sale(opening["uuid"], total=1), self.sale(opening["uuid"], minute=20))
+        self.assertEqual([s for s, _ in self.states(response)], ["aplicada", "cuarentena", "aplicada"])
+        self.assertEqual(Sale.objects.count(), 1)
+
+    def test_whole_batch_errors_apply_nothing(self):
+        opening = self.opening()
+        self.client.logout()
+        self.assertEqual(self.send(opening).status_code, 401)
+        self.client.force_login(self.cashier)
+        self.assertEqual(self.send(opening, version=2).status_code, 400)
+        self.assertEqual(self.client.post(self.url, "{", content_type="application/json").status_code, 400)
+        bad_time = {**self.opening(), "marca_tiempo_dispositivo": "ayer"}
+        self.assertEqual(self.send(opening, bad_time).status_code, 400)
+        self.assertEqual(self.send(*[self.opening() for _ in range(101)]).status_code, 413)
+        self.assertFalse(CashRegisterSession.objects.exists())
+
+    def test_needs_the_csrf_token(self):
+        client = Client(enforce_csrf_checks=True)
+        client.force_login(self.cashier)
+        response = client.post(self.url, json.dumps({"version_contrato": 1, "operaciones": []}),
+                               content_type="application/json")
+        self.assertEqual(response.status_code, 403)

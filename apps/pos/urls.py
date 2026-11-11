@@ -1,7 +1,7 @@
 """URL routes for apps.pos. Each package adds its views here; names describe the action."""
 from django.urls import path
 
-from . import views
+from . import views, views_sync
 
 app_name = "pos"
 urlpatterns = [
@@ -16,5 +16,5 @@ urlpatterns = [
     path("order/confirm/", views.confirm_sale, name="confirm_sale"),
     path("cash-session/open/", views.open_session, name="open_session"),
     path("cash-session/close/", views.close_session, name="close_session"),
-    # path("sync/", views_sync.sync_operations, name="sync_operations"),  # views_sync.py pending (Jesús + Jared)
+    path("sync/", views_sync.sync_operations, name="sync_operations"),
 ]
