@@ -23,7 +23,6 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from apps.catalog.models import Category, Dish
-from apps.core import preview
 from apps.core.mixins import ADMIN, admin_pin_required, is_admin_unlocked, role_required, unlocked_admin
 from apps.inventory.services import check_min_stock
 from apps.pos import services, services_cash_session as cash
@@ -575,7 +574,6 @@ def open_session(request):
     except cash.CashSessionError as error:
         return _retarget_dialog(render(request, "pos/partials/open_cash_session.html",
                                        _open_cash_dialog(str(error)), status=422))
-    preview.set_cash_open(request, True)  # until T18: the other screens still read the cash state from preview
     context, _ = _screen_context(request)
     context["oob_cash_status"] = True
     return render(request, "pos/partials/sale_area.html", context)
@@ -643,7 +641,6 @@ def close_session(request):
     except cash.CashSessionError as error:
         context["form_error"] = str(error)
         return _retarget_dialog(render(request, template, context, status=409))
-    preview.set_cash_open(request, False)  # until T18
     difference = closed.cash_difference or Decimal("0.00")
     detail = "sin diferencia" if not difference else \
         f"diferencia de {'+' if difference > 0 else '−'}${abs(difference):,.2f}"
