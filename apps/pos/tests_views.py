@@ -467,3 +467,23 @@ class OfflineDataTests(ViewTestCase):
         body = self.client.get("/pos/sw.js").content.decode()
         for path in ('"/static/pos/db.js"', '"/static/pos/offline.js"', "dexie@4.0.10"):
             self.assertIn(path, body)
+
+
+class CashStateTests(ViewTestCase):
+    """apps.pos.context_processors.cash_session: every screen shows the real cash state in the top bar."""
+
+    def test_other_screens_show_the_open_session_and_its_total(self):
+        self.unlock()
+        for url in ("/catalog/", "/inventory/"):
+            self.assertRegex(self.client.get(url).content.decode(), r'Caja<span class="sr-only"> cerrada</span>')
+        self.open_cash()
+        self.add(self.asada)
+        self.client.post(CONFIRM, **HTMX)
+        for url in ("/catalog/", "/inventory/"):
+            html = self.client.get(url).content.decode()
+            self.assertRegex(html, r'Caja<span class="sr-only"> abierta</span>')
+            self.assertRegex(html, r'(?s)id="session-total".*?\$75\.00')
+
+    def test_the_stand_in_is_gone(self):
+        from importlib.util import find_spec
+        self.assertIsNone(find_spec("apps.core.preview"))

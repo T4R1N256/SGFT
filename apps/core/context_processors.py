@@ -1,7 +1,7 @@
 """
 Shell context for base.html (menu and top bar) on every page, so views stop building it by hand. Owner: Jesús.
 A view that passes one of these keys overrides it. The cash state (cash_session_open, session_total) is not here:
-core depends on no other app, so the pos views keep supplying it.
+core depends on no other app, so it comes from apps.pos.context_processors.cash_session.
 """
 from django.urls import NoReverseMatch, reverse
 

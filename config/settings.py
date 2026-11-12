@@ -84,6 +84,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "apps.core.context_processors.shell",  # menu and top bar of base.html (WBS 3.1.3)
+                "apps.pos.context_processors.cash_session",  # cash state of the top bar (WBS 3.5.1)
             ],
         },
     },

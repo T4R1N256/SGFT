@@ -3,8 +3,8 @@ Views of the Productos screen (WBS 3.2.1–3.2.3; DEC-25). Owner: Tarín (DEC-31
 
 Dishes, prices, recipes and new ingredients come from the database through apps/catalog/services.py. The whole
 screen is admin-only: admin_pin_required asks for the Administrator's PIN and keeps it 30 minutes (DEC-32). The menu
-comes from apps.core.context_processors.shell; the cash state of the top bar still comes from apps/core/preview.py
-until T18 removes it. catalog depends on no other app (CLAUDE.md §7): it imports neither pos nor inventory.
+comes from apps.core.context_processors.shell and the cash state of the top bar from
+apps.pos.context_processors.cash_session. catalog depends on no other app (CLAUDE.md §7): it imports neither pos nor inventory.
 """
 from decimal import Decimal, InvalidOperation
 
@@ -16,7 +16,6 @@ from django.views.decorators.http import require_GET, require_http_methods
 
 from apps.catalog import services
 from apps.catalog.models import Category, Dish, Ingredient, Recipe, Units
-from apps.core import preview
 from apps.core.mixins import admin_pin_required
 
 MODULE = "Productos"
@@ -37,7 +36,7 @@ def _decimal(value):
 def _shell(request):
     """Top bar of Productos; the menu comes from the context processor."""
     return {"search_placeholder": "Buscar platillo en el catálogo (F2)...", "search_url": _url("catalog:dish_catalog"),
-            "search_target": "#dish-grid", "cash_session_open": preview.is_cash_open(request), "session_total": None}
+            "search_target": "#dish-grid"}
 
 
 def _emoji(category):
