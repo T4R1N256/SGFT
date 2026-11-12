@@ -17,6 +17,18 @@
   {# Evita el parpadeo de elementos con x-cloak antes de que Alpine arranque #}
   <style>[x-cloak] { display: none !important; }</style>
 
+  {% comment %}
+    Cliente sin red (static/pos/, WBS 3.4.3): con sesión, toda página sincroniza la cola al cargar y al volver la red,
+    muestra «N pendientes» y manda X-Pendientes en cada petición HTMX, para que cerrar la caja desde Caja se niegue
+    si falta algo por sincronizar (regla 5). Sin defer: offline.js registra su componente antes de que arranque Alpine.
+  {% endcomment %}
+  {% if user.is_authenticated %}
+  <script src="https://cdn.jsdelivr.net/npm/dexie@4.0.10/dist/dexie.min.js"></script>
+  <script src="{% static 'pos/pricing.js' %}"></script>
+  <script src="{% static 'pos/db.js' %}"></script>
+  <script src="{% static 'pos/offline.js' %}"></script>
+  {% endif %}
+
   {# Páginas del punto de venta agregan aquí manifest.json y el service worker (static/pos/) #}
   {% block head_extra %}{% endblock %}
 </head>

@@ -2,7 +2,9 @@
 {% comment %}
 pos/order_builder.html — Nueva Venta (Figma 02 · Nueva Venta, 2045:2158, y 01 · Caja cerrada, 2045:1946; rev. 1.1)
 Vista: pos:order_builder. La página solo incluye fragmentos; el contrato está en el docstring de la vista.
-head_extra: la PWA (manifest, íconos de iOS y registro del service worker, WBS 3.4.1).
+head_extra: la PWA (manifest, íconos de iOS y registro del service worker, WBS 3.4.1). El cliente sin red (Dexie,
+pricing.js, db.js y offline.js) lo carga base.html en toda página con sesión. Sin red, ventaSinRed oculta el área del
+servidor y pinta pos/partials/offline_sale.html (WBS 3.4.4).
 {% endcomment %}
 {% block title %}Nueva venta{% endblock %}
 {% block head_extra %}
@@ -16,6 +18,10 @@ head_extra: la PWA (manifest, íconos de iOS y registro del service worker, WBS 
   <script defer src="{% static 'pos/pwa.js' %}"></script>
 {% endblock %}
 {% block content %}
-  {% include "pos/partials/sale_area.html" %}
+  <div x-data="ventaSinRed" x-init="iniciar()">
+    <div x-show="!sinRed">{% include "pos/partials/sale_area.html" %}</div>
+    <template x-if="sinRed">{% include "pos/partials/offline_sale.html" %}</template>
+  </div>
+  {% if offline_data %}{{ offline_data|json_script:"datos-sin-red" }}{% endif %}
 {% endblock %}
 {% block dialog %}{% if open_cash %}{% include "pos/partials/open_cash_session.html" with post_url=open_cash.post_url hx_target=open_cash.hx_target hx_swap=open_cash.hx_swap shift_label=open_cash.shift_label opening_amount=open_cash.opening_amount ask_pin=open_cash.ask_pin error=open_cash.error %}{% endif %}{% endblock %}

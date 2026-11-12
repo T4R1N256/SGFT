@@ -1,0 +1,156 @@
+{% comment %}
+pos/partials/offline_sale.html — Nueva venta sin red (WBS 3.4.4, 3.4.7; id «offline-sale»)
+Vista: pos:order_builder, dentro del componente Alpine ventaSinRed de static/pos/offline.js. Se pinta solo sin red;
+con red manda el área de venta del servidor (pos/partials/sale_area.html), que esta plantilla imita con las mismas
+clases. Aquí sí calcula el navegador: el precio sale de calcularTotal (pricing.js), y lo cobrado se guarda en la
+cola del dispositivo hasta que vuelva la red. La regla 12 se cumple con el turno guardado en el dispositivo.
+{% endcomment %}
+{% load static %}
+<div id="offline-sale" class="flex flex-col gap-md">
+  <div class="flex flex-wrap items-center gap-sm rounded-md border border-estado-alerta bg-estado-alerta-fondo px-md py-sm sgft-texto-cuerpo-pequeno text-texto-primario" role="status">
+    <span class="text-estado-alerta">{% include "components/icons/triangle-alert.html" with size=20 only %}</span>
+    <span class="flex-1">Sin conexión · <span x-text="pendientes"></span> pendientes. Las ventas se guardan en este dispositivo y se envían al volver la red.</span>
+  </div>
+  <template x-if="reactivar">
+    <p class="rounded-md bg-estado-peligro-fondo px-md py-sm sgft-texto-cuerpo-pequeno text-estado-peligro" role="alert">
+      La sesión de este dispositivo venció. Al volver la red, actívalo de nuevo con el PIN de un administrador: la cola se conserva.
+    </p>
+  </template>
+  <p x-show="mensaje" x-text="mensaje" class="rounded-md bg-estado-exito-fondo px-md py-sm sgft-texto-cuerpo-pequeno text-estado-exito" role="status"></p>
+  <p x-show="error && !dialogo" x-text="error" class="rounded-md bg-estado-peligro-fondo px-md py-sm sgft-texto-cuerpo-pequeno text-estado-peligro" role="alert"></p>
+
+  <div class="relative">
+    <div class="sgft-grid-venta" :class="!turno && 'pointer-events-none select-none opacity-35'" :inert="!turno">
+      <section class="flex min-w-0 flex-col gap-md" aria-labelledby="offline-sale-title">
+        <header class="flex flex-col gap-[4px]">
+          <h1 id="offline-sale-title" class="sgft-texto-titulo-h1 text-texto-primario">Nueva venta</h1>
+          <p class="sgft-texto-cuerpo-pequeno text-texto-secundario" x-text="turno ? 'Sin conexión · turno guardado en el dispositivo' : 'Sin turno de caja abierto'"></p>
+        </header>
+        <div class="flex flex-wrap gap-[10px]" role="group" aria-label="Categorías">
+          <button type="button" class="sgft-chip sgft-texto-cuerpo-pequeno-medio" :aria-pressed="categoria === 'todos'" @click="categoria = 'todos'">Todos</button>
+          <template x-for="c in catalogo.categorias" :key="c.id">
+            <button type="button" class="sgft-chip sgft-texto-cuerpo-pequeno-medio" :aria-pressed="categoria === String(c.id)" @click="categoria = String(c.id)" x-text="c.nombre"></button>
+          </template>
+        </div>
+        <div class="sgft-grid-platillos">
+          <template x-for="p in platillosVisibles" :key="p.id">
+            <button type="button" class="sgft-dish-card" :class="cantidadEnTicket(p.id) && 'sgft-dish-card--en-ticket'" @click="agregar(p)"
+                    :aria-label="'Agregar ' + p.nombre + ', ' + dinero(p.precio_centavos)">
+              <span class="sgft-thumb relative size-[120px] rounded-[18px] text-[64px]"><span aria-hidden="true" x-text="p.emoji"></span><span x-show="cantidadEnTicket(p.id)" class="sgft-dish-card__qty sgft-dish-card__qty--thumb" aria-hidden="true" x-text="cantidadEnTicket(p.id)"></span></span>
+              <span class="flex min-w-0 flex-1 flex-col gap-[6px]">
+                <span class="sgft-texto-etiqueta-mayusculas text-texto-secundario" x-text="p.categoria"></span>
+                <span class="line-clamp-2 sgft-texto-titulo-h2-compacto text-texto-primario" x-text="p.nombre"></span>
+                <span class="sgft-texto-titulo-h2 text-marca-primario-oscuro" x-text="dinero(p.precio_centavos)"></span>
+              </span>
+            </button>
+          </template>
+        </div>
+      </section>
+
+      <aside class="sgft-card sgft-card--media gap-sm xl:sticky xl:top-md" aria-label="Ticket en curso">
+        {% include "components/card_header.html" with title="Ticket" icon="receipt-sheet" compact=True only %}
+        <div class="h-px bg-borde-sutil"></div>
+        <div class="flex flex-1 flex-col gap-[2px]">
+          <template x-for="l in lineasVista" :key="l.clave">
+            <div class="sgft-ticket-line flex h-[60px] items-center gap-[14px]">
+              <span class="sgft-thumb relative size-[48px] rounded-md text-[26px]"><span aria-hidden="true" x-text="l.emoji"></span><span class="sgft-dish-card__qty sgft-dish-card__qty--line" aria-hidden="true" x-text="l.cantidad"></span></span>
+              <button type="button" class="flex min-w-0 flex-1 flex-col gap-px text-left" :disabled="!l.personalizable" @click="personalizar(l)">
+                <span class="truncate sgft-texto-cuerpo-medio text-texto-primario" x-text="l.nombre"></span>
+                <span class="truncate sgft-texto-cuerpo-descripcion text-texto-secundario" x-text="l.etiquetas || (l.personalizable ? 'Personalizar' : '')"></span>
+              </button>
+              <span class="w-[76px] text-right sgft-texto-numero-precio text-texto-primario" x-text="l.subtotal"></span>
+              <button type="button" class="sgft-icon-btn sgft-icon-btn--peligro sgft-icon-btn--compacto" :aria-label="'Quitar uno de ' + l.nombre" @click="quitar(l)">
+                {% include "components/icons/minus.html" with size=20 only %}
+              </button>
+            </div>
+          </template>
+          <template x-if="!lineas.length">
+            {% include "components/empty_state.html" with icon="receipt-sheet" message="Toca un platillo para agregarlo" only %}
+          </template>
+        </div>
+        <div class="h-px bg-borde-sutil"></div>
+        <div class="flex items-end justify-between gap-sm">
+          <span class="sgft-texto-titulo-h2 text-texto-primario">Total</span>
+          <span class="sgft-texto-display-indicador text-marca-primario-oscuro" x-text="total"></span>
+        </div>
+        <p class="sgft-texto-etiqueta-mayusculas text-texto-secundario">Método de pago</p>
+        <div class="flex gap-[10px]" role="group" aria-label="Método de pago">
+          <button type="button" class="sgft-btn sgft-btn--full flex-1" :class="metodo === 'efectivo' ? 'sgft-btn--primario sgft-btn--seleccionado' : 'sgft-btn--contorno'"
+                  :aria-pressed="metodo === 'efectivo'" :disabled="!lineas.length" @click="metodo = 'efectivo'">Efectivo</button>
+          <button type="button" class="sgft-btn sgft-btn--full flex-1" :class="metodo === 'transferencia' ? 'sgft-btn--primario sgft-btn--seleccionado' : 'sgft-btn--contorno'"
+                  :aria-pressed="metodo === 'transferencia'" :disabled="!lineas.length" @click="metodo = 'transferencia'">Transferencia</button>
+        </div>
+        <button type="button" class="sgft-btn sgft-btn--primario sgft-btn--grande sgft-btn--full" :disabled="!lineas.length || !turno || guardando" @click="cobrar()">
+          <span class="sgft-btn__icon inline-flex">{% include "components/icons/circle-check.html" with size=20 only %}</span>Confirmar compra
+        </button>
+      </aside>
+    </div>
+
+    <template x-if="!turno">
+      <div class="absolute inset-0 z-10 flex justify-center p-md">
+        <div class="sticky top-[160px] h-fit w-full max-w-[520px] xl:mt-[184px]">
+          <section class="mx-auto flex w-full max-w-[520px] flex-col items-center gap-md rounded-xl border border-borde-sutil bg-superficie-tarjeta p-[40px] text-center shadow-tarjeta">
+            <span class="grid size-[72px] place-items-center rounded-lg bg-marca-durazno-200 text-marca-primario-oscuro">{% include "components/icons/lock.html" with size=36 only %}</span>
+            <h2 class="sgft-texto-titulo-h1 text-texto-primario">La caja está cerrada</h2>
+            <p class="sgft-texto-cuerpo-grande text-texto-secundario">Sin conexión, la abre un administrador con su PIN en este dispositivo.</p>
+            <button type="button" class="sgft-btn sgft-btn--primario sgft-btn--grande" @click="dialogo = 'abrir'">
+              <span class="sgft-btn__icon inline-flex">{% include "components/icons/lock.html" with size=20 only %}</span>Abrir caja
+            </button>
+          </section>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  <template x-if="dialogo === 'abrir'">
+    <div class="fixed inset-0 z-50 grid place-items-center bg-superficie-velo-oscuro p-md" @keydown.escape.window="cerrarDialogo()" @click.self="cerrarDialogo()">
+      <form role="dialog" aria-modal="true" aria-labelledby="offline-open-title" @submit.prevent="abrirCaja($event)"
+            x-init="$nextTick(() => $el.querySelector('input[name=pin]').focus())"
+            class="flex w-full max-w-[480px] flex-col gap-canal rounded-xl border border-borde-sutil bg-superficie-tarjeta p-xl shadow-tarjeta">
+        <div class="flex items-center gap-md">
+          <span class="sgft-card-header__icon">{% include "components/icons/wallet.html" with size=28 only %}</span>
+          <div class="flex flex-col gap-[2px]">
+            <h2 id="offline-open-title" class="sgft-texto-titulo-h2 text-texto-primario">Abrir caja</h2>
+            <p class="sgft-texto-cuerpo-pequeno text-texto-secundario">Sin conexión</p>
+          </div>
+        </div>
+        {% include "components/pin_boxes.html" with note="Solo un administrador puede abrir la caja. Sin conexión, el PIN se valida en este dispositivo." only %}
+        <label class="flex flex-col gap-xs">
+          <span class="sgft-texto-cuerpo-pequeno-medio text-texto-primario">Fondo inicial en efectivo</span>
+          <span class="sgft-field h-[52px]">
+            <span class="text-texto-secundario">{% include "components/icons/banknote.html" with size=20 only %}</span>
+            <input name="opening_amount" type="text" inputmode="decimal" required class="sgft-texto-cuerpo-base" placeholder="$0.00" x-model="fondo">
+          </span>
+        </label>
+        <p x-show="error" x-text="error" class="sgft-texto-cuerpo-nota text-estado-peligro" role="alert"></p>
+        <div class="flex gap-sm">
+          <button type="button" class="sgft-btn sgft-btn--contorno sgft-btn--full" @click="cerrarDialogo()">Cancelar</button>
+          <button type="submit" class="sgft-btn sgft-btn--primario sgft-btn--full">Abrir caja</button>
+        </div>
+      </form>
+    </div>
+  </template>
+
+  <template x-if="dialogo === 'personalizar'">
+    <div class="fixed inset-0 z-50 grid place-items-center bg-superficie-velo-oscuro p-md" @keydown.escape.window="cerrarDialogo()" @click.self="cerrarDialogo()">
+      <form role="dialog" aria-modal="true" aria-labelledby="offline-mods-title" @submit.prevent="guardarPersonalizacion()"
+            class="flex w-full max-w-[480px] flex-col gap-canal rounded-xl border border-borde-sutil bg-superficie-tarjeta p-xl shadow-tarjeta">
+        <h2 id="offline-mods-title" class="sgft-texto-titulo-h2 text-texto-primario">Personalizar</h2>
+        <fieldset class="flex flex-col gap-sm">
+          <legend class="sr-only">Modificadores</legend>
+          <template x-for="m in opcionesPersonalizar" :key="m.id">
+            <label class="flex items-center gap-sm rounded-md border border-borde-sutil bg-superficie-campo px-md py-sm sgft-texto-cuerpo-medio text-texto-primario">
+              <input type="checkbox" class="size-[22px] accent-marca-primario-oscuro" :value="m.id" x-model="seleccion">
+              <span class="flex-1" x-text="m.nombre"></span>
+            </label>
+          </template>
+        </fieldset>
+        <p class="sgft-texto-cuerpo-nota text-texto-secundario">Aplica a todas las unidades de la línea.</p>
+        <div class="flex gap-sm">
+          <button type="button" class="sgft-btn sgft-btn--contorno sgft-btn--full" @click="cerrarDialogo()">Cancelar</button>
+          <button type="submit" class="sgft-btn sgft-btn--primario sgft-btn--full">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </template>
+</div>
