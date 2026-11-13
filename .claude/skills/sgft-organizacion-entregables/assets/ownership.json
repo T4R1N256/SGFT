@@ -88,6 +88,20 @@
       ]
     },
     {
+      "patron": "railway.json",
+      "dueno": "tarin",
+      "colaboradores": [
+        "jesus"
+      ],
+      "revisor": [
+        "jared"
+      ],
+      "wbs": [
+        "5.3"
+      ],
+      "nota": "Configuración del despliegue en Railway (DEC-09: el archivo del proveedor va en la raíz). Dueño Tarín, que administra el proyecto en Railway; Jesús colabora porque comparte variables con config/settings.py. collectstatic al construir, migraciones antes de cada despliegue y Gunicorn al arrancar."
+    },
+    {
       "patron": "CLAUDE.md",
       "dueno": "diego",
       "wbs": [],

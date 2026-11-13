@@ -151,7 +151,24 @@ STORAGES = {
 CSRF_COOKIE_HTTPONLY = False
 
 if not DEBUG:
+    # Railway ends TLS at its proxy and passes the original scheme in X-Forwarded-Proto (WBS 5.3).
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", False)
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+    # HSTS (checklist-seguridad.md, A02): 0 turns it off. Start with 3600 and raise it once HTTPS works;
+    # the browser remembers it, so a mistake here cannot be undone from the server.
+    SECURE_HSTS_SECONDS = int(env("DJANGO_SECURE_HSTS_SECONDS", "0"))
+    # The *.up.railway.app domain is not ours: its subdomains belong to other projects and it cannot go on the
+    # browsers' preload list, so includeSubDomains and preload stay off on purpose.
+    SILENCED_SYSTEM_CHECKS = ["security.W005", "security.W021"]
+
+# --- Logging (WBS 5.3) ------------------------------------------------------------------------
+
+# Railway shows what the process writes to stdout: send Django's errors (500s included) there instead of e-mail.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    "loggers": {"django": {"handlers": ["console"], "level": env("DJANGO_LOG_LEVEL", "ERROR")}},
+}
