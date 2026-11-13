@@ -5,7 +5,7 @@ Adapted from Yahir's Inventario screen (apps/core/templates/inventario.html) to 
 The data comes from the catalog's ingredients and inventory/services.py (register_purchase, register_waste,
 is_low_stock). What is authorized with the PIN is recorded under that Administrator (unlocked_admin). «Agregar insumo»
 is catalog:ingredient_create; the grid refreshes on its «ingredient-created» event, so inventory does not import the
-catalog views. The cash state of the top bar still comes from apps/core/preview.py until T18 removes it.
+catalog views. The cash state of the top bar comes from apps.pos.context_processors.cash_session.
 """
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
@@ -14,7 +14,6 @@ from django.urls import NoReverseMatch, reverse
 from django.views.decorators.http import require_GET, require_http_methods
 
 from apps.catalog.models import Ingredient
-from apps.core import preview
 from apps.core.mixins import admin_pin_required, unlocked_admin
 from apps.inventory import services
 
@@ -29,8 +28,7 @@ def _url(name, *args):
 def _shell(request, search_placeholder=None, search_url="", search_target=""):
     """Top bar of the screen; the menu comes from apps.core.context_processors.shell."""
     return {"search_placeholder": search_placeholder, "hide_search": search_placeholder is None,
-            "search_url": search_url, "search_target": search_target,
-            "cash_session_open": preview.is_cash_open(request), "session_total": None}
+            "search_url": search_url, "search_target": search_target}
 
 
 # ------------------------------------------------------------------------------------------------ Inventario
