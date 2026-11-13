@@ -13,6 +13,9 @@ The order arrives with the pricing module's shape and keys (DEC-01), in integer 
 
 A sale is immutable once charged (rule 7): cancel_sale and adjust_sale add a SaleAdjustment that points to it,
 and the reason decides what is reverted (rule 11).
+
+What the sync could not apply waits in QuarantinedOperation until an Administrator resolves it in Django Admin
+with resolve_quarantine (rule 9, WBS 3.4.9); sales marked for review are closed with mark_sale_reviewed.
 """
 from decimal import Decimal
 
@@ -23,8 +26,10 @@ from apps.catalog.models import Dish
 from apps.inventory import services as inventory
 from apps.pos.models import (
     AdjustmentKind, AdjustmentReason, CashRegisterSession, ModifierKind, Modifier, Order, OrderItem,
-    OrderItemModifier, PaymentMethod, QuarantineReason, ReviewReason, Sale, SaleAdjustment, SessionStatus,
+    OrderItemModifier, OperationType, PaymentMethod, QuarantinedOperation, QuarantineReason, QuarantineResolution,
+    QuarantineStatus, ReviewReason, Sale, SaleAdjustment, SessionStatus,
 )
+from apps.pos import services_cash_session as cash
 from apps.pos.services_cash_session import require_open_session
 from apps.pos.services_pricing import calcular_total
 
@@ -99,6 +104,10 @@ class NotAdminError(SaleError):
 
 class AdjustmentError(SaleError):
     """A cancellation or adjustment that does not make sense for this sale."""
+
+
+class ResolutionError(SaleError):
+    """A quarantined operation that cannot be resolved that way; the message says what to do instead."""
 
 
 # ---------- Confirmar ----------
@@ -177,6 +186,15 @@ def _inventory_lines(lines, definitions):
     } for line in lines]
 
 
+def _with_current_prices(lines, dishes, definitions):
+    """The same lines with today's base prices and extras, in cents."""
+    return [{**line, "base": _decimal_to_cents(dishes[line["dish_id"]].price), "modifiers": [
+        {**m, "adjustment": _decimal_to_cents(
+            definitions[(line["dish_id"], m["ingredient_id"], m["kind"])].price_adjustment)}
+        for m in line["modifiers"]
+    ]} for line in lines]
+
+
 def _current_total(lines, dishes, definitions):
     """What the order costs with today's catalog, in cents (DEC-02 compares it with what was charged)."""
     return calcular_total({"lineas": [{
@@ -192,7 +210,7 @@ def _current_total(lines, dishes, definitions):
 
 @transaction.atomic
 def confirm_sale(user, pedido, payment_method, total_cobrado_centavos, *, uuid=None, session_uuid=None,
-                 device_timestamp=None, deduct_inventory=True):
+                 device_timestamp=None, deduct_inventory=True, current_prices=False):
     """
     Records a charged sale and deducts its inventory in the same transaction (rule 1). Returns the Sale.
 
@@ -201,6 +219,8 @@ def confirm_sale(user, pedido, payment_method, total_cobrado_centavos, *, uuid=N
     - Offline (sync), pass the operation's uuid, turno_uuid and marca_tiempo_dispositivo. A repeated uuid
       raises DuplicateSaleError with the sale already saved and changes nothing (rule 8).
     - deduct_inventory=False is the quarantine's "apply without deducting inventory" (rule 9).
+    - current_prices=True is the quarantine's "apply with the current catalog": the lines take today's prices, so
+      an order that did not match its own total can be recorded; what was charged is still what is recorded.
 
     Checks, in the contract's order: role, open session (before any pricing, rule 12), dishes and modifiers that
     exist, recipes, and that the charged total matches its own lines. What was charged is what is recorded
@@ -221,6 +241,9 @@ def confirm_sale(user, pedido, payment_method, total_cobrado_centavos, *, uuid=N
         raise InvalidOrderError("El total cobrado debe ser un entero de centavos.")
     expected, lines = _parse_order(pedido)
     dishes, definitions = _catalog(lines)
+    if current_prices:
+        lines = _with_current_prices(lines, dishes, definitions)
+        expected = total_cobrado_centavos
     inventory_lines = _inventory_lines(lines, definitions)
     if deduct_inventory:
         try:
@@ -370,3 +393,108 @@ def adjust_sale(admin, sale, reason, *, order_item=None, quantity=None, new_paym
     return SaleAdjustment.objects.create(sale=sale, kind=AdjustmentKind.ADJUSTMENT, reason=reason,
                                          order_item=item, quantity=quantity, amount=_unit_price(item) * quantity,
                                          note=note, authorized_by=admin)
+
+
+# ---------- Cuarentena y revisión ----------
+def _quarantine_session(session_uuid):
+    """
+    The session a quarantined sale goes to: the one the device recorded if it is still open, or the current open
+    session if the device's never reached the server (its opening was quarantined or discarded). A sale of a session
+    that was already closed is refused: its cash close was saved and cannot change.
+    """
+    session = CashRegisterSession.objects.filter(uuid=session_uuid).first() if session_uuid else None
+    if session is not None and session.status != SessionStatus.OPEN:
+        raise ResolutionError("El turno de esta venta ya se cerró y su corte no se puede cambiar; descártala.")
+    if session is None:
+        session = cash.current_session()
+        if session is None:
+            raise ResolutionError("No hay un turno abierto: abre la caja para aplicar esta venta.")
+    return session
+
+
+def _registered_by(operation, admin, allowed):
+    """Who the record is in the name of: who registered it on the device, or the Administrator that applies it."""
+    user = operation.user
+    return user if user is not None and user.is_active and allowed(user) else admin
+
+
+def _apply_sale(operation, admin, deduct_inventory):
+    payload = operation.payload
+    session = _quarantine_session(payload.get("turno_uuid"))
+    user = _registered_by(operation, admin, lambda u: u.is_admin or u.is_cashier)
+    try:
+        sale = confirm_sale(user, payload.get("pedido"), payload.get("metodo_pago"),
+                            payload.get("total_cobrado_centavos"), uuid=operation.uuid, session_uuid=session.uuid,
+                            device_timestamp=operation.device_timestamp, deduct_inventory=deduct_inventory,
+                            current_prices=True)
+    except DuplicateSaleError:
+        raise ResolutionError("Ya hay una venta con este UUID: descártala como duplicada.") from None
+    except MissingRecipeError as error:
+        raise ResolutionError(f"{error} Agrega la receta o aplícala sin descontar inventario.") from None
+    except UnknownItemError as error:
+        raise ResolutionError(f"{error} No se puede aplicar con el catálogo actual; descártala.") from None
+    except InvalidOrderError as error:
+        raise ResolutionError(f"El contenido de la venta no es válido ({error}); descártala.") from None
+    operation.sale = sale
+
+
+def _apply_opening(operation, admin):
+    payload = operation.payload
+    cents = payload.get("efectivo_inicial_centavos")
+    if type(cents) is not int or cents < 0:
+        raise ResolutionError("La apertura no trae un efectivo inicial válido; descártala.")
+    user = _registered_by(operation, admin, lambda u: u.is_admin)
+    try:
+        operation.cash_session = cash.open_session(user, _cents_to_decimal(cents), uuid=operation.uuid,
+                                                   device_timestamp=operation.device_timestamp)
+    except cash.DuplicateOperationError:
+        raise ResolutionError("Ya hay un turno con este UUID: descártala como duplicada.") from None
+    except (cash.SessionAlreadyOpenError, cash.DayAlreadyHasSessionError) as error:
+        raise ResolutionError(f"{error} Descártala si era la misma apertura.") from None
+
+
+@transaction.atomic
+def resolve_quarantine(admin, operation, resolution):
+    """
+    Resolves a quarantined operation with one of the three outcomes of rule 9 and returns it:
+
+    - apply: records it with the current catalog. A sale takes today's prices for its lines, keeps what was charged
+      (marked precio_distinto if they differ) and deducts inventory; an opening opens the session.
+    - apply_no_deduction: the same for a sale, without touching inventory (a dish without recipe, for instance).
+    - discard: records nothing; for a real duplicate or a sale that cannot be recovered.
+
+    Only an active Administrator resolves; the record keeps the device's UUID and time, and stays in the name of who
+    registered it if that account can still do it, or else in the Administrator's. Raises ResolutionError, and
+    changes nothing, when that outcome is not possible; the message says what to do instead.
+    """
+    if not (admin.is_active and admin.is_admin):
+        raise ResolutionError("Solo un Administrador puede resolver la cuarentena.")
+    operation = QuarantinedOperation.objects.select_for_update().get(pk=operation.pk)
+    if operation.status != QuarantineStatus.PENDING:
+        raise ResolutionError("Esta operación ya se resolvió.")
+    resolution = QuarantineResolution(resolution)
+    if resolution != QuarantineResolution.DISCARD:
+        if operation.operation_type == OperationType.SALE:
+            _apply_sale(operation, admin, deduct_inventory=resolution == QuarantineResolution.APPLY)
+        elif resolution == QuarantineResolution.APPLY:
+            _apply_opening(operation, admin)
+        else:
+            raise ResolutionError("Una apertura de turno no descuenta inventario: aplícala o descártala.")
+    operation.status = QuarantineStatus.RESOLVED
+    operation.resolution = resolution
+    operation.resolved_by = admin
+    operation.resolved_at = timezone.now()
+    operation.save(update_fields=["status", "resolution", "resolved_by", "resolved_at", "sale", "cash_session"])
+    return operation
+
+
+def mark_sale_reviewed(admin, sale):
+    """An Administrator checked a sale marked for review (rules 10 and 14); the sale itself does not change."""
+    if not (admin.is_active and admin.is_admin):
+        raise ResolutionError("Solo un Administrador puede revisar ventas.")
+    updated = Sale.objects.filter(pk=sale.pk, needs_review=True, reviewed_at__isnull=True).update(
+        reviewed_by=admin, reviewed_at=timezone.now())
+    if not updated:
+        raise ResolutionError("Esta venta no está pendiente de revisión.")
+    sale.refresh_from_db()
+    return sale

@@ -20,7 +20,8 @@ from apps.pos import services_cash_session as cash
 from apps.pos.services_pricing import calcular_total
 from apps.pos.models import (
     AdjustmentKind, AdjustmentReason, CashRegisterSession, Modifier, Order, OrderItem, QuarantinedOperation,
-    QuarantineReason, ReviewReason, Sale, SaleAdjustment, validate_review_reasons,
+    QuarantineReason, QuarantineResolution, QuarantineStatus, ReviewReason, Sale, SaleAdjustment,
+    validate_review_reasons,
 )
 
 
@@ -263,6 +264,217 @@ class QuarantinedOperationTests(PosModelsBase):
             {"usuario_sin_permiso", "turno_ya_abierto", "turno_invalido",
              "platillo_desconocido", "receta_faltante", "total_inconsistente"},
         )
+
+class QuarantineBase(TestCase):
+    def setUp(self):
+        users = get_user_model().objects
+        self.admin = users.create_user(username="dueno", password="x-9Lq!pr2", role="admin")
+        self.cashier = users.create_user(username="caja", password="x-9Lq!pr3", role="cashier")
+        category = Category.objects.create(name="Burritos")
+        self.burrito = Dish.objects.create(name="Burrito de asada", category=category, price=Decimal("85.00"))
+        self.beef = Ingredient.objects.create(name="Asada", unit=Units.G, stock=Decimal("1000"))
+        self.cheese = Ingredient.objects.create(name="Queso", unit=Units.G, stock=Decimal("500"))
+        Recipe.objects.create(dish=self.burrito, ingredient=self.beef, quantity=Decimal("150"))
+        Modifier.objects.create(dish=self.burrito, ingredient=self.cheese, kind="add",
+                                price_adjustment=Decimal("15.00"), quantity=Decimal("30"))
+        self.session = cash.open_session(self.admin, Decimal("500.00"))
+
+    def quarantine(self, reason=QuarantineReason.MISSING_RECIPE, base=8500, total=20000, user=None, turno=None,
+                   **extra):
+        payload = {"uuid": str(uuid4()), "tipo": "venta", "turno_uuid": str(turno or self.session.uuid),
+                   "metodo_pago": "efectivo", "total_cobrado_centavos": total, "pedido": {"lineas": [
+                       {"platillo_id": self.burrito.pk, "precio_base_centavos": base, "cantidad": 2,
+                        "modificadores": [{"tipo": "agregar", "insumo_id": self.cheese.pk, "ajuste_centavos": 1500}]}
+                   ]}, **extra}
+        operation = QuarantinedOperation.objects.create(
+            uuid=payload["uuid"], operation_type=payload["tipo"], payload=payload, reason=reason,
+            user=user or self.cashier, device_timestamp=timezone.now() - timedelta(hours=1))
+        operation.refresh_from_db()
+        return operation
+
+    def stock(self, ingredient):
+        ingredient.refresh_from_db()
+        return ingredient.stock
+
+
+
+class QuarantineResolutionTests(QuarantineBase):
+    """WBS 3.4.9 — resolver la cuarentena con sus tres salidas y revisar ventas marcadas (reglas 9, 10 y 14)."""
+
+    def resolve(self, operation, resolution, admin=None):
+        return sales.resolve_quarantine(admin or self.admin, operation, resolution)
+
+    def test_apply_records_the_sale_with_its_uuid_and_deducts_inventory(self):
+        operation = self.quarantine()
+        resolved = self.resolve(operation, QuarantineResolution.APPLY)
+        sale = resolved.sale
+        self.assertEqual((sale.uuid, sale.device_timestamp, sale.created_by, sale.cash_session),
+                         (operation.uuid, operation.device_timestamp, self.cashier, self.session))
+        self.assertEqual((sale.charged_total, sale.needs_review), (Decimal("200.00"), False))
+        self.assertEqual((resolved.status, resolved.resolution, resolved.resolved_by),
+                         (QuarantineStatus.RESOLVED, "apply", self.admin))
+        self.assertIsNotNone(resolved.resolved_at)
+        self.assertEqual(self.stock(self.beef), Decimal("700"))
+        self.assertEqual(self.stock(self.cheese), Decimal("440"))
+
+    def test_apply_uses_the_current_catalog_and_keeps_what_was_charged(self):
+        # The order did not match its own total (8000 x 2 + extras = 19000, charged 20000).
+        operation = self.quarantine(QuarantineReason.INCONSISTENT_TOTAL, base=8000)
+        sale = self.resolve(operation, QuarantineResolution.APPLY).sale
+        self.assertEqual(sale.order.items.get().unit_price, Decimal("85.00"))
+        self.assertEqual((sale.charged_total, sale.server_total, sale.needs_review),
+                         (Decimal("200.00"), Decimal("200.00"), False))
+
+        self.burrito.price = Decimal("90.00")
+        self.burrito.save()
+        sale = self.resolve(self.quarantine(QuarantineReason.INCONSISTENT_TOTAL, base=8000),
+                            QuarantineResolution.APPLY).sale
+        self.assertEqual((sale.charged_total, sale.server_total, sale.review_reasons),
+                         (Decimal("200.00"), Decimal("210.00"), ["precio_distinto"]))
+
+    def test_apply_without_deduction_skips_the_missing_recipe(self):
+        Recipe.objects.all().delete()
+        operation = self.quarantine()
+        with self.assertRaisesMessage(sales.ResolutionError, "sin descontar inventario"):
+            self.resolve(operation, QuarantineResolution.APPLY)
+        sale = self.resolve(operation, QuarantineResolution.APPLY_NO_DEDUCTION).sale
+        self.assertEqual(sale.charged_total, Decimal("200.00"))
+        self.assertEqual((self.stock(self.beef), self.stock(self.cheese)), (Decimal("1000"), Decimal("500")))
+        self.assertFalse(StockMovement.objects.exists())
+
+    def test_discard_records_nothing(self):
+        operation = self.resolve(self.quarantine(QuarantineReason.UNKNOWN_DISH), QuarantineResolution.DISCARD)
+        self.assertEqual((operation.status, operation.resolution, operation.sale), ("resolved", "discard", None))
+        self.assertFalse(Sale.objects.exists())
+
+    def test_a_failed_resolution_changes_nothing(self):
+        operation = self.quarantine(QuarantineReason.UNKNOWN_DISH)
+        operation.payload["pedido"]["lineas"][0]["platillo_id"] = 999
+        operation.save()
+        with self.assertRaisesMessage(sales.ResolutionError, "descártala"):
+            self.resolve(operation, QuarantineResolution.APPLY)
+        operation.refresh_from_db()
+        self.assertEqual((operation.status, operation.resolution), (QuarantineStatus.PENDING, ""))
+        self.assertFalse(Sale.objects.exists())
+        self.assertEqual(self.stock(self.beef), Decimal("1000"))
+
+    def test_only_an_active_admin_resolves_and_only_once(self):
+        operation = self.quarantine()
+        with self.assertRaisesMessage(sales.ResolutionError, "Solo un Administrador"):
+            self.resolve(operation, QuarantineResolution.DISCARD, admin=self.cashier)
+        self.resolve(operation, QuarantineResolution.DISCARD)
+        with self.assertRaisesMessage(sales.ResolutionError, "ya se resolvió"):
+            self.resolve(operation, QuarantineResolution.APPLY)
+
+    def test_a_user_without_permission_leaves_the_sale_in_the_admins_name(self):
+        self.cashier.is_active = False
+        self.cashier.save()
+        sale = self.resolve(self.quarantine(QuarantineReason.USER_WITHOUT_PERMISSION),
+                            QuarantineResolution.APPLY).sale
+        self.assertEqual(sale.created_by, self.admin)
+
+    def test_a_sale_of_an_unknown_session_goes_to_the_open_one(self):
+        sale = self.resolve(self.quarantine(QuarantineReason.INVALID_SESSION, turno=uuid4()),
+                            QuarantineResolution.APPLY).sale
+        self.assertEqual(sale.cash_session, self.session)
+
+    def test_a_sale_of_a_closed_session_or_without_an_open_one_is_refused(self):
+        operation = self.quarantine(QuarantineReason.INVALID_SESSION)
+        unknown = self.quarantine(QuarantineReason.INVALID_SESSION, turno=uuid4())
+        cash.close_session(self.admin, Decimal("500.00"))
+        with self.assertRaisesMessage(sales.ResolutionError, "ya se cerró"):
+            self.resolve(operation, QuarantineResolution.APPLY)
+        with self.assertRaisesMessage(sales.ResolutionError, "abre la caja"):
+            self.resolve(unknown, QuarantineResolution.APPLY)
+
+    def test_a_quarantined_opening_is_applied_with_its_uuid(self):
+        cash.close_session(self.admin, Decimal("500.00"))
+        when = timezone.now() + timedelta(days=1)
+        operation = QuarantinedOperation.objects.create(
+            uuid=uuid4(), operation_type="apertura_turno", reason=QuarantineReason.USER_WITHOUT_PERMISSION,
+            payload={"tipo": "apertura_turno", "efectivo_inicial_centavos": 30000}, user=self.cashier,
+            device_timestamp=when)
+        with self.assertRaisesMessage(sales.ResolutionError, "no descuenta inventario"):
+            self.resolve(operation, QuarantineResolution.APPLY_NO_DEDUCTION)
+        session = self.resolve(operation, QuarantineResolution.APPLY).cash_session
+        self.assertEqual((session.uuid, session.opened_by, session.opening_amount),
+                         (operation.uuid, self.admin, Decimal("300.00")))
+
+    def test_a_repeated_opening_must_be_discarded(self):
+        operation = QuarantinedOperation.objects.create(
+            uuid=uuid4(), operation_type="apertura_turno", reason=QuarantineReason.SESSION_ALREADY_OPEN,
+            payload={"tipo": "apertura_turno", "efectivo_inicial_centavos": 50000}, user=self.admin,
+            device_timestamp=timezone.now())
+        with self.assertRaisesMessage(sales.ResolutionError, "Descártala"):
+            self.resolve(operation, QuarantineResolution.APPLY)
+
+    def test_mark_sale_reviewed(self):
+        self.burrito.price = Decimal("90.00")
+        self.burrito.save()
+        sale = sales.confirm_sale(self.cashier, self.quarantine().payload["pedido"], "efectivo", 20000)
+        self.assertTrue(sale.needs_review)
+        with self.assertRaisesMessage(sales.ResolutionError, "Solo un Administrador"):
+            sales.mark_sale_reviewed(self.cashier, sale)
+        sale = sales.mark_sale_reviewed(self.admin, sale)
+        self.assertEqual((sale.reviewed_by, sale.needs_review, sale.charged_total),
+                         (self.admin, True, Decimal("200.00")))
+        with self.assertRaisesMessage(sales.ResolutionError, "no está pendiente"):
+            sales.mark_sale_reviewed(self.admin, sale)
+
+
+class SalesAdminTests(QuarantineBase):
+    """WBS 3.4.9 — la bandeja en Django Admin: acciones de la cuarentena y de las ventas por revisar."""
+
+    def setUp(self):
+        super().setUp()
+        self.admin.is_staff = self.admin.is_superuser = True
+        self.admin.save()
+        self.client.force_login(self.admin)
+
+    def url(self, name, *args):
+        from django.urls import reverse  # local: the module's imports are shared with the sync tests
+        return reverse(f"admin:pos_{name}", args=args)
+
+    def act(self, model, action, *objects):
+        return self.client.post(self.url(f"{model}_changelist"), {
+            "action": action, "_selected_action": [obj.pk for obj in objects]}, follow=True)
+
+    def test_quarantine_actions(self):
+        applied, discarded = self.quarantine(), self.quarantine()
+        response = self.act("quarantinedoperation", "resolve_apply", applied)
+        self.assertContains(response, "1 operación(es) resuelta(s)")
+        self.act("quarantinedoperation", "resolve_discard", discarded)
+        applied.refresh_from_db()
+        discarded.refresh_from_db()
+        self.assertEqual((applied.resolution, discarded.resolution), ("apply", "discard"))
+        self.assertEqual(Sale.objects.get().uuid, applied.uuid)
+
+    def test_quarantine_action_reports_what_failed(self):
+        Recipe.objects.all().delete()
+        operation = self.quarantine()
+        response = self.act("quarantinedoperation", "resolve_apply", operation)
+        self.assertContains(response, "Agrega la receta")
+        self.act("quarantinedoperation", "resolve_apply_no_deduction", operation)
+        operation.refresh_from_db()
+        self.assertEqual(operation.resolution, "apply_no_deduction")
+
+    def test_admin_is_read_only_and_shows_the_original_content(self):
+        operation = self.quarantine()
+        page = self.client.get(self.url("quarantinedoperation_change", operation.pk))
+        self.assertContains(page, "total_cobrado_centavos")
+        self.assertNotContains(page, 'name="_save"')
+        self.assertEqual(self.client.get(self.url("quarantinedoperation_add")).status_code, 403)
+
+    def test_sales_pending_review_and_mark_reviewed(self):
+        self.burrito.price = Decimal("90.00")
+        self.burrito.save()
+        marked = sales.confirm_sale(self.cashier, self.quarantine().payload["pedido"], "efectivo", 20000)
+        url = self.url("sale_changelist")
+        self.assertContains(self.client.get(url, {"revision": "pendiente"}), "precio_distinto")
+        response = self.act("sale", "mark_reviewed", marked)
+        self.assertContains(response, "1 venta(s) marcada(s) como revisada(s).")
+        self.assertNotContains(self.client.get(url, {"revision": "pendiente"}), "precio_distinto")
+
 
 class PricingParityTest(TestCase):
     """WBS 3.3.4 y 3.4.5 — calcular_total() contra los casos compartidos con pricing.js (autor: Jesús)."""
