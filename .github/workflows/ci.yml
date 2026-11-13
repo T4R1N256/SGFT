@@ -75,3 +75,16 @@ jobs:
 
       - name: 5. Paridad de precios entre Python y JavaScript
         run: node --test "tests_e2e/parity/*.mjs"
+
+      # Flujos críticos en un Chromium real contra el servidor de pruebas (WBS 3.4.8, 4.6): venta con y sin red,
+      # apertura con PIN (en línea y con el verificador sin red) y cierre de caja, que se niega con pendientes.
+      # Playwright solo se instala aquí: no es dependencia de la aplicación.
+      - name: Instalar Playwright y Chromium
+        run: |
+          pip install playwright==1.63.0
+          python -m playwright install --with-deps chromium
+
+      - name: 6. Pruebas E2E con Playwright
+        env:
+          SGFT_E2E: "1"
+        run: python manage.py test tests_e2e
