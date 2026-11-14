@@ -7,7 +7,8 @@ Parámetros:
   active         key del módulo actual
   sync_pending   operaciones sin sincronizar (entero); en Nueva venta static/pos/offline.js lo cambia con la
                  cola del dispositivo ([data-sgft-pendientes])
-  sync_url       destino de «Sincronizar» (opcional); «#sincronizar» lo atiende static/pos/offline.js
+  sync_url       destino de «Sincronizar» (opcional); por omisión «#sincronizar», que static/pos/offline.js atiende en
+                 toda página con sesión: manda la cola del dispositivo, también desde Caja antes del cierre
   admin_mode_url destino de «Activar modo admin» (opcional; si no viene, no se muestra)
   user_name, user_detail, user_initials, logout_url   datos del pie (opcionales)
 El estado «En línea / Sin conexión» es visual y lo lleva Alpine. Incluir siempre con «only».
@@ -39,7 +40,7 @@ El estado «En línea / Sin conexión» es visual y lo lleva Alpine. Incluir sie
 <div class="relative py-[14px]"><div class="h-px bg-sidebar-texto opacity-20"></div></div>
 
 <div class="relative">
-  {% include "components/nav_item.html" with text="Sincronizar" icon="refresh-cw" url=sync_url|default:"#" only %}
+  {% include "components/nav_item.html" with text="Sincronizar" icon="refresh-cw" url=sync_url|default:"#sincronizar" only %}
   <p class="flex items-center gap-xs pl-[56px] sgft-texto-etiqueta-chip text-sidebar-icono"
      x-data="{ online: navigator.onLine }" @online.window="online = true" @offline.window="online = false">
     <span class="size-[8px] rounded-full" :class="online ? 'bg-indicador-en-linea' : 'bg-estado-alerta'" aria-hidden="true"></span>

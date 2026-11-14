@@ -516,6 +516,16 @@ class OfflineScreensTests(ViewTestCase):
         self.assertNotIn('x-data="pantallaSinRed"', html)
         self.assertIn('x-data="ventaSinRed"', html)
 
+    def test_sync_link_works_on_every_screen(self):
+        # offline.js sends the queue on «#sincronizar»; a plain «#» did nothing outside Nueva venta, so a failed
+        # sync could only be retried by reloading, and Caja would refuse the close (rule 5).
+        self.unlock()
+        for name in ("catalog:dish_catalog", "inventory:ingredient_list", "reports:cash", "reports:reports"):
+            html = self.client.get(reverse(name)).content.decode()
+            self.assertIn('href="#sincronizar"', html, name)
+            self.assertNotIn('href="#"', html, name)
+        self.assertIn('href="#sincronizar"', self.client.get(BUILDER).content.decode())
+
     def test_locked_menu_items_say_where_their_copy_is(self):
         html = self.client.get(BUILDER).content.decode()
         for name in ("catalog:dish_catalog", "inventory:ingredient_list", "reports:cash", "reports:reports"):
