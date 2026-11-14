@@ -496,7 +496,10 @@ class OfflineScreensTests(ViewTestCase):
         body = self.client.get("/pos/sw.js").content.decode()
         self.assertIn('const MODULOS = ["/pos/", "/catalog/", "/inventory/", "/reports/"];', body)
         self.assertIn('name="sgft-copia"', body)
-        self.assertIn('"guardar-pantallas"', body)
+        # No background refresh of pages: each request re-saves the session and would undo a ticket change made
+        # meanwhile (Transferencia came back as efectivo in the CI).
+        self.assertNotIn("guardar-pantallas", body)
+        self.assertNotIn("guardar-pantallas", self.client.get("/static/pos/offline.js").content.decode())
         self.assertIn("setCatchHandler", body)
 
     def test_padlock_screens_are_marked_and_carry_the_notice(self):

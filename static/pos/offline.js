@@ -8,8 +8,9 @@
 // The other screens (Productos, Inventario, Caja, Reportes) are read-only without network: the service worker serves
 // the copy of their last load marked with <meta name="sgft-copia">, and the Alpine component pantallaSinRed shows
 // «Sin conexión · N pendientes · Última sincronización» and, in the padlock modules, asks for the Administrator's
-// PIN checked on the device (DEC-28), which unlocks them for 30 minutes (DEC-32). With network, every page asks the
-// service worker to refresh the copies of the screens the menu can open.
+// PIN checked on the device (DEC-28), which unlocks them for 30 minutes (DEC-32). A screen's copy is the one of its
+// last visit with network. Nothing fetches pages in the background: every request re-saves the session
+// (SESSION_SAVE_EVERY_REQUEST), so a background request would overwrite a ticket change made at the same time.
 //
 // Without network (the «offline» event or an HTMX request that cannot reach the server; navigator.onLine alone is
 // not trusted, spike finding 4) the Alpine component ventaSinRed takes over in Nueva venta: the catalog of the last load, the
@@ -23,7 +24,6 @@
   const SYNC_URL = "/pos/sync/";
   let pendientes = 0;
   const DESBLOQUEO_MS = 30 * 60 * 1000;
-  const REFRESCO_MS = 5 * 60 * 1000;
 
   function avisar(nombre, detalle) {
     document.dispatchEvent(new CustomEvent(nombre, { detail: detalle }));
@@ -65,20 +65,6 @@
     return meta ? meta.content : null;
   }
 
-  // With network: refresh the copies of the screens the menu links to (the padlock ones only while unlocked, since
-  // locked they are buttons), at most every 5 minutes unless the set of screens changed.
-  async function refrescarPantallas() {
-    const trabajador = navigator.serviceWorker && navigator.serviceWorker.controller;
-    if (copiaSinRed() || !navigator.onLine || !trabajador) return;
-    const urls = [...document.querySelectorAll("a.sgft-nav-item[href^='/']")].map((a) => a.getAttribute("href"));
-    if (!urls.length) return;
-    const clave = urls.join(" ");
-    const ultima = await almacen.leer("pantallas_guardadas");
-    if (ultima && ultima.clave === clave && Date.now() - ultima.hora < REFRESCO_MS) return;
-    await almacen.guardar("pantallas_guardadas", { clave, hora: Date.now() });
-    trabajador.postMessage({ tipo: "guardar-pantallas", urls });
-  }
-
   function leerDatos() {
     const nodo = document.getElementById("datos-sin-red");
     return nodo ? JSON.parse(nodo.textContent) : null;
@@ -96,7 +82,6 @@
     if (navigator.onLine && !copiaSinRed()) {
       const resultado = await sincronizar();
       if (resultado.ok && resultado.resultados.length) window.location.reload();
-      else refrescarPantallas();
     }
   }
 

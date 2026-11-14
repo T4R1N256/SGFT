@@ -90,29 +90,6 @@ workbox.routing.setCatchHandler(async ({ request }) => {
   return new Response(html, { status: 503, headers: { "Content-Type": "text/html; charset=utf-8" } });
 });
 
-// With network, offline.js asks to refresh the copies of the other screens, so they are current when the network
-// goes away. Each one is fetched with the session of the app, like a visit; locked modules answer 403 and keep
-// their previous copy.
-self.addEventListener("message", (event) => {
-  if (!event.data || event.data.tipo !== "guardar-pantallas") return;
-  const urls = (event.data.urls || []).filter((url) => esPantalla(new URL(url, self.location.origin)));
-  event.waitUntil(caches.open(PAGINAS).then((cache) => Promise.all(urls.map(async (url) => {
-    const respuesta = await guardable(await fetch(url, { credentials: "same-origin" }).catch(() => null));
-    if (respuesta) await cache.put(new URL(url, self.location.origin).href, respuesta);
-  }))));
-});
-
-// Own static files and the CDN libraries: from the cache at once, refreshed in the background. The CDN answers
-// no-cors requests with opaque responses (status 0), so those are cached too.
-workbox.routing.registerRoute(
-  ({ request, url }) => request.method === "GET" &&
-    ((url.origin === self.location.origin && url.pathname.startsWith("/static/")) || CDN.includes(url.origin)),
-  new workbox.strategies.StaleWhileRevalidate({
-    cacheName: RECURSOS,
-    plugins: [new workbox.cacheableResponse.CacheableResponsePlugin({ statuses: [0, 200] })],
-  }),
-);
-
 // Warm both caches on install, so the first offline load works without visiting every URL. cache.add() rejects
 // opaque responses (spike, finding 2), so every file goes through fetch + put. A file that fails does not stop
 // the install: the strategies above fill it in on the next visit with network.

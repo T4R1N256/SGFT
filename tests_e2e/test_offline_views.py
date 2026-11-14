@@ -15,12 +15,13 @@ class OfflineScreensTests(E2ETestCase):
         sales.confirm_sale(self.cashier, pedido, "efectivo", 7500)
 
     def saved(self, path):
-        """Waits until the service worker keeps a copy of the screen (the page asks for it with the padlock open)."""
+        """Waits until the service worker keeps the copy of a screen visited with network."""
         script = ("(path) => caches.keys().then((names) => Promise.all(names.filter((n) => n.startsWith('sgft-paginas-'))"
                   ".map((n) => caches.open(n).then((cache) => cache.match(path))))).then((found) => found.some(Boolean))")
         self.wait_for(lambda: self.page.evaluate(script, path), f"No se guardó la copia de {path}.")
 
     def open_caja_with_network(self):
+        """Before the day: unlock Caja and visit the padlock screens once with network, so the device keeps them."""
         page = self.page
         self.activate_device()
         self.wait_for_service_worker()
@@ -28,7 +29,10 @@ class OfflineScreensTests(E2ETestCase):
         self.unlock()
         page.wait_for_url("**/reports/cash/")
         page.locator("#cash-title").wait_for()
-        for path in ("/reports/cash/", "/reports/", "/inventory/", "/catalog/"):
+        for path, title in (("/reports/", "#reports-title"), ("/inventory/", "#inventory-title"),
+                            ("/catalog/", "h1"), ("/reports/cash/", "#cash-title")):
+            page.goto(self.url(path))
+            page.locator(title).first.wait_for()
             self.saved(path)
 
     def test_padlock_screens_open_without_network_after_the_pin(self):
