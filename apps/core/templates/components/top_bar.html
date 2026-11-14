@@ -11,8 +11,9 @@ Parámetros:
   stock_notice        {detail, url} o None: en el teléfono en horizontal, «Alerta stock» va aquí, junto a la búsqueda
   show_notifications  True: muestra la campana (por omisión oculta: sin función en el alcance actual)
   has_notifications   True: punto en la campana
-En el iPhone el buscador pasa a su propia fila y se ocultan la marca, la campana y el perfil (propuesta: Figma
-solo tiene 1600 de ancho). Incluir siempre con «only».
+En el iPhone el buscador pasa a su propia fila y se ocultan la marca y la campana (propuesta: Figma
+solo tiene 1600 de ancho). Sin el avatar de perfil de Figma: no tenía acción, y el usuario ya sale al pie del
+menú. Incluir siempre con «only».
 {% endcomment %}
 <div class="flex w-full flex-wrap items-center justify-between gap-x-md gap-y-sm xl:flex-nowrap">
   <div class="flex items-center gap-md">
@@ -45,6 +46,5 @@ solo tiene 1600 de ancho). Incluir siempre con «only».
       {% include "components/icons/bell.html" with size=32 only %}
       {% if has_notifications %}<span class="absolute right-0 top-0 size-[11px] rounded-full border-2 border-superficie-fondo bg-marca-primario"></span>{% endif %}
     </span>{% endif %}
-    <span class="hidden size-[54px] place-items-center rounded-full bg-perfil-fondo text-texto-primario xl:grid" aria-hidden="true">{% include "components/icons/user.html" with size=24 only %}</span>
   </div>
 </div>
