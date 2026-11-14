@@ -15,7 +15,7 @@ from apps.accounts.admin import UserAdmin
 from apps.accounts.models import DEFAULT_PIN_VERIFIER_ITERATIONS, Role
 from apps.accounts.services import (
     MAX_PIN_ATTEMPTS, InvalidPinError, NoCashierAvailableError, PinLockedError, activate_device, change_role,
-    create_user, deactivate_user, pin_minutes_locked, verify_admin_pin,
+    create_user, deactivate_user, guard_admin_login, pin_minutes_locked, verify_admin_pin,
 )
 
 class UserModelTests(TestCase):
@@ -310,35 +310,57 @@ class DeactivateUserTests(TestCase):
         self.assertFalse(deactivate_user(self.admin).is_active)
 
 
+
+
 @override_settings(PASSWORD_HASHERS=FAST_HASHERS, SGFT_PIN_VERIFIER_ITERATIONS=1000)
-class UserAdminTests(TestCase):
-    """WBS 3.1.5 — Django Admin de cuentas (autor: Diego)."""
+class AdminLoginLimitTests(TestCase):
+    """WBS 4.4 — /admin/login/ comparte el límite de intentos del PIN (checklist-seguridad.md, control 4)."""
 
     def setUp(self):
-        self.admin = get_user_model().objects.create_superuser("root", password="730261")
-        self.client.force_login(self.admin)
-        self.cashier = create_user("caja", "730264")
+        cache.clear()
+        self.admin = create_user("dueno", "482915", role=Role.ADMIN)
+        self.url = reverse("admin:login")
 
-    def test_accounts_cannot_be_deleted(self):
-        response = self.client.get(reverse("admin:accounts_user_delete", args=[self.cashier.pk]))
-        self.assertEqual(response.status_code, 403)
-        changelist = self.client.get(reverse("admin:accounts_user_changelist"))
-        self.assertNotContains(changelist, "delete_selected")
+    def log_in(self, password, username="dueno"):
+        return self.client.post(self.url, {"username": username, "password": password, "next": "/admin/"})
 
-    def test_deactivate_action(self):
-        self.client.post(reverse("admin:accounts_user_changelist"),
-                         {"action": "deactivate", "_selected_action": [self.cashier.pk]})
-        self.cashier.refresh_from_db()
-        self.assertFalse(self.cashier.is_active)
+    def test_right_password_enters(self):
+        self.assertRedirects(self.log_in("482915"), "/admin/", fetch_redirect_response=False)
 
-    def test_verifier_is_not_shown(self):
-        response = self.client.get(reverse("admin:accounts_user_change", args=[self.cashier.pk]))
+    def test_five_failures_lock_even_the_right_password(self):
+        for _ in range(MAX_PIN_ATTEMPTS - 1):
+            self.assertNotContains(self.log_in("000001"), "Demasiados intentos")
+        self.assertContains(self.log_in("000001"), "Demasiados intentos. Intenta de nuevo en 15 min.")
+        response = self.log_in("482915")
         self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, "pin_verifier")
+        self.assertContains(response, "Demasiados intentos")
+        self.assertNotIn("_auth_user_id", self.client.session)
 
-    def test_saving_a_cashier_as_admin_gives_admin_access(self):
-        user = get_user_model().objects.get(pk=self.cashier.pk)
-        user.role = Role.ADMIN
-        UserAdmin(get_user_model(), site).save_model(None, user, None, True)
-        user.refresh_from_db()
-        self.assertTrue(user.is_staff)
+    def test_the_lock_is_shared_with_the_pin(self):
+        for _ in range(MAX_PIN_ATTEMPTS):
+            with self.assertRaises(InvalidPinError):
+                verify_admin_pin("000001")
+        self.assertContains(self.log_in("482915"), "Demasiados intentos")
+        cache.clear()
+        for _ in range(MAX_PIN_ATTEMPTS):
+            self.log_in("000001", username="nadie")
+        with self.assertRaises(PinLockedError):
+            verify_admin_pin("482915")
+
+    def test_success_resets_the_counter(self):
+        for _ in range(MAX_PIN_ATTEMPTS - 1):
+            self.log_in("000001")
+        self.log_in("482915")
+        self.client.logout()
+        self.assertNotContains(self.log_in("000001"), "Demasiados intentos")
+
+    def test_incomplete_form_neither_counts_nor_resets(self):
+        for _ in range(MAX_PIN_ATTEMPTS - 1):
+            self.log_in("000001")
+        for _ in range(3):
+            self.log_in("")
+        self.assertContains(self.log_in("000001"), "Demasiados intentos")
+
+    def test_guard_without_user_leaves_the_counter_alone(self):
+        self.assertIsNone(guard_admin_login(lambda: None))
+        self.assertEqual(pin_minutes_locked(), 0)
