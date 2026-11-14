@@ -364,3 +364,43 @@ class AdminLoginLimitTests(TestCase):
     def test_guard_without_user_leaves_the_counter_alone(self):
         self.assertIsNone(guard_admin_login(lambda: None))
         self.assertEqual(pin_minutes_locked(), 0)
+
+
+
+@override_settings(PASSWORD_HASHERS=FAST_HASHERS, SGFT_PIN_VERIFIER_ITERATIONS=1000)
+class AccountEdgeCaseTests(TestCase):
+    """WBS 3.1.4 — casos límite de cuentas que el resto de las pruebas no recorre (autor: Diego)."""
+
+    def test_superuser_cannot_drop_staff_or_superuser(self):
+        users = get_user_model().objects
+        with self.assertRaisesMessage(ValueError, "is_staff=True"):
+            users.create_superuser("root", password="730261", is_staff=False)
+        with self.assertRaisesMessage(ValueError, "is_superuser=True"):
+            users.create_superuser("root", password="730261", is_superuser=False)
+        self.assertFalse(users.exists())
+
+    def test_password_help_text_is_in_spanish(self):
+        from apps.accounts.validators import SixDigitPasswordValidator
+        self.assertEqual(SixDigitPasswordValidator().get_help_text(), "La contraseña son 6 dígitos.")
+
+    def test_deactivate_action_keeps_the_last_admin_and_says_why(self):
+        admin = get_user_model().objects.create_superuser("dueno", password="482915")
+        cashier = create_user("caja", "730264")
+        self.client.force_login(admin)
+        response = self.client.post(reverse("admin:accounts_user_changelist"),
+                                    {"action": "deactivate", "_selected_action": [admin.pk, cashier.pk]}, follow=True)
+        admin.refresh_from_db()
+        cashier.refresh_from_db()
+        self.assertTrue(admin.is_active)
+        self.assertFalse(cashier.is_active)
+        texts = [str(message) for message in response.context["messages"]]
+        self.assertIn("dueno (Administrador): Debe quedar al menos un administrador activo.", texts)
+        self.assertIn("Cuentas desactivadas: 1.", texts)
+
+    def test_deactivate_action_with_only_the_last_admin_reports_no_success(self):
+        admin = get_user_model().objects.create_superuser("dueno", password="482915")
+        self.client.force_login(admin)
+        response = self.client.post(reverse("admin:accounts_user_changelist"),
+                                    {"action": "deactivate", "_selected_action": [admin.pk]}, follow=True)
+        texts = [str(message) for message in response.context["messages"]]
+        self.assertEqual(texts, ["dueno (Administrador): Debe quedar al menos un administrador activo."])

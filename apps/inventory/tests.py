@@ -223,3 +223,15 @@ class PurchaseWasteAndAlertTests(TestCase):
         cheese = Ingredient.objects.create(name="Queso", unit=Units.KG, stock=Decimal("1"), min_stock=Decimal("1"))
         Ingredient.objects.create(name="Sal", unit=Units.KG, stock=Decimal("5"), min_stock=Decimal("1"))
         self.assertEqual(list(check_min_stock()), [tortilla, cheese])
+
+
+
+class StockMovementTextTests(TestCase):
+    """WBS 3.2.9 — cómo se nombra un movimiento en Django Admin (autor: Diego)."""
+
+    def test_name(self):
+        user = get_user_model().objects.create_user(username="dueno", password="x-9Lq!pr2", role="admin")
+        ingredient = Ingredient.objects.create(name="Tortilla de harina", unit=Units.PIECE)
+        movement = register_purchase(ingredient, Decimal("40"), Decimal("2.50"), user)
+        movement.refresh_from_db()
+        self.assertEqual(str(movement), f"Compra 40.000 de {ingredient.pk}")
