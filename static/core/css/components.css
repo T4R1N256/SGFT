@@ -36,7 +36,7 @@
   .sgft-icon-btn--compacto { width: 40px; height: 40px; border-radius: var(--sgft-radio-chip); }
   .sgft-icon-btn--neutro   { background: var(--sgft-color-superficie-tarjeta); border: 1px solid var(--sgft-color-borde-sutil); color: var(--sgft-color-texto-primario); }
   .sgft-icon-btn--oscuro   { background: var(--sgft-color-boton-oscuro-fondo); color: var(--sgft-color-sidebar-texto); }
-  .sgft-icon-btn--primario { background: var(--sgft-gradiente-accion); color: var(--sgft-color-texto-inverso); box-shadow: var(--sgft-sombra-boton-primario); }
+  .sgft-icon-btn--primario { background: var(--sgft-color-marca-primario); color: var(--sgft-color-texto-inverso); box-shadow: var(--sgft-sombra-boton-primario); }
   .sgft-icon-btn--peligro  { background: var(--sgft-color-estado-peligro-solido); color: var(--sgft-color-texto-inverso); }
 
   /* Tarjeta de pantalla */
@@ -57,7 +57,7 @@
   .sgft-btn--compacto { height: 40px; padding: 0 10px; gap: 6px; }
   .sgft-btn--full     { width: 100%; padding-inline: 12px; }
   .sgft-btn:disabled, .sgft-btn[aria-disabled="true"] { opacity: .5; cursor: not-allowed; }
-  .sgft-btn--primario   { background: var(--sgft-gradiente-accion); color: var(--sgft-color-texto-inverso); box-shadow: var(--sgft-sombra-boton-primario); }
+  .sgft-btn--primario   { background: var(--sgft-color-marca-primario); color: var(--sgft-color-texto-inverso); box-shadow: var(--sgft-sombra-boton-primario); }
   .sgft-btn--secundario { background: var(--sgft-color-marca-durazno-100); color: var(--sgft-color-marca-primario-oscuro); }
   .sgft-btn--contorno   { background: var(--sgft-color-superficie-tarjeta); color: var(--sgft-color-texto-primario); border: 1px solid var(--sgft-color-borde-sutil); }
   .sgft-btn--oscuro     { background: var(--sgft-color-boton-oscuro-fondo); color: var(--sgft-color-sidebar-texto); border: 1px solid var(--sgft-boton-oscuro-borde); }
@@ -81,7 +81,7 @@
   /* Chip de categoría; el activo lo marca aria-pressed, que decide el servidor */
   .sgft-chip { height: 40px; padding: 0 18px; border-radius: var(--sgft-radio-chip); font-size: 14px; font-weight: 500;
     background: var(--sgft-color-superficie-tarjeta); border: 1px solid var(--sgft-color-borde-sutil); color: var(--sgft-color-texto-secundario); }
-  .sgft-chip[aria-pressed="true"] { background: var(--sgft-gradiente-accion); color: var(--sgft-color-texto-inverso);
+  .sgft-chip[aria-pressed="true"] { background: var(--sgft-color-marca-primario); color: var(--sgft-color-texto-inverso);
     border-color: transparent; box-shadow: var(--sgft-sombra-boton-primario); }
 
   /* Foco visible (efecto Foco/Anillo de Figma); se suma a la sombra propia del control */
@@ -96,7 +96,7 @@
   .sgft-nav-item { height: 52px; display: flex; align-items: center; gap: 16px; padding: 0 16px 0 18px;
     border-radius: var(--sgft-radio-md); color: var(--sgft-color-sidebar-texto); text-decoration: none; font-size: 16px; line-height: 1.4; }
   .sgft-nav-item__icon { color: var(--sgft-color-sidebar-icono); flex: none; }
-  .sgft-nav-item[aria-current="page"] { background: var(--sgft-gradiente-accion-nav); color: var(--sgft-color-texto-inverso);
+  .sgft-nav-item[aria-current="page"] { background: var(--sgft-color-marca-primario); color: var(--sgft-color-texto-inverso);
     font-weight: 500; box-shadow: var(--sgft-sombra-boton-primario); }
   .sgft-nav-item[aria-current="page"] .sgft-nav-item__icon { color: var(--sgft-color-texto-inverso); }
   .sgft-nav-item:focus-visible { outline: none; box-shadow: var(--sgft-foco-anillo); }
@@ -111,7 +111,7 @@
     border: 2px solid var(--sgft-color-marca-primario); box-shadow: none; }
   .sgft-dish-card:focus-visible { outline: none; box-shadow: var(--sgft-foco-anillo); }
   .sgft-dish-card__qty { position: absolute; top: 10px; right: 14px; width: 36px; height: 36px; border-radius: 18px;
-    display: grid; place-items: center; background: var(--sgft-gradiente-accion); color: var(--sgft-color-texto-inverso);
+    display: grid; place-items: center; background: var(--sgft-color-marca-primario); color: var(--sgft-color-texto-inverso);
     font-weight: 600; font-size: 16px; box-shadow: var(--sgft-sombra-boton-primario); }
 
   /* Miniatura con emoji (tarjetas, línea de ticket, menú de cantidad) */
@@ -169,9 +169,9 @@
    (flex-wrap, tamaños fijos) solo en el teléfono, sin usar !important. En escritorio no aplica nada de esto.
    ============================================================================================================= */
 
-/* Botón de menú con el naranja del logotipo en todo momento (escritorio y teléfono); fuera de @layer para ganarle a
+/* Botón de menú con el naranja de marca en todo momento (escritorio y teléfono); fuera de @layer para ganarle a
    la variante neutra del botón de ícono */
-.sgft-app__menu-btn { border: 0; background: var(--sgft-gradiente-logotipo); color: var(--sgft-color-texto-inverso);
+.sgft-app__menu-btn { border: 0; background: var(--sgft-color-marca-primario); color: var(--sgft-color-texto-inverso);
   box-shadow: var(--sgft-sombra-boton-primario); }
 .sgft-app__menu-btn:hover { filter: brightness(1.05); }
 
