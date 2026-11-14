@@ -932,3 +932,160 @@ class SyncOperationsTests(TestCase):
         response = client.post(self.url, json.dumps({"version_contrato": 1, "operaciones": []}),
                                content_type="application/json")
         self.assertEqual(response.status_code, 403)
+
+
+class SyncEdgeCaseTests(TestCase):
+    """WBS 3.3.6 — /pos/sync/: validación de cada operación y carreras de UUID (autor: Jared)."""
+
+    setUp = SyncOperationsTests.setUp
+    opening = SyncOperationsTests.opening
+    sale = SyncOperationsTests.sale
+    send = SyncOperationsTests.send
+    states = SyncOperationsTests.states
+
+    def test_a_malformed_operation_rejects_the_whole_batch(self):
+        good = self.opening()
+        cases = [
+            ("no es objeto", "Cada operación debe ser un objeto."),
+            ({**self.opening(), "uuid": "no-es-uuid"}, "Una operación no trae un uuid válido."),
+            ({**self.opening(), "marca_tiempo_dispositivo": "2026-11-04T08:00:00"}, "con zona horaria"),
+            ({**self.opening(), "usuario_id": str(self.admin.pk)}, "usuario_id debe ser un entero"),
+            ({**self.opening(), "efectivo_inicial_centavos": -1}, "efectivo_inicial_centavos debe ser un entero"),
+            ({**self.sale(uuid4()), "turno_uuid": "no-es-uuid"}, "turno_uuid no es un UUID"),
+            ({**self.opening(), "tipo": "merma"}, "tipo debe ser «apertura_turno» o «venta»"),
+        ]
+        for operation, message in cases:
+            with self.subTest(message=message):
+                response = self.send(good, operation)
+                self.assertEqual(response.status_code, 400)
+                self.assertIn(message, response.json()["detalle"])
+        self.assertFalse(CashRegisterSession.objects.exists())
+        self.assertFalse(QuarantinedOperation.objects.exists())
+
+    def test_an_operation_of_an_unknown_user_goes_to_quarantine(self):
+        opening = {**self.opening(), "usuario_id": 999999}
+        sale = {**self.sale(uuid4()), "usuario_id": 999999}
+        self.assertEqual(self.states(self.send(opening, sale)),
+                         [("cuarentena", "usuario_sin_permiso"), ("cuarentena", "usuario_sin_permiso")])
+        self.assertEqual(QuarantinedOperation.objects.filter(user=None).count(), 2)
+
+    def test_a_duplicate_caught_by_the_service_still_answers_duplicate(self):
+        from unittest import mock
+        opening = self.opening()
+        sale = self.sale(opening["uuid"])
+        self.send(opening, sale)
+        with mock.patch("apps.pos.views_sync._already_known", return_value=False):
+            self.assertEqual(self.states(self.send(opening, sale)), [("duplicada", None), ("duplicada", None)])
+        self.assertEqual((CashRegisterSession.objects.count(), Sale.objects.count()), (1, 1))
+
+    def test_two_requests_with_the_same_uuid(self):
+        # Another request saves the same UUID between the check and the insert: the unique constraint fails.
+        from unittest import mock
+        opening = self.opening()
+        with mock.patch("apps.pos.views_sync._apply_opening", side_effect=IntegrityError), \
+                mock.patch("apps.pos.views_sync._already_known", side_effect=[False, True]):
+            self.assertEqual(self.states(self.send(opening)), [("duplicada", None)])
+        # If the UUID still is nowhere, the error is something else and must not be hidden.
+        with mock.patch("apps.pos.views_sync._apply_opening", side_effect=IntegrityError), \
+                mock.patch("apps.pos.views_sync._already_known", return_value=False), \
+                self.assertRaises(IntegrityError):
+            self.send(opening)
+
+
+class SaleEdgeCaseTests(TestCase):
+    """WBS 3.3.6 — pedidos mal formados y ajustes que no proceden (autor: Jared)."""
+
+    setUp = SaleServiceTests.setUp
+    order = SaleServiceTests.order
+    sell = SaleServiceTests.sell
+
+    def test_a_modifier_without_its_ingredient_is_a_malformed_order(self):
+        pedido = {"lineas": [{"platillo_id": self.burrito.pk, "precio_base_centavos": 8500, "cantidad": 1,
+                              "modificadores": [{"tipo": "agregar", "ajuste_centavos": 1500}]}]}
+        with self.assertRaisesMessage(sales.InvalidOrderError, "Cada modificador debe traer insumo_id."):
+            self.sell(pedido, total=10000)
+        self.assertFalse(Sale.objects.exists())
+
+    def test_adjustments_that_do_not_apply(self):
+        sale = self.sell()
+        item = sale.order.items.get()
+        with self.assertRaisesMessage(sales.AdjustmentError, "Indica el nuevo método de pago"):
+            sales.adjust_sale(self.admin, sale, "correccion_pago", new_payment_method="tarjeta")
+        with self.assertRaisesMessage(sales.AdjustmentError, "El motivo debe ser"):
+            sales.adjust_sale(self.admin, sale, "otro", order_item=item, quantity=1)
+        sales.adjust_sale(self.admin, sale, "error_captura", order_item=item, quantity=2)
+        with self.assertRaisesMessage(sales.AdjustmentError, "Esa línea ya se ajustó completa."):
+            sales.adjust_sale(self.admin, sale, "error_captura", order_item=item, quantity=1)
+        self.assertEqual(sale.adjustments.count(), 1)
+
+
+class QuarantineEdgeCaseTests(QuarantineBase):
+    """WBS 3.3.6 — resoluciones de cuarentena que no se pueden aplicar y la bandeja de ventas (autor: Jared)."""
+
+    def resolve(self, operation, resolution=QuarantineResolution.APPLY):
+        return sales.resolve_quarantine(self.admin, operation, resolution)
+
+    def edit(self, operation, **changes):
+        operation.payload = {**operation.payload, **changes}
+        operation.save()
+        return operation
+
+    def test_a_sale_that_cannot_be_applied_says_why(self):
+        duplicate = self.quarantine()
+        sales.confirm_sale(self.cashier, duplicate.payload["pedido"], "efectivo", 20000, uuid=duplicate.uuid,
+                           session_uuid=self.session.uuid, device_timestamp=duplicate.device_timestamp)
+        cases = [
+            (duplicate, "Ya hay una venta con este UUID"),
+            (self.edit(self.quarantine(), pedido={"lineas": [
+                {"platillo_id": 999999, "precio_base_centavos": 8500, "cantidad": 1}]}), "descártala"),
+            (self.edit(self.quarantine(), pedido={"lineas": "no es lista"}), "no es válido"),
+        ]
+        for operation, message in cases:
+            with self.subTest(message=message), self.assertRaisesMessage(sales.ResolutionError, message):
+                self.resolve(operation)
+            operation.refresh_from_db()
+            self.assertEqual(operation.status, QuarantineStatus.PENDING)
+
+    def test_an_opening_that_cannot_be_applied_says_why(self):
+        cash.close_session(self.admin, Decimal("500.00"))
+
+        def opening(uuid=None, cents=30000):
+            return QuarantinedOperation.objects.create(
+                uuid=uuid or uuid4(), operation_type="apertura_turno", reason=QuarantineReason.USER_WITHOUT_PERMISSION,
+                payload={"tipo": "apertura_turno", "efectivo_inicial_centavos": cents}, user=self.admin,
+                device_timestamp=timezone.now() + timedelta(days=1))
+
+        with self.assertRaisesMessage(sales.ResolutionError, "no trae un efectivo inicial válido"):
+            self.resolve(opening(cents=-5))
+        with self.assertRaisesMessage(sales.ResolutionError, "Ya hay un turno con este UUID"):
+            self.resolve(opening(uuid=self.session.uuid))
+
+    def test_sales_admin_lists_reviewed_sales_with_their_lines(self):
+        self.admin.is_staff = self.admin.is_superuser = True
+        self.admin.save()
+        self.client.force_login(self.admin)
+        self.burrito.price = Decimal("90.00")
+        self.burrito.save()
+        sale = sales.mark_sale_reviewed(self.admin, sales.confirm_sale(
+            self.cashier, self.quarantine().payload["pedido"], "efectivo", 20000))
+        from django.urls import reverse  # local: the module's imports are shared with the sync tests
+        changelist = self.client.get(reverse("admin:pos_sale_changelist"), {"revision": "revisada"})
+        self.assertContains(changelist, "precio_distinto")
+        change = self.client.get(reverse("admin:pos_sale_change", args=[sale.pk]))
+        self.assertContains(change, "2 × Burrito de asada ($85.00)")  # what was charged (rule 14)
+
+
+class PosModelTextTests(QuarantineBase):
+    """WBS 3.3.6 — cómo se nombran los registros de pos en Django Admin (autor: Jared)."""
+
+    def test_names(self):
+        sale = sales.confirm_sale(self.cashier, self.quarantine().payload["pedido"], "efectivo", 20000)
+        item = sale.order.items.get()
+        modifier = Modifier.objects.get()
+        line_modifier = item.modifiers.get()
+        adjustment = sales.adjust_sale(self.admin, sale, "error_captura", order_item=item, quantity=1)
+        self.assertEqual(str(sale.order), f"Pedido {sale.order.pk}")
+        self.assertEqual(str(item), f"2 x {self.burrito.pk}")
+        self.assertEqual(str(modifier), f"Agregar {self.cheese.pk} en {self.burrito.pk}")
+        self.assertEqual(str(line_modifier), f"Agregar {self.cheese.pk}")
+        self.assertEqual(str(adjustment), f"Ajuste de {sale.pk} (Error de captura)")
