@@ -149,3 +149,16 @@ class DemoFixtureTests(TestCase):
             with self.subTest(dish=dish.name):
                 self.assertTrue(dish.recipes.exists())
                 self.assertLess(services.dish_cost(dish), dish.price)
+
+
+
+class CatalogModelTextTests(CatalogServicesBase):
+    """WBS 3.2.9 — cómo se nombran los registros en Django Admin y en los mensajes (autor: Diego)."""
+
+    def test_names(self):
+        services.set_recipe(self.dish, [(self.tortilla, Decimal("1")), (self.beans, Decimal("120"))])
+        recipe = Recipe.objects.get(dish=self.dish, ingredient=self.beans)
+        self.assertEqual(str(self.burritos), "Burritos")
+        self.assertEqual(str(self.dish), "Burrito de frijol")
+        self.assertEqual(str(self.tortilla), "Tortilla de harina (Piezas)")
+        self.assertEqual(str(recipe), "Burrito de frijol - Frijoles (120.000 g)")
