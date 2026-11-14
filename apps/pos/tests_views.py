@@ -528,3 +528,14 @@ class OfflineScreensTests(ViewTestCase):
         self.unlock()
         for name in ("catalog:dish_catalog", "inventory:ingredient_list", "reports:cash", "reports:reports"):
             self.assertUniqueIds(self.client.get(reverse(name)))
+
+    def test_no_template_comment_leaks_into_the_page(self):
+        # {# … #} only works on one line; a multi-line one is printed as text at the top of every page.
+        from pathlib import Path
+        from django.conf import settings
+        for template in Path(settings.BASE_DIR, "apps").glob("**/templates/**/*.html"):
+            for number, line in enumerate(template.read_text(encoding="utf-8").splitlines(), 1):
+                if "{#" in line:
+                    self.assertIn("#}", line, f"{template}:{number}")
+        self.assertNotIn("{#", self.client.get(BUILDER).content.decode())
+
