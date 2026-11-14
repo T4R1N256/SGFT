@@ -313,6 +313,40 @@ class DeactivateUserTests(TestCase):
 
 
 @override_settings(PASSWORD_HASHERS=FAST_HASHERS, SGFT_PIN_VERIFIER_ITERATIONS=1000)
+class UserAdminTests(TestCase):
+    """WBS 3.1.5 — Django Admin de cuentas (autor: Diego)."""
+
+    def setUp(self):
+        self.admin = get_user_model().objects.create_superuser("root", password="730261")
+        self.client.force_login(self.admin)
+        self.cashier = create_user("caja", "730264")
+
+    def test_accounts_cannot_be_deleted(self):
+        response = self.client.get(reverse("admin:accounts_user_delete", args=[self.cashier.pk]))
+        self.assertEqual(response.status_code, 403)
+        changelist = self.client.get(reverse("admin:accounts_user_changelist"))
+        self.assertNotContains(changelist, "delete_selected")
+
+    def test_deactivate_action(self):
+        self.client.post(reverse("admin:accounts_user_changelist"),
+                         {"action": "deactivate", "_selected_action": [self.cashier.pk]})
+        self.cashier.refresh_from_db()
+        self.assertFalse(self.cashier.is_active)
+
+    def test_verifier_is_not_shown(self):
+        response = self.client.get(reverse("admin:accounts_user_change", args=[self.cashier.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "pin_verifier")
+
+    def test_saving_a_cashier_as_admin_gives_admin_access(self):
+        user = get_user_model().objects.get(pk=self.cashier.pk)
+        user.role = Role.ADMIN
+        UserAdmin(get_user_model(), site).save_model(None, user, None, True)
+        user.refresh_from_db()
+        self.assertTrue(user.is_staff)
+
+
+@override_settings(PASSWORD_HASHERS=FAST_HASHERS, SGFT_PIN_VERIFIER_ITERATIONS=1000)
 class AdminLoginLimitTests(TestCase):
     """WBS 4.4 — /admin/login/ comparte el límite de intentos del PIN (checklist-seguridad.md, control 4)."""
 
