@@ -1,11 +1,30 @@
 """Django Admin of staff accounts (WBS 3.1.5): the only place where accounts are created, changed and deactivated.
 Accounts are never deleted; is_staff follows the role (accounts.services)."""
 from django.contrib import admin, messages
+from django.contrib.admin.forms import AdminAuthenticationForm
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.core.exceptions import ValidationError
 
 from .models import Role, User
-from .services import deactivate_user
+from .services import PinLockedError, deactivate_user, guard_admin_login
+
+
+class AdminLoginForm(AdminAuthenticationForm):
+    """/admin/login/ con el límite de intentos del PIN: la contraseña del Administrador es su PIN (DEC-38)."""
+
+    def clean(self):
+        def login():
+            super(AdminLoginForm, self).clean()
+            return self.get_user()
+
+        try:
+            guard_admin_login(login)
+        except PinLockedError as error:
+            raise ValidationError(str(error), code="pin_locked") from None
+        return self.cleaned_data
+
+
+admin.site.login_form = AdminLoginForm
 
 
 @admin.register(User)

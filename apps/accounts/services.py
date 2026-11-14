@@ -118,6 +118,31 @@ def verify_admin_pin(pin):
     raise InvalidPinError()
 
 
+def guard_admin_login(login):
+    """
+    Aplica el límite de intentos del PIN al inicio de sesión de Django Admin (/admin/login/), cuya contraseña es el
+    mismo PIN de 6 dígitos (DEC-38): sin esto se podrían probar las combinaciones ahí (checklist-seguridad.md, A07).
+
+    login() valida usuario y contraseña: lanza ValidationError si no coinciden y devuelve el usuario, o None si el
+    formulario venía incompleto. El contador es el mismo de verify_admin_pin: con el PIN bloqueado no se intenta
+    (PinLockedError), cada fallo cuenta y un acierto lo reinicia; un formulario incompleto no hace ninguna de las dos.
+    """
+    minutes = pin_minutes_locked()
+    if minutes:
+        raise PinLockedError(minutes)
+    try:
+        user = login()
+    except ValidationError:
+        _register_failure()
+        minutes = pin_minutes_locked()
+        if minutes:
+            raise PinLockedError(minutes) from None
+        raise
+    if user is not None:
+        cache.delete(_ATTEMPTS_KEY)
+    return user
+
+
 def activate_device(pin):
     """
     Activa el dispositivo (DEC-34): con el PIN de un Administrador devuelve la cuenta de cajero con la que el
