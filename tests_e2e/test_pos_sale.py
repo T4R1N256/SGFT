@@ -74,3 +74,29 @@ class SaleWithoutNetworkTests(E2ETestCase):
         # Syncing again (what «Sincronizar» of the menu does) sends nothing: the UUID was applied once (rule 8).
         self.assertTrue(self.sync())
         self.assertEqual((self.pending(), Sale.objects.count()), (0, 1))
+
+    def test_a_failed_sync_is_retried_without_touching_anything(self):
+        # T30, test 4 on the iPhone: «online» came before the connection worked, that one attempt failed and nothing
+        # retried until someone touched «Sincronizar». Now offline.js retries every 10 s while something is pending.
+        cash.open_session(self.admin, Decimal("500.00"))
+        self.activate_device()
+        self.wait_for_service_worker()
+        self.go_offline()
+        self.sell_offline()
+
+        attempts = []
+
+        def first_attempt_fails(route):
+            attempts.append(route.request.url)
+            if len(attempts) == 1:
+                route.abort()
+            else:
+                route.continue_()
+
+        self.page.route("**/pos/sync/", first_attempt_fails)
+        with self.page.expect_navigation(timeout=25_000):
+            self.context.set_offline(False)
+        self.wait_for(Sale.objects.exists, "La venta no se sincronizó al reintentar.")
+        self.assertGreaterEqual(len(attempts), 2)
+        self.page.wait_for_function(
+            "document.querySelector('[data-sgft-pendientes]').textContent.trim() === '0'")

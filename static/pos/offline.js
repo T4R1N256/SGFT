@@ -1,7 +1,8 @@
 // Nueva venta without network (WBS 3.4.4, 3.4.7, 3.5.1) and the sync triggers (3.4.3). Owners: Tarín + Yahir.
 //
 // With network, Nueva venta is the server's (HTMX) and this file only keeps the queue moving: it saves the data the
-// page brings for working offline, syncs when the page loads, when the network comes back and with «Sincronizar»
+// page brings for working offline, syncs when the page loads, when the network comes back, every 10 s while something
+// is pending and with «Sincronizar»
 // (iOS has no Background Sync, spike finding 5), shows «N pendientes» and sends X-Pendientes so closing the till
 // is refused while something is pending (rule 5).
 //
@@ -53,6 +54,21 @@
     return sincronizando;
   }
 
+  // iOS may not fire «online», or fires it before the connection works, and then that one attempt fails (spike
+  // finding 4; T30, test 4 on the iPhone). While something is pending, retry every REINTENTO_MS and when the app
+  // comes back to the foreground, so the queue leaves in under 30 s without touching anything (RNF-07). The reload
+  // that brings the server's state waits while Nueva venta has a ticket in progress: it would lose its lines.
+  const REINTENTO_MS = 10 * 1000;
+  let modoSinRed = false;
+  let ticketEnCurso = false;
+
+  async function reintentar() {
+    if (!pendientes || document.visibilityState !== "visible") return;
+    const resultado = await sincronizar();
+    if (!resultado.ok || ticketEnCurso) return;
+    if (resultado.resultados.length || modoSinRed || copiaSinRed()) window.location.reload();
+  }
+
   // With network again: send the queue and reload, so the screen shows the server's state (session, totals).
   async function alVolverLaRed() {
     const resultado = await sincronizar();
@@ -93,6 +109,8 @@
   document.addEventListener("htmx:sendError", () => avisar("sgft:sin-red"));
   window.addEventListener("offline", () => avisar("sgft:sin-red"));
   window.addEventListener("online", alVolverLaRed);
+  setInterval(reintentar, REINTENTO_MS);
+  document.addEventListener("visibilitychange", reintentar);
   document.addEventListener("click", (event) => {
     const enlace = event.target.closest('a[href="#sincronizar"]');
     if (!enlace) return;
@@ -149,6 +167,7 @@
       async iniciar() {
         document.addEventListener("sgft:sin-red", () => this.entrar());
         document.addEventListener("sgft:pendientes", (e) => { this.pendientes = e.detail; });
+        this.$watch("lineas", (lineas) => { ticketEnCurso = lineas.length > 0; });
         if (!navigator.onLine) await this.entrar();
       },
 
@@ -165,6 +184,7 @@
         this.reactivar = Boolean(await almacen.leer("reactivar"));
         this.pendientes = await almacen.contar();
         this.sinRed = true;
+        modoSinRed = true;
       },
 
       platillo(id) {
@@ -323,6 +343,7 @@
 
       async entrar(aviso) {
         this.sinRed = true;
+        modoSinRed = true;
         this.aviso = aviso;
         this.pendientes = await almacen.contar();
         if (!this.copia) this.copia = await almacen.leer("ultima_sincronizacion");
