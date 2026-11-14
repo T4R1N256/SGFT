@@ -33,8 +33,10 @@
   {% block head_extra %}{% endblock %}
 </head>
 
-{# hx-headers se hereda: toda petición HTMX manda el token CSRF. data-sgft-candado marca los módulos con candado:
-   sin red, offline.js pide el PIN antes de mostrar su copia (components/offline_notice.html). #}
+{% comment %}
+  hx-headers se hereda: toda petición HTMX manda el token CSRF. data-sgft-candado marca los módulos con candado:
+  sin red, offline.js pide el PIN antes de mostrar su copia (components/offline_notice.html).
+{% endcomment %}
 {% comment %}
   .sgft-app (components.css): barra superior y contenido a todo lo ancho (Figma rev. 1.1).
   El menú lateral es una capa: lo abre el botón «Menú» de la barra superior y se cierra con «Cerrar menú»,
