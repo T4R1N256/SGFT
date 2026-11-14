@@ -57,8 +57,34 @@ jobs:
       - name: 2. No falta ninguna migración
         run: python manage.py makemigrations --check --dry-run
 
-      - name: 3. Pruebas (con PostgreSQL)
-        run: python manage.py test
+      # Cobertura (WBS 4.1): las mismas pruebas, medidas con coverage, línea por línea y por rama. Las migraciones,
+      # las pruebas y los puntos de entrada de wsgi/asgi no cuentan. coverage solo se instala aquí: no es
+      # dependencia de la aplicación.
+      - name: Instalar coverage
+        run: pip install coverage==7.17.2
+
+      - name: 3. Pruebas (con PostgreSQL) y cobertura
+        run: >-
+          coverage run --branch --source=apps,config
+          --omit="*/migrations/*,*/tests*.py,config/wsgi.py,config/asgi.py"
+          manage.py test
+
+      # El resumen por archivo aparece en la pestaña del job; el reporte HTML queda como artefacto «cobertura-html».
+      # Falla si la cobertura total baja de 90 %.
+      - name: 3b. Resumen de cobertura
+        run: |
+          coverage report --skip-empty --format=markdown >> "$GITHUB_STEP_SUMMARY"
+          coverage html --skip-empty -d htmlcov
+          coverage report --skip-empty --sort=cover --fail-under=90
+
+      - name: Subir el reporte de cobertura
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cobertura-html
+          path: htmlcov/
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: 4. Archivos en su lugar según el mapa de la skill
         if: github.event_name == 'pull_request'

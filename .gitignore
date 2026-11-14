@@ -143,3 +143,8 @@ vite.config.ts.timestamp-*
 .vite/
 
 **/__pycache__/
+
+# Python coverage (WBS 4.1)
+.coverage
+.coverage.*
+htmlcov/
