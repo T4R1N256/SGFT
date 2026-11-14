@@ -1,4 +1,4 @@
-{% load static %}{% comment %}
+{% comment %}
 components/sidebar.html — Contenido del menú lateral (Figma «Sidebar», 6:540, rev. 1.1)
 Va dentro de la capa <nav id="app-menu"> de base.html, que ya trae «Cerrar menú».
 Parámetros:
@@ -13,12 +13,8 @@ Parámetros:
   user_name, user_detail, user_initials, logout_url   datos del pie (opcionales)
 El estado «En línea / Sin conexión» es visual y lo lleva Alpine. Incluir siempre con «only».
 {% endcomment %}
-<div class="pointer-events-none absolute inset-x-0 top-[470px] h-[320px]" aria-hidden="true">
-  <img src="{% static 'core/img/sidebar-waves.svg' %}" alt="" class="size-full">
-</div>
-
 <div class="relative -mt-[40px] flex items-center gap-[14px] pl-[6px] pr-[48px]">
-  <span class="grid size-[50px] flex-none place-items-center rounded-md bg-gradiente-logotipo text-texto-inverso shadow-boton-primario">
+  <span class="grid size-[50px] flex-none place-items-center rounded-md bg-marca-primario text-texto-inverso shadow-boton-primario">
     {% include "components/icons/store.html" with size=28 only %}
   </span>
   <span class="flex flex-col">

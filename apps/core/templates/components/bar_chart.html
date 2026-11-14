@@ -6,14 +6,14 @@ Parámetros:
   label   descripción para lectores de pantalla, por ejemplo «Ventas por hora» (obligatorio)
   size    grande (150 de alto, eje de montos y barras de hasta 48; Caja) | compacto (120, sin eje, barras de hasta
           28; tarjeta de Reportes). Por omisión: grande
-La barra activa lleva el gradiente «acción» y su monto encima (Figma). Incluir siempre con «only».
+La barra activa va en naranja de marca, con su monto encima. Incluir siempre con «only».
 {% endcomment %}
 {% if size == "compacto" %}
   <ol class="flex h-[120px] items-end gap-xs border-b border-borde-sutil" role="img" aria-label="{{ label }}">
     {% for bar in chart.bars %}
       <li class="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-[4px]">
         {% if bar.active %}<span class="rounded-xs bg-superficie-oscura px-[6px] py-[2px] sgft-texto-etiqueta-mini text-texto-inverso">${{ bar.amount|floatformat:"0g" }}</span>{% endif %}
-        <span class="w-full max-w-[28px] rounded-t-xs {% if bar.active %}bg-gradiente-accion{% else %}bg-marca-durazno-200{% endif %}" style="height: {{ bar.pct }}%"></span>
+        <span class="w-full max-w-[28px] rounded-t-xs {% if bar.active %}bg-marca-primario{% else %}bg-marca-durazno-200{% endif %}" style="height: {{ bar.pct }}%"></span>
         <span class="sr-only">{{ bar.label }}: ${{ bar.amount|floatformat:"2g" }}</span>
       </li>
     {% endfor %}
@@ -28,7 +28,7 @@ La barra activa lleva el gradiente «acción» y su monto encima (Figma). Inclui
       {% for bar in chart.bars %}
         <li class="flex h-[150px] min-w-0 flex-1 flex-col items-center justify-end gap-[6px]">
           {% if bar.active %}<span class="rounded-xs bg-superficie-oscura px-xs py-[2px] sgft-texto-etiqueta-mini text-texto-inverso">${{ bar.amount|floatformat:"0g" }}</span>{% endif %}
-          <span class="w-full max-w-[48px] rounded-t-xs {% if bar.active %}bg-gradiente-accion{% else %}bg-marca-durazno-200{% endif %}" style="height: {{ bar.pct }}%"></span>
+          <span class="w-full max-w-[48px] rounded-t-xs {% if bar.active %}bg-marca-primario{% else %}bg-marca-durazno-200{% endif %}" style="height: {{ bar.pct }}%"></span>
           <span class="sr-only">{{ bar.label }}: ${{ bar.amount|floatformat:"2g" }}</span>
         </li>
       {% endfor %}

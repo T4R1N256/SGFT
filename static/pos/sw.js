@@ -7,7 +7,7 @@
 importScripts("https://storage.googleapis.com/workbox-cdn/releases/7.3.0/workbox-sw.js");
 
 // Bump VERSION when the list changes: activate deletes every cache of another version.
-const VERSION = "v3";
+const VERSION = "v4";
 const PAGINAS = "sgft-paginas-" + VERSION;
 const RECURSOS = "sgft-recursos-" + VERSION;
 const INICIO = "/pos/";
@@ -17,7 +17,6 @@ const PRECARGA = [
   "/static/core/fonts/outfit-500.woff2",
   "/static/core/fonts/outfit-600.woff2",
   "/static/core/fonts/outfit-700.woff2",
-  "/static/core/img/sidebar-waves.svg",
   "/static/pos/manifest.json",
   "/static/pos/pricing.js",
   "/static/pos/pwa.js",

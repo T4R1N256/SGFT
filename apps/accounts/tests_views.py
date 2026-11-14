@@ -32,7 +32,7 @@ class ActivateDeviceViewTests(AccessViewsBase):
         response = self.client.get(self.activate_url)
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "accounts/activate_device.html")
-        self.assertNotContains(response, "sidebar-waves.svg")  # components/sidebar.html
+        self.assertNotContains(response, "Sincronizar")  # components/sidebar.html
         self.assertNotContains(response, 'type="search"')  # components/top_bar.html
 
     def test_page_says_what_to_do_with_the_dialog_open(self):

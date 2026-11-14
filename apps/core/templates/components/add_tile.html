@@ -9,7 +9,7 @@ Qué acción existe lo decide el servidor: si no hay hx_get, no se incluye. Incl
 {% endcomment %}
 <button type="button" class="flex w-full items-center justify-center rounded-lg border-[1.5px] border-dashed border-marca-primario/55 bg-marca-durazno-100/45 text-marca-primario-oscuro focus-visible:shadow-foco-anillo focus-visible:outline-none {% if compact %}h-[60px] gap-sm px-md{% else %}h-full min-h-[200px] flex-col gap-sm p-lg{% endif %}"
   {% if hx_get %}hx-get="{{ hx_get }}"{% endif %}{% if hx_target %} hx-target="{{ hx_target }}" hx-swap="innerHTML"{% endif %}>
-  <span class="grid place-items-center rounded-full bg-gradiente-accion text-texto-inverso shadow-boton-primario {% if compact %}size-[32px]{% else %}size-[64px]{% endif %}">
+  <span class="grid place-items-center rounded-full bg-marca-primario text-texto-inverso shadow-boton-primario {% if compact %}size-[32px]{% else %}size-[64px]{% endif %}">
     {% if compact %}{% include "components/icons/plus.html" with size=18 only %}{% else %}{% include "components/icons/plus.html" with size=30 only %}{% endif %}
   </span>
   <span class="{% if compact %}sgft-texto-cuerpo-medio{% else %}sgft-texto-titulo-h3{% endif %}">{{ text }}</span>
