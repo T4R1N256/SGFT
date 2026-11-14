@@ -487,3 +487,41 @@ class CashStateTests(ViewTestCase):
     def test_the_stand_in_is_gone(self):
         from importlib.util import find_spec
         self.assertIsNone(find_spec("apps.core.preview"))
+
+
+class OfflineScreensTests(ViewTestCase):
+    """CLAUDE.md §5-bis: Productos, Inventario, Caja and Reportes can be read without network (last copy)."""
+
+    def test_service_worker_keeps_a_copy_of_every_screen(self):
+        body = self.client.get("/pos/sw.js").content.decode()
+        self.assertIn('const MODULOS = ["/pos/", "/catalog/", "/inventory/", "/reports/"];', body)
+        self.assertIn('name="sgft-copia"', body)
+        self.assertIn('"guardar-pantallas"', body)
+        self.assertIn("setCatchHandler", body)
+
+    def test_padlock_screens_are_marked_and_carry_the_notice(self):
+        self.unlock()
+        for name in ("catalog:dish_catalog", "inventory:ingredient_list", "reports:cash", "reports:reports"):
+            html = self.client.get(reverse(name)).content.decode()
+            self.assertRegex(html, r"<body[^>]*\sdata-sgft-candado[\s>]", name)
+            self.assertIn('x-data="pantallaSinRed"', html, name)
+            self.assertIn('aria-labelledby="offline-pin-title"', html, name)
+
+    def test_nueva_venta_keeps_its_own_offline_mode(self):
+        html = self.client.get(BUILDER).content.decode()
+        self.assertNotRegex(html, r"<body[^>]*\sdata-sgft-candado")
+        self.assertNotIn('x-data="pantallaSinRed"', html)
+        self.assertIn('x-data="ventaSinRed"', html)
+
+    def test_locked_menu_items_say_where_their_copy_is(self):
+        html = self.client.get(BUILDER).content.decode()
+        for name in ("catalog:dish_catalog", "inventory:ingredient_list", "reports:cash", "reports:reports"):
+            self.assertIn(f'data-sgft-url="{reverse(name)}"', html, name)
+
+    def test_without_a_session_there_is_no_offline_notice(self):
+        self.assertNotIn("pantallaSinRed", self.client_class().get("/accounts/activate/").content.decode())
+
+    def test_every_screen_has_unique_ids(self):
+        self.unlock()
+        for name in ("catalog:dish_catalog", "inventory:ingredient_list", "reports:cash", "reports:reports"):
+            self.assertUniqueIds(self.client.get(reverse(name)))

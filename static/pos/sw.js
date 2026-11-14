@@ -7,7 +7,7 @@
 importScripts("https://storage.googleapis.com/workbox-cdn/releases/7.3.0/workbox-sw.js");
 
 // Bump VERSION when the list changes: activate deletes every cache of another version.
-const VERSION = "v2";
+const VERSION = "v3";
 const PAGINAS = "sgft-paginas-" + VERSION;
 const RECURSOS = "sgft-recursos-" + VERSION;
 const INICIO = "/pos/";
@@ -30,26 +30,77 @@ const PRECARGA = [
   "https://cdn.jsdelivr.net/npm/dexie@4.0.10/dist/dexie.min.js",
 ];
 const CDN = ["https://cdn.jsdelivr.net", "https://storage.googleapis.com"];
+// Screens that keep their last copy for working without network: Nueva venta sells from it; Productos, Inventario,
+// Caja and Reportes are read-only with the data of the last load (CLAUDE.md §5-bis).
+const MODULOS = ["/pos/", "/catalog/", "/inventory/", "/reports/"];
+
+function esPantalla(url) {
+  return url.origin === self.location.origin && MODULOS.some((prefijo) => url.pathname.startsWith(prefijo));
+}
+
+// Only real screens are kept: a 200 that did not come from a redirect. «Requiere PIN» is a 403, so a locked
+// module never replaces the last unlocked copy. Safari refuses a page served by the worker that came from a
+// redirect.
+async function guardable(respuesta) {
+  return respuesta && respuesta.status === 200 && !respuesta.redirected ? respuesta : null;
+}
+
+// A copy served without network says so, and since when: offline.js reads <meta name="sgft-copia"> to show
+// «Sin conexión» and «Última sincronización», and to ask for the PIN in the padlock modules.
+async function marcarCopia(respuesta) {
+  if (!respuesta) return respuesta;
+  const fecha = new Date(respuesta.headers.get("Date") || Date.now()).toISOString();
+  const html = (await respuesta.text()).replace("<head>", `<head><meta name="sgft-copia" content="${fecha}">`);
+  return new Response(html, { status: respuesta.status, statusText: respuesta.statusText, headers: respuesta.headers });
+}
 
 workbox.setConfig({ debug: false });
 workbox.core.skipWaiting();
 workbox.core.clientsClaim();
 
-// Pages of the point of sale: network first; after 3 s or without network, the last copy. Nueva venta keeps
-// working from that copy (offline it is the device that prices and queues, 3.4.4).
+// Screens: network first; after 3 s or without network, the last copy. Nueva venta keeps working from that copy
+// (offline it is the device that prices and queues, 3.4.4); the other screens are shown as they were last loaded.
+// The key is the URL alone (ignoreVary): the server varies on Cookie and HX-Request, and a navigation never
+// carries HX-Request.
 workbox.routing.registerRoute(
-  ({ request, url }) => request.mode === "navigate" && url.origin === self.location.origin &&
-    url.pathname.startsWith("/pos/"),
+  ({ request, url }) => request.mode === "navigate" && esPantalla(url),
   new workbox.strategies.NetworkFirst({
     cacheName: PAGINAS,
     networkTimeoutSeconds: 3,
-    plugins: [
-      new workbox.cacheableResponse.CacheableResponsePlugin({ statuses: [200] }),
-      // Safari refuses a page served by the service worker that came from a redirect: never keep one.
-      { cacheWillUpdate: async ({ response }) => (response.redirected ? null : response) },
-    ],
+    matchOptions: { ignoreVary: true },
+    plugins: [{
+      cacheWillUpdate: async ({ response }) => guardable(response),
+      cachedResponseWillBeUsed: async ({ cachedResponse }) => marcarCopia(cachedResponse),
+    }],
   }),
 );
+
+// A screen that was never opened with network has no copy: instead of the browser's error, say what to do.
+workbox.routing.setCatchHandler(async ({ request }) => {
+  if (request.mode !== "navigate") return Response.error();
+  const html = `<!doctype html><html lang="es-MX"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>Sin conexión · SGFT</title>
+<link rel="stylesheet" href="/static/core/css/app.css"></head>
+<body class="grid min-h-screen place-items-center bg-superficie-fondo p-md font-sans text-texto-primario">
+<main class="flex max-w-[480px] flex-col gap-md rounded-xl border border-borde-sutil bg-superficie-tarjeta p-xl text-center shadow-tarjeta">
+<h1 class="sgft-texto-titulo-h2">Sin conexión</h1>
+<p class="sgft-texto-cuerpo-base text-texto-secundario">Esta pantalla todavía no está guardada en el dispositivo.
+Ábrela una vez con conexión para poder consultarla sin red.</p>
+<a class="sgft-btn sgft-btn--primario" href="${INICIO}">Ir a Nueva venta</a></main></body></html>`;
+  return new Response(html, { status: 503, headers: { "Content-Type": "text/html; charset=utf-8" } });
+});
+
+// With network, offline.js asks to refresh the copies of the other screens, so they are current when the network
+// goes away. Each one is fetched with the session of the app, like a visit; locked modules answer 403 and keep
+// their previous copy.
+self.addEventListener("message", (event) => {
+  if (!event.data || event.data.tipo !== "guardar-pantallas") return;
+  const urls = (event.data.urls || []).filter((url) => esPantalla(new URL(url, self.location.origin)));
+  event.waitUntil(caches.open(PAGINAS).then((cache) => Promise.all(urls.map(async (url) => {
+    const respuesta = await guardable(await fetch(url, { credentials: "same-origin" }).catch(() => null));
+    if (respuesta) await cache.put(new URL(url, self.location.origin).href, respuesta);
+  }))));
+});
 
 // Own static files and the CDN libraries: from the cache at once, refreshed in the background. The CDN answers
 // no-cors requests with opaque responses (status 0), so those are cached too.
@@ -69,7 +120,7 @@ self.addEventListener("install", (event) => {
   event.waitUntil(Promise.all([
     caches.open(PAGINAS).then(async (cache) => {
       const respuesta = await fetch(new Request(INICIO, { credentials: "same-origin" })).catch(() => null);
-      if (respuesta && respuesta.ok && !respuesta.redirected) await cache.put(INICIO, respuesta);
+      if (await guardable(respuesta)) await cache.put(INICIO, respuesta);
     }),
     caches.open(RECURSOS).then((cache) => Promise.all(PRECARGA.map(async (url) => {
       const peticion = new Request(url, url.startsWith("http") ? { mode: "no-cors" } : {});

@@ -1,0 +1,40 @@
+{% comment %}
+components/offline_notice.html — Productos, Inventario, Caja y Reportes sin red (CLAUDE.md §5-bis)
+Lo incluye base.html en toda pantalla con sesión salvo Nueva venta, que tiene su propio modo sin red. Lo maneja el
+componente Alpine pantallaSinRed de static/pos/offline.js:
+  - Sin red, la pantalla es la copia de su última carga: muestra «Sin conexión · N pendientes · Última
+    sincronización» y avisa si una acción necesita red.
+  - En un módulo con candado (data-sgft-candado en <body>), pide el PIN de Administrador, validado en el
+    dispositivo con su verificador (DEC-28), y queda desbloqueado 30 minutos (DEC-32).
+Sin parámetros. Incluir siempre con «only».
+{% endcomment %}
+<div x-data="pantallaSinRed" x-init="iniciar()">
+  <div x-show="sinRed" x-cloak role="status" class="flex flex-wrap items-center gap-xs rounded-sm border border-estado-alerta bg-estado-alerta-fondo px-3 py-2 sgft-texto-cuerpo-nota text-estado-alerta">
+    <span class="size-[8px] rounded-full bg-estado-alerta" aria-hidden="true"></span>
+    <span>Sin conexión · <span data-sgft-pendientes x-text="pendientes"></span> pendientes · Última sincronización: <span x-text="ultima"></span></span>
+    <span x-show="nombre" x-text="'· Desbloqueado por ' + nombre"></span>
+  </div>
+  <p x-show="aviso" x-cloak x-text="aviso" role="alert" class="mt-2 rounded-sm border border-estado-peligro bg-estado-peligro-fondo px-3 py-2 text-sm text-estado-peligro"></p>
+
+  <template x-if="bloqueada">
+    <div class="fixed inset-0 z-50 grid place-items-center bg-superficie-fondo p-md">
+      <form role="dialog" aria-modal="true" aria-labelledby="offline-pin-title" @submit.prevent="desbloquear($event)"
+            x-init="$nextTick(() => $el.querySelector('input[name=pin]').focus())"
+            class="flex w-full max-w-[480px] flex-col gap-canal rounded-xl border border-borde-sutil bg-superficie-tarjeta p-xl shadow-tarjeta">
+        <div class="flex items-center gap-md">
+          <span class="sgft-card-header__icon">{% include "components/icons/lock.html" with size=28 only %}</span>
+          <div class="flex flex-col gap-[2px]">
+            <h2 id="offline-pin-title" class="sgft-texto-titulo-h2 text-texto-primario">Requiere PIN</h2>
+            <p class="sgft-texto-cuerpo-pequeno text-texto-secundario">Sin conexión · datos de la última sincronización</p>
+          </div>
+        </div>
+        {% include "components/pin_boxes.html" with note="Sin conexión, el PIN se valida en este dispositivo." only %}
+        <p x-show="error" x-text="error" class="sgft-texto-cuerpo-nota text-estado-peligro" role="alert"></p>
+        <div class="flex gap-sm">
+          <a href="/pos/" class="sgft-btn sgft-btn--contorno sgft-btn--full">Ir a Nueva venta</a>
+          <button type="submit" class="sgft-btn sgft-btn--primario sgft-btn--full">Desbloquear</button>
+        </div>
+      </form>
+    </div>
+  </template>
+</div>
