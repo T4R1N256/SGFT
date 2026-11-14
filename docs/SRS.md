@@ -450,3 +450,89 @@ Objetivos de negocio: #1 reducir tiempos de atención, #2 eliminar errores de co
 | Modelo entidad-relación (WBS 1.6.1) | [`docs/diagramas/diagrama-er.md`](diagramas/diagrama-er.md), generado de los modelos |
 | Wireframes (inicio, venta, inventario, caja, reportes) | Documento Word del SRS |
 | Prototipos (venta bloqueada, venta, productos, reportes, inventario, menú lateral, cantidad, PIN de administrador) | Archivo de Figma del sistema de diseño «PuntoVenta» |
+
+### Apéndice B. Matriz de trazabilidad (WBS 4.3)
+
+Liga cada requisito de la sección 3 con la parte del sistema que lo atiende y las pruebas que lo comprueban.
+
+**Estado:** ✅ implementado y con prueba automática · ✋ implementado; se verifica a mano en el dispositivo · ◐ prueba automática parcial; el resto se verifica a mano.
+
+**Cómo leer «Pruebas»:** `Clase.método` en el archivo abreviado; si se nombra solo la clase, cuentan todas sus pruebas. `acc`/`acc-v` = `apps/accounts/tests.py`/`tests_views.py`; igual `cat` (catalog), `inv` (inventory), `pos` y `rep` (reports); `core` = `apps/core/tests.py`; `e2e` = `tests_e2e/test_*.py` (Playwright, `SGFT_E2E=1`); `node` = `tests_e2e/parity/*.mjs`.
+
+#### B.1 Requisitos funcionales
+
+| ID | Requisito | WBS | Estado | Pruebas |
+|---|---|---|---|---|
+| RF-01 | Registro rápido de pedidos | 3.3.1, 3.3.2 | ✅ | `pos-v` OrderBuilderTests, DishListTests, OrderSummaryTests · `e2e` SaleWithNetworkTests |
+| RF-02 | Personalización de platillos | 3.3.3 | ✅ | `pos-v` OrderSummaryTests.test_modifiers_dialog_and_price, .test_a_line_with_the_same_modifiers_merges · `pos` ModifierTests · `inv` DeductForSaleTests.test_removed_ingredient_is_not_deducted, .test_extra_deducts_its_quantity_per_unit · `e2e` SaleWithNetworkTests |
+| RF-03 | Cálculo automático de total | 3.3.4, 3.4.5 | ✅ | `pos` PricingParityTest · `node` test_pricing · `pos-v` OrderSummaryTests.test_add_item_sums_and_returns_ticket_and_card_out_of_band |
+| RF-04 | Registro de pagos | 3.3.5 | ✅ | `pos-v` OrderSummaryTests.test_payment_method_selected_by_server, .test_invalid_payment_method_is_retargeted_to_messages · `pos` SaleServiceTests.test_malformed_order_or_payment_method |
+| RF-05 | Ajuste y cancelación de ventas | 3.3.5 | ✅ | `pos` SaleAdjustmentTests, SaleServiceTests.test_cancel_for_capture_error_gives_money_and_inventory_back, .test_cancel_for_return_records_waste_and_keeps_stock, .test_cancel_needs_an_admin_a_valid_reason_and_happens_once, .test_adjust_units_of_a_line_and_then_cancel_the_rest, .test_payment_correction_only_moves_the_sale_to_the_other_method |
+| RF-06 | Turno de caja | 3.5.1, 3.4.7 | ✅ | `pos` CashSessionServiceTests, CashRegisterSessionTests · `pos-v` OpenSessionTests, CloseSessionTests · `e2e` OpeningTests, CashCloseTests |
+| RF-07 | Modo sin conexión | 3.4.1–3.4.7 | ✅ | `pos` SyncOperationsTests · `pos-v` PwaTests, OfflineDataTests, OfflineScreensTests · `node` test_pin_verifier · `e2e` SaleWithoutNetworkTests, OpeningTests, OfflineScreensTests |
+| RF-08 | Descuento automático de inventario | 3.2.6 | ✅ | `inv` DeductForSaleTests · `pos` SaleServiceTests.test_online_sale_records_what_was_charged_and_deducts_inventory |
+| RF-09 | Registro de insumos con unidad | 3.2.2 | ✅ | `cat` IngredientServicesTests · `cat-v` IngredientCreateTests |
+| RF-10 | Alertas de stock mínimo | 3.2.4, 3.2.8 | ✅ | `inv` PurchaseWasteAndAlertTests.test_alert_when_stock_reaches_the_minimum, .test_check_min_stock_lists_the_most_urgent_first · `inv-v` IngredientListTests · `pos-v` OrderBuilderTests.test_low_stock_shows_the_alert · `cat` IngredientServicesTests.test_negative_minimum_is_rejected, .test_update_minimum_and_cost |
+| RF-11 | Registro de compras | 3.2.5 | ✅ | `inv` StockMovementModelTests.test_purchase_adds_and_keeps_its_cost, PurchaseWasteAndAlertTests.test_purchase_adds_stock_and_updates_the_cost, .test_purchase_rejects_zero_negative_or_too_precise_quantities · `inv-v` StockFormTests.test_valid_purchase_adds_stock_in_the_admins_name_and_refreshes |
+| RF-12 | Cálculo de costo de platillos | 3.2.3 | ✅ | `cat` RecipeServicesTests.test_cost_and_margin, .test_dish_without_recipe_costs_zero, DemoFixtureTests |
+| RF-13 | Registro de mermas | 3.2.7 | ✅ | `inv` PurchaseWasteAndAlertTests.test_waste_subtracts_with_its_reason, .test_waste_needs_a_reason · `inv-v` StockFormTests.test_waste_dialog_lists_the_agreed_reasons, .test_waste_other_reason_is_required_and_limited |
+| RF-14 | Gestión de cuentas con roles | 3.1.1, 3.1.3 | ✅ | `acc` UserModelTests, RoleTests, ChangeRoleTests, DeactivateUserTests, UserAdminTests, AccountEdgeCaseTests |
+| RF-15 | Restricción de acceso | 3.1.3 | ✅ | `core` AdminPinRequiredTests, UnlockTests, RoleRequiredTests · `cat-v` AccessTests · `inv-v` AccessTests · `rep-v` AccessTests |
+| RF-16 | Bandeja de revisión | 3.4.9 | ✅ | `pos` QuarantineResolutionTests, SalesAdminTests, SyncOperationsTests.test_review_reasons |
+| RF-17 | Catálogo de platillos y recetas | 3.2.1, 3.2.3 | ✅ | `cat` DishServicesTests, RecipeServicesTests · `cat-v` DishCatalogTests, DishFormTests, RecipeTests |
+| RF-18 | Corte de caja | 3.5.2 | ✅ | `rep` ReportServiceTests.test_cash_close_while_open_and_after_closing · `pos` CashSessionServiceTests.test_totals_by_method_net_of_reversions, .test_close_is_refused_with_unsynced_sales, .test_close_records_the_difference_without_blocking · `rep-v` CashTests · `e2e` CashCloseTests |
+| RF-19 | Reporte de ganancia neta | 3.5.3 | ✅ | `rep` ReportServiceTests.test_ingredients_used_waste_and_profit, .test_period_ranges · `rep-v` ReportsTests.test_totals_of_the_week, .test_period_returns_columns_and_replaces_subtitle_out_of_band |
+| RF-20 | Reporte de productos más vendidos | 3.5.4 | ✅ | `rep` ReportServiceTests.test_top_dishes_skip_cancelled_sales_and_reverted_units |
+| RF-21 | Reporte de insumos y mermas | 3.5.3, 3.2.8 | ✅ | `rep` ReportServiceTests.test_ingredients_used_waste_and_profit · `inv-v` IngredientListTests |
+| RF-22 | Exportación de reportes | 3.5.5 | ✅ | `rep` ReportServiceTests.test_daily_sales_pdf · `rep-v` ExportDailySalesPdfTests |
+| RF-23 | Activación del dispositivo | 3.1.2 | ✅ | `acc-v` ActivateDeviceViewTests · `acc` VerifyAdminPinTests.test_activate_device_returns_the_cashier_account, .test_activate_device_without_cashier |
+| RF-24 | Límite de intentos del PIN | 3.1.2, 4.4 | ✅ | `acc` VerifyAdminPinTests.test_five_failures_lock_the_pin_even_for_the_right_one, .test_lock_expires, AdminLoginLimitTests · `acc-v` ActivateDeviceViewTests.test_five_failures_lock_even_with_a_new_cookie |
+
+#### B.2 Requisitos no funcionales
+
+| ID | Requisito | Estado | Evidencia |
+|---|---|---|---|
+| RNF-01 | Usabilidad táctil | ✋ | Prueba en el iPhone (T31). |
+| RNF-02 | Tamaño de botones | ✋ | Medidas del sistema de diseño «PuntoVenta»; prueba en el iPhone (T31). |
+| RNF-03 | Legibilidad en exteriores | ✋ | Auditoría de contraste del sistema de diseño; prueba en el food truck (T31). |
+| RNF-04 | Ayudas visuales | ✅ | `e2e` OfflineScreensTests.test_padlock_screens_open_without_network_after_the_pin · `pos-v` OrderBuilderTests.test_closed_cash_disables_content_and_offers_open · `core` AdminPinRequiredTests.test_locked_full_page_shows_pin_required_with_dialog · `rep-v` CashTests.test_pending_operations_are_shown_in_the_close_card |
+| RNF-05 | Atención en hora pico | ✅ | `e2e` SaleWithoutNetworkTests |
+| RNF-06 | Tiempo de respuesta | ✋ | Medición en el iPhone con red móvil (T30). |
+| RNF-07 | Sincronización | ◐ | `e2e` SaleWithoutNetworkTests, OpeningTests sincronizan dentro del límite de 15 s de la prueba; medición en el iPhone (T30). |
+| RNF-08 | Operación sin internet | ✅ | `pos-v` PwaTests, OfflineDataTests, OfflineScreensTests · `e2e` SaleWithoutNetworkTests, OpeningTests, OfflineScreensTests |
+| RNF-09 | Compatibilidad de navegadores | ◐ | La E2E corre en Chromium; Safari para iOS se prueba en el iPhone (T30). |
+| RNF-10 | Diseño responsivo | ✋ | Prueba en el iPhone y en computadora (T31). |
+| RNF-11 | Autenticación | ✅ | `core` AdminPinRequiredTests, UnlockTests · `acc` VerifyAdminPinTests, AdminLoginLimitTests, AccessRestrictionTest · `acc-v` AdminPinViewTests |
+| RNF-12 | Rastro de operaciones | ✅ | `inv` StockMovementModelTests · `inv-v` StockFormTests.test_valid_purchase_adds_stock_in_the_admins_name_and_refreshes · `pos` CashSessionServiceTests.test_admin_opens_the_session_in_their_name, SaleServiceTests.test_offline_sale_keeps_its_uuid_and_device_time_and_is_applied_once, QuarantineResolutionTests.test_only_an_active_admin_resolves_and_only_once |
+| RNF-13 | Confidencialidad de reportes | ✅ | `rep-v` AccessTests · `core` RoleRequiredTests.test_cashier_is_rejected_from_admin_only_view |
+| RNF-14 | Modularidad | ✋ | Apps `accounts`, `catalog`, `inventory`, `pos` y `reports` con capas `views` → `services` → `models`. |
+
+#### B.3 Reglas de negocio (sección 1.3.2)
+
+| # | Regla | Pruebas |
+|---|---|---|
+| 1 | El inventario se descuenta al llegar la venta al servidor, en la misma transacción | `inv` DeductForSaleTests.test_follows_the_recipe_times_the_units, .test_same_sale_is_deducted_only_once · `pos` SaleServiceTests.test_online_sale_records_what_was_charged_and_deducts_inventory · `e2e` SaleWithoutNetworkTests (sin descuento hasta sincronizar) |
+| 2 | Las personalizaciones ajustan el descuento | `inv` DeductForSaleTests.test_removed_ingredient_is_not_deducted, .test_extra_deducts_its_quantity_per_unit · `pos-v` OrderSummaryTests.test_modifiers_dialog_and_price |
+| 3 | Alerta visual con `existencia <= min_stock` | `inv` PurchaseWasteAndAlertTests.test_alert_when_stock_reaches_the_minimum · `inv-v` IngredientListTests.test_level_follows_rule_3 · `pos-v` OrderBuilderTests.test_low_stock_shows_the_alert |
+| 4 | Solo efectivo o transferencia | `pos` SaleServiceTests.test_malformed_order_or_payment_method · `pos-v` OrderSummaryTests.test_payment_method_selected_by_server, .test_invalid_payment_method_is_retargeted_to_messages |
+| 5 | El corte se niega con ventas sin sincronizar; la diferencia no bloquea | `pos` CashSessionServiceTests.test_close_is_refused_with_unsynced_sales, .test_close_records_the_difference_without_blocking · `pos-v` CloseSessionTests.test_pending_operations_are_409_in_the_dialog · `rep-v` CashTests.test_pending_operations_are_shown_in_the_close_card · `e2e` CashCloseTests |
+| 6 | Precios, recetas y mínimos solo del Administrador | `cat-v` AccessTests · `inv-v` AccessTests · `core` RoleRequiredTests.test_cashier_is_rejected_from_admin_only_view, AdminPinRequiredTests |
+| 7 | Venta inmutable; se corrige con ajuste o cancelación; dos marcas de tiempo | `pos` SaleAdjustmentTests, SaleServiceTests.test_offline_sale_keeps_its_uuid_and_device_time_and_is_applied_once, .test_adjust_units_of_a_line_and_then_cancel_the_rest, .test_sale_of_a_closed_session_cannot_be_changed |
+| 8 | UUID por operación; unicidad en la base de datos | `pos` SaleTests.test_uuid_is_unique, CashRegisterSessionTests.test_uuid_is_unique, QuarantinedOperationTests.test_uuid_is_unique, SyncOperationsTests.test_the_same_batch_twice_applies_once, .test_a_uuid_already_used_in_another_table_is_a_duplicate · `e2e` SaleWithoutNetworkTests |
+| 9 | Cuarentena en lugar de rechazo, con tres salidas | `pos` SyncOperationsTests.test_quarantine_reasons, SaleServiceTests.test_quarantine_reasons, QuarantineResolutionTests, SalesAdminTests.test_quarantine_actions |
+| 10 | Existencia negativa se registra y se marca | `inv` DeductForSaleTests.test_stock_may_go_negative_and_is_reported, PurchaseWasteAndAlertTests.test_waste_may_leave_stock_negative · `pos` SaleServiceTests.test_negative_stock_is_kept_and_marked_for_review, SyncOperationsTests.test_review_reasons |
+| 11 | El motivo del ajuste decide qué se revierte | `pos` SaleServiceTests.test_cancel_for_capture_error_gives_money_and_inventory_back, .test_cancel_for_return_records_waste_and_keeps_stock, .test_payment_correction_only_moves_the_sale_to_the_other_method · `inv` DeductForSaleTests.test_revert_gives_the_stock_back_as_an_adjustment, .test_return_records_the_ingredients_as_waste_without_changing_stock · `rep` ReportServiceTests.test_sales_by_period_nets_cancellations_and_payment_corrections |
+| 12 | Toda venta requiere turno abierto, validado antes de calcular | `pos` SaleServiceTests.test_needs_an_open_session_and_checks_it_before_pricing, CashSessionServiceTests.test_require_open_session · `pos-v` OrderSummaryTests.test_add_item_without_open_cash_is_409, ConfirmSaleTests.test_closed_cash_is_409 |
+| 13 | Un turno por jornada, solo el Administrador lo abre o cierra, también sin red | `pos` CashSessionServiceTests.test_admin_opens_the_session_in_their_name, .test_cashier_cannot_open_or_close, .test_only_one_session_per_day, .test_offline_opening_keeps_its_uuid_and_device_time, CashRegisterSessionTests · `pos-v` OpenSessionTests.test_second_session_of_the_day_is_422 · `node` test_pin_verifier · `e2e` OpeningTests |
+| 14 | Manda lo cobrado; si no cuadra con sus líneas, cuarentena | `pos` SaleServiceTests.test_what_was_charged_wins_over_the_current_catalog, .test_quarantine_reasons (`total_inconsistente`), QuarantineResolutionTests.test_apply_uses_the_current_catalog_and_keeps_what_was_charged, SyncOperationsTests.test_review_reasons |
+
+#### B.4 Pruebas por módulo
+
+| Módulo | Servicios, modelos y acceso (`tests.py`) | Vistas (`tests_views.py`) | Otras |
+|---|---:|---:|---|
+| Usuarios (`accounts`, `core`) | 72 | 18 | 4 en Node (verificador del PIN) |
+| Productos (`catalog`) | 25 | 23 | — |
+| Inventario (`inventory`) | 29 | 15 | — |
+| Punto de venta y turno (`pos`) | 102 | 52 | Paridad de precios en Node · 9 E2E |
+| Reportes (`reports`) | 7 | 19 | — |
+| **Total** | **235** | **127** | 362 de Django, 9 E2E y 31 de Node |
