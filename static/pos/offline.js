@@ -5,8 +5,14 @@
 // (iOS has no Background Sync, spike finding 5), shows «N pendientes» and sends X-Pendientes so closing the till
 // is refused while something is pending (rule 5).
 //
+// The other screens (Productos, Inventario, Caja, Reportes) are read-only without network: the service worker serves
+// the copy of their last load marked with <meta name="sgft-copia">, and the Alpine component pantallaSinRed shows
+// «Sin conexión · N pendientes · Última sincronización» and, in the padlock modules, asks for the Administrator's
+// PIN checked on the device (DEC-28), which unlocks them for 30 minutes (DEC-32). With network, every page asks the
+// service worker to refresh the copies of the screens the menu can open.
+//
 // Without network (the «offline» event or an HTMX request that cannot reach the server; navigator.onLine alone is
-// not trusted, spike finding 4) the Alpine component ventaSinRed takes over: the catalog of the last load, the
+// not trusted, spike finding 4) the Alpine component ventaSinRed takes over in Nueva venta: the catalog of the last load, the
 // ticket priced with calcularTotal (pricing.js, the only money computed in the browser), and «Confirmar compra»
 // that queues a «venta» operation. Without an open session it offers «Abrir caja» with the PIN checked against
 // the PBKDF2 verifier (DEC-28), and queues an «apertura_turno» in that Administrator's name.
@@ -16,6 +22,8 @@
   const almacen = window.sgftDb.crearAlmacen();
   const SYNC_URL = "/pos/sync/";
   let pendientes = 0;
+  const DESBLOQUEO_MS = 30 * 60 * 1000;
+  const REFRESCO_MS = 5 * 60 * 1000;
 
   function avisar(nombre, detalle) {
     document.dispatchEvent(new CustomEvent(nombre, { detail: detalle }));
@@ -51,6 +59,26 @@
     if (resultado.ok) window.location.reload();
   }
 
+  // ISO date of the copy when the service worker served this page without network; null when it came from the server.
+  function copiaSinRed() {
+    const meta = document.querySelector('meta[name="sgft-copia"]');
+    return meta ? meta.content : null;
+  }
+
+  // With network: refresh the copies of the screens the menu links to (the padlock ones only while unlocked, since
+  // locked they are buttons), at most every 5 minutes unless the set of screens changed.
+  async function refrescarPantallas() {
+    const trabajador = navigator.serviceWorker && navigator.serviceWorker.controller;
+    if (copiaSinRed() || !navigator.onLine || !trabajador) return;
+    const urls = [...document.querySelectorAll("a.sgft-nav-item[href^='/']")].map((a) => a.getAttribute("href"));
+    if (!urls.length) return;
+    const clave = urls.join(" ");
+    const ultima = await almacen.leer("pantallas_guardadas");
+    if (ultima && ultima.clave === clave && Date.now() - ultima.hora < REFRESCO_MS) return;
+    await almacen.guardar("pantallas_guardadas", { clave, hora: Date.now() });
+    trabajador.postMessage({ tipo: "guardar-pantallas", urls });
+  }
+
   function leerDatos() {
     const nodo = document.getElementById("datos-sin-red");
     return nodo ? JSON.parse(nodo.textContent) : null;
@@ -65,9 +93,10 @@
       if (!guardados || datos.generado > guardados.generado) await almacen.guardarDatos(datos);
     }
     await actualizarPendientes();
-    if (navigator.onLine) {
+    if (navigator.onLine && !copiaSinRed()) {
       const resultado = await sincronizar();
       if (resultado.ok && resultado.resultados.length) window.location.reload();
+      else refrescarPantallas();
     }
   }
 
@@ -85,6 +114,14 @@
     event.preventDefault();
     sincronizar().then((resultado) => { if (resultado.ok && resultado.resultados.length) window.location.reload(); });
   });
+  // A locked module in the menu opens the PIN dialog of the server; without network, go to its saved copy instead.
+  document.addEventListener("click", (event) => {
+    const boton = event.target.closest("button[data-sgft-url]");
+    if (!boton || (navigator.onLine && !copiaSinRed())) return;
+    event.preventDefault();
+    event.stopPropagation();
+    window.location.href = boton.dataset.sgftUrl;
+  }, true);
   document.addEventListener("DOMContentLoaded", () => { arrancar(); });
 
   // --- Alpine component -------------------------------------------------------------------------------------
@@ -278,6 +315,67 @@
     };
   }
 
-  document.addEventListener("alpine:init", () => window.Alpine.data("ventaSinRed", ventaSinRed));
+  // Productos, Inventario, Caja and Reportes without network: what they showed at their last load, read-only.
+  function pantallaSinRed() {
+    return {
+      sinRed: false,
+      copia: null,
+      pendientes: 0,
+      candado: false,
+      bloqueada: false,
+      nombre: "",
+      aviso: "",
+      error: "",
+
+      async iniciar() {
+        this.candado = document.body.hasAttribute("data-sgft-candado");
+        this.copia = copiaSinRed();
+        document.addEventListener("sgft:pendientes", (e) => { this.pendientes = e.detail; });
+        document.addEventListener("sgft:sin-red", () => this.entrar(
+          "Sin conexión: esta acción necesita red. Lo que ves es de la última sincronización."));
+        if (this.copia) await this.entrar("");
+      },
+
+      async entrar(aviso) {
+        this.sinRed = true;
+        this.aviso = aviso;
+        this.pendientes = await almacen.contar();
+        if (!this.copia) this.copia = await almacen.leer("ultima_sincronizacion");
+        if (this.candado && copiaSinRed()) await this.revisarCandado();
+      },
+
+      get ultima() {
+        return this.copia ? new Date(this.copia).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" })
+          : "sin datos";
+      },
+
+      async revisarCandado() {
+        const desbloqueo = await almacen.leer("desbloqueo_sin_red");
+        this.bloqueada = !(desbloqueo && desbloqueo.hasta > Date.now());
+        this.nombre = this.bloqueada ? "" : desbloqueo.nombre;
+      },
+
+      async desbloquear(evento) {
+        this.error = "";
+        const pin = new FormData(evento.target).getAll("pin").join("");
+        if (!/^\d{6}$/.test(pin)) { this.error = "Escribe los 6 dígitos del PIN."; return; }
+        const admin = await almacen.verificarPin(pin);
+        if (!admin) {
+          this.error = "PIN incorrecto, o el dispositivo no se ha sincronizado en 7 días. Conéctate para renovarlo.";
+          evento.target.reset();
+          return;
+        }
+        await almacen.guardar("desbloqueo_sin_red",
+          { hasta: Date.now() + DESBLOQUEO_MS, usuario_id: admin.usuario_id, nombre: admin.nombre });
+        this.nombre = admin.nombre;
+        this.bloqueada = false;
+      },
+    };
+  }
+
+  document.addEventListener("alpine:init", () => {
+    window.Alpine.data("ventaSinRed", ventaSinRed);
+    window.Alpine.data("pantallaSinRed", pantallaSinRed);
+  });
   window.sgftSinRed = { sincronizar, centavosDeTexto, dinero };
 })();
