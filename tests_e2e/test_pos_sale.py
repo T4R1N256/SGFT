@@ -100,3 +100,20 @@ class SaleWithoutNetworkTests(E2ETestCase):
         self.assertGreaterEqual(len(attempts), 2)
         self.page.wait_for_function(
             "document.querySelector('[data-sgft-pendientes]').textContent.trim() === '0'")
+
+    def test_without_network_the_landscape_phone_keeps_the_dishes_below_the_categories(self):
+        # On the iPhone in landscape the phone rules lay out title, categories and dishes as a grid. They only knew
+        # the ids of the screen with network, so without network the dishes ended up squeezed beside the categories.
+        cash.open_session(self.admin, Decimal("500.00"))
+        self.page.set_viewport_size({"width": 874, "height": 402})  # iPhone 17 in landscape
+        self.activate_device()
+        self.wait_for_service_worker()
+        self.go_offline()
+
+        offline = self.page.locator("#offline-sale")
+        chips = offline.get_by_role("group", name="Categorías").bounding_box()
+        dishes = offline.locator(".sgft-grid-platillos").bounding_box()
+        ticket = offline.get_by_role("complementary", name="Ticket en curso").bounding_box()
+        self.assertGreaterEqual(dishes["y"], chips["y"] + chips["height"] - 1)  # below, not beside
+        self.assertLess(dishes["x"], chips["x"])  # the grid starts under the title, at the left edge
+        self.assertLess(dishes["x"] + dishes["width"], ticket["x"])  # and the ticket stays on the right
