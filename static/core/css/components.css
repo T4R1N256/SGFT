@@ -178,8 +178,8 @@
 /* Las dos orientaciones del teléfono */
 @media (orientation: portrait) and (max-width: 767px), (orientation: landscape) and (max-height: 500px) {
   /* Chips en una fila con desplazamiento horizontal */
-  #category-chips { flex-wrap: nowrap; overflow-x: auto; gap: 8px; scrollbar-width: none; padding: 2px 2px 8px; margin: -2px -2px -6px; }
-  #category-chips .sgft-chip { flex: none; white-space: nowrap; font-size: 13px; padding: 0 14px; }
+  :is(#category-chips, .sgft-venta-chips) { flex-wrap: nowrap; overflow-x: auto; gap: 8px; scrollbar-width: none; padding: 2px 2px 8px; margin: -2px -2px -6px; }
+  :is(#category-chips, .sgft-venta-chips) .sgft-chip { flex: none; white-space: nowrap; font-size: 13px; padding: 0 14px; }
 
   /* Tarjeta de venta compacta: miniatura de 52, nombre en varias líneas sin cortarse, sin la etiqueta de categoría
      (el chip activo ya la indica) */
@@ -201,8 +201,8 @@
 
 /* Vertical: 2 productos por fila y ticket flotante abajo; abierto ocupa toda la pantalla */
 @media (orientation: portrait) and (max-width: 767px) {
-  #category-chips { margin-right: -16px; padding-right: 16px; }
-  #category-chips .sgft-chip { height: 36px; }
+  :is(#category-chips, .sgft-venta-chips) { margin-right: -16px; padding-right: 16px; }
+  :is(#category-chips, .sgft-venta-chips) .sgft-chip { height: 36px; }
   .sgft-grid-platillos { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 
   .sgft-app__main { padding-bottom: calc(250px + env(safe-area-inset-bottom)); }
@@ -252,6 +252,10 @@
   .sgft-app__main { min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column;
     padding: 0 max(16px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
   #sale-area { flex: 1 1 auto; min-height: 0; }
+  /* Sin red (offline_sale.html): el aviso arriba y la venta ocupa el resto, igual que #sale-area */
+  .sgft-app__main > [x-data]:has(> #offline-sale) { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+  #offline-sale { flex: 1 1 auto; min-height: 0; gap: 8px; }
+  #offline-sale > .relative { flex: 1 1 auto; min-height: 0; }
   .sgft-grid-venta { height: 100%; grid-template-columns: minmax(0, 1fr) 300px; grid-template-rows: minmax(0, 1fr); gap: 12px; }
 
   /* Título «Nueva venta #0039» y chips en una fila; «Alerta stock» se fue a la barra; la rejilla ocupa el resto */
@@ -260,13 +264,13 @@
   .sgft-grid-venta > section > header { display: contents; }
   .sgft-grid-venta > section > header > div:first-child { grid-column: 1; grid-row: 1; }
   #stock-notice { display: none; }
-  #sale-title { font-size: 18px; white-space: nowrap; }
+  :is(#sale-title, .sgft-venta-titulo) { font-size: 18px; white-space: nowrap; }
   .sgft-sale-title__no { display: inline; color: var(--sgft-color-texto-secundario); font-weight: 500; }
-  #sale-title + p { display: none; }
-  #category-chips { grid-column: 2; grid-row: 1; }
-  #category-chips .sgft-chip { height: 32px; }
-  #dish-list { grid-column: 1 / -1; grid-row: 2; align-self: stretch; min-height: 0; gap: 8px; }
-  #dish-list > .sgft-grid-platillos { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  :is(#sale-title, .sgft-venta-titulo) + p { display: none; }
+  :is(#category-chips, .sgft-venta-chips) { grid-column: 2; grid-row: 1; }
+  :is(#category-chips, .sgft-venta-chips) .sgft-chip { height: 32px; }
+  :is(#dish-list, .sgft-venta-platillos) { grid-column: 1 / -1; grid-row: 2; align-self: stretch; min-height: 0; gap: 8px; }
+  :is(#dish-list, .sgft-venta-platillos) > .sgft-grid-platillos { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
     align-content: start; padding: 2px 4px 6px 2px; margin: -2px -4px 0 -2px; scrollbar-width: thin; }
   #dish-list > .sgft-card { flex: 1 1 auto; }
 
@@ -274,25 +278,28 @@
   .sgft-grid-platillos { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 
   /* Ticket a la derecha: plegado muestra la venta; abierto se alarga con todas las líneas y se desplaza completo */
-  #order-summary { position: static; align-self: start; min-height: 0; max-height: 100%; overflow: hidden;
+  :is(#order-summary, .sgft-venta-ticket) { position: static; align-self: start; min-height: 0; max-height: 100%; overflow: hidden;
     padding: 12px; gap: 8px; border-radius: var(--sgft-radio-campo); }
+  /* El ticket sin red no tiene acordeón: se desplaza completo dentro de la pantalla */
+  .sgft-venta-ticket { overflow-y: auto; overscroll-behavior: contain; }
+  .sgft-venta-ticket > * { flex-shrink: 0; }
   #order-summary[data-open="true"] { overflow-y: auto; overscroll-behavior: contain; }
   #order-summary[data-open="true"] > * { flex-shrink: 0; }
   #order-summary[data-open="true"] .sgft-ticket-body, #order-summary[data-open="true"] .sgft-ticket-lines { flex: none; overflow: visible; }
-  #order-summary .sgft-card-header__icon { width: 36px; height: 36px; border-radius: var(--sgft-radio-sm); }
-  #order-summary .sgft-card-header__icon svg { width: 20px; height: 20px; }
-  #order-summary .sgft-card-header { gap: 10px; }
-  #order-summary h2 { font-size: 16px; }
-  #order-summary .sgft-badge { height: 24px; padding: 0 8px; font-size: 11px; }
-  #order-summary .sgft-ticket-line { height: 46px; gap: 14px; }
-  #order-summary .sgft-thumb { width: 34px; height: 34px; border-radius: var(--sgft-radio-sm); font-size: 18px; }
-  #order-summary .sgft-texto-cuerpo-medio { font-size: 13px; }
-  #order-summary .sgft-texto-cuerpo-descripcion { font-size: 11px; }
-  #order-summary .sgft-texto-numero-precio { width: 58px; font-size: 13px; }
-  #order-summary .sgft-icon-btn--compacto { width: 30px; height: 30px; border-radius: var(--sgft-radio-xs); }
-  #order-summary .sgft-texto-display-indicador { font-size: 24px; }
-  #order-summary .sgft-texto-titulo-h2 { font-size: 16px; }
-  #order-summary .sgft-btn { height: 38px; font-size: 13px; padding: 0 8px; }
-  #order-summary .sgft-btn--grande { height: 44px; }
-  #order-summary .sgft-btn svg { width: 16px; height: 16px; }
+  :is(#order-summary, .sgft-venta-ticket) .sgft-card-header__icon { width: 36px; height: 36px; border-radius: var(--sgft-radio-sm); }
+  :is(#order-summary, .sgft-venta-ticket) .sgft-card-header__icon svg { width: 20px; height: 20px; }
+  :is(#order-summary, .sgft-venta-ticket) .sgft-card-header { gap: 10px; }
+  :is(#order-summary, .sgft-venta-ticket) h2 { font-size: 16px; }
+  :is(#order-summary, .sgft-venta-ticket) .sgft-badge { height: 24px; padding: 0 8px; font-size: 11px; }
+  :is(#order-summary, .sgft-venta-ticket) .sgft-ticket-line { height: 46px; gap: 14px; }
+  :is(#order-summary, .sgft-venta-ticket) .sgft-thumb { width: 34px; height: 34px; border-radius: var(--sgft-radio-sm); font-size: 18px; }
+  :is(#order-summary, .sgft-venta-ticket) .sgft-texto-cuerpo-medio { font-size: 13px; }
+  :is(#order-summary, .sgft-venta-ticket) .sgft-texto-cuerpo-descripcion { font-size: 11px; }
+  :is(#order-summary, .sgft-venta-ticket) .sgft-texto-numero-precio { width: 58px; font-size: 13px; }
+  :is(#order-summary, .sgft-venta-ticket) .sgft-icon-btn--compacto { width: 30px; height: 30px; border-radius: var(--sgft-radio-xs); }
+  :is(#order-summary, .sgft-venta-ticket) .sgft-texto-display-indicador { font-size: 24px; }
+  :is(#order-summary, .sgft-venta-ticket) .sgft-texto-titulo-h2 { font-size: 16px; }
+  :is(#order-summary, .sgft-venta-ticket) .sgft-btn { height: 38px; font-size: 13px; padding: 0 8px; }
+  :is(#order-summary, .sgft-venta-ticket) .sgft-btn--grande { height: 44px; }
+  :is(#order-summary, .sgft-venta-ticket) .sgft-btn svg { width: 16px; height: 16px; }
 }

@@ -2,7 +2,9 @@
 pos/partials/offline_sale.html — Nueva venta sin red (WBS 3.4.4, 3.4.7; id «offline-sale»)
 Vista: pos:order_builder, dentro del componente Alpine ventaSinRed de static/pos/offline.js. Se pinta solo sin red;
 con red manda el área de venta del servidor (pos/partials/sale_area.html), que esta plantilla imita con las mismas
-clases. Aquí sí calcula el navegador: el precio sale de calcularTotal (pricing.js), y lo cobrado se guarda en la
+clases y la misma estructura. Los id de aquella siguen en la página (oculta), así que aquí van clases equivalentes
+para las reglas del teléfono (components.css): sgft-venta-titulo (#sale-title), sgft-venta-chips (#category-chips),
+sgft-venta-platillos (#dish-list) y sgft-venta-ticket (#order-summary). Aquí sí calcula el navegador: el precio sale de calcularTotal (pricing.js), y lo cobrado se guarda en la
 cola del dispositivo hasta que vuelva la red. La regla 12 se cumple con el turno guardado en el dispositivo.
 {% endcomment %}
 {% load static %}
@@ -22,16 +24,19 @@ cola del dispositivo hasta que vuelva la red. La regla 12 se cumple con el turno
   <div class="relative">
     <div class="sgft-grid-venta" :class="!turno && 'pointer-events-none select-none opacity-35'" :inert="!turno">
       <section class="flex min-w-0 flex-col gap-md" aria-labelledby="offline-sale-title">
-        <header class="flex flex-col gap-[4px]">
-          <h1 id="offline-sale-title" class="sgft-texto-titulo-h1 text-texto-primario">Nueva venta</h1>
-          <p class="sgft-texto-cuerpo-pequeno text-texto-secundario" x-text="turno ? 'Sin conexión · turno guardado en el dispositivo' : 'Sin turno de caja abierto'"></p>
+        <header class="flex flex-wrap items-start justify-between gap-md">
+          <div class="flex flex-col gap-[4px]">
+            <h1 id="offline-sale-title" class="sgft-venta-titulo sgft-texto-titulo-h1 text-texto-primario">Nueva venta</h1>
+            <p class="sgft-texto-cuerpo-pequeno text-texto-secundario" x-text="turno ? 'Sin conexión · turno guardado en el dispositivo' : 'Sin turno de caja abierto'"></p>
+          </div>
         </header>
-        <div class="flex flex-wrap gap-[10px]" role="group" aria-label="Categorías">
+        <div class="sgft-venta-chips flex flex-wrap gap-[10px]" role="group" aria-label="Categorías">
           <button type="button" class="sgft-chip sgft-texto-cuerpo-pequeno-medio" :aria-pressed="categoria === 'todos'" @click="categoria = 'todos'">Todos</button>
           <template x-for="c in catalogo.categorias" :key="c.id">
             <button type="button" class="sgft-chip sgft-texto-cuerpo-pequeno-medio" :aria-pressed="categoria === String(c.id)" @click="categoria = String(c.id)" x-text="c.nombre"></button>
           </template>
         </div>
+        <div class="sgft-venta-platillos flex flex-col gap-md">
         <div class="sgft-grid-platillos">
           <template x-for="p in platillosVisibles" :key="p.id">
             <button type="button" class="sgft-dish-card" :class="cantidadEnTicket(p.id) && 'sgft-dish-card--en-ticket'" @click="agregar(p)"
@@ -45,9 +50,10 @@ cola del dispositivo hasta que vuelva la red. La regla 12 se cumple con el turno
             </button>
           </template>
         </div>
+        </div>
       </section>
 
-      <aside class="sgft-card sgft-card--media gap-sm xl:sticky xl:top-md" aria-label="Ticket en curso">
+      <aside class="sgft-venta-ticket sgft-card sgft-card--media gap-sm xl:sticky xl:top-md" aria-label="Ticket en curso">
         {% include "components/card_header.html" with title="Ticket" icon="receipt-sheet" compact=True only %}
         <div class="h-px bg-borde-sutil"></div>
         <div class="flex flex-1 flex-col gap-[2px]">
