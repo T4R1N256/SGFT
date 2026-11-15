@@ -100,3 +100,18 @@ class SaleWithoutNetworkTests(E2ETestCase):
         self.assertGreaterEqual(len(attempts), 2)
         self.page.wait_for_function(
             "document.querySelector('[data-sgft-pendientes]').textContent.trim() === '0'")
+
+    def test_the_app_files_come_from_the_worker_when_the_browser_cache_expired(self):
+        # Without network, the browser's own copy of offline.js, db.js, pricing.js and app.css lasts only as long as
+        # WhiteNoise's max-age (60 s in production). After that only the service worker can serve them; if it does
+        # not, Nueva venta opens without its offline client and nothing can be sold.
+        cash.open_session(self.admin, Decimal("500.00"))
+        self.activate_device()
+        self.wait_for_service_worker()
+        cdp = self.context.new_cdp_session(self.page)
+        cdp.send("Network.clearBrowserCache")  # as if a minute had passed
+        cdp.detach()
+
+        self.go_offline()
+        self.sell_offline()
+        self.assertEqual(self.pending(), 1)

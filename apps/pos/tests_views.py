@@ -468,6 +468,14 @@ class OfflineDataTests(ViewTestCase):
         for path in ('"/static/pos/db.js"', '"/static/pos/offline.js"', "dexie@4.0.10"):
             self.assertIn(path, body)
 
+    def test_service_worker_serves_the_app_files_from_its_cache(self):
+        # The precached copies are only useful if a route reads them: offline, the browser's HTTP cache of
+        # offline.js and app.css expires after WhiteNoise's max-age (T30, spike on the iPhone).
+        body = self.client.get("/pos/sw.js").content.decode()
+        self.assertIn("StaleWhileRevalidate", body)
+        self.assertIn("cacheName: RECURSOS", body)
+        self.assertIn('url.pathname.startsWith("/static/")', body)
+
 
 class CashStateTests(ViewTestCase):
     """apps.pos.context_processors.cash_session: every screen shows the real cash state in the top bar."""
