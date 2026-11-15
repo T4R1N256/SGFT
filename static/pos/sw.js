@@ -89,6 +89,20 @@ workbox.routing.setCatchHandler(async ({ request }) => {
   return new Response(html, { status: 503, headers: { "Content-Type": "text/html; charset=utf-8" } });
 });
 
+// Own static files and the CDN libraries: from the cache at once, refreshed in the background. Without this route
+// the copies warmed on install are never read, and offline the page depends on the browser's HTTP cache, which
+// WhiteNoise lets expire after 60 s: Nueva venta would open without offline.js. The CDN answers no-cors requests
+// with opaque responses (status 0), so those are cached too. Static files go through WhiteNoise before the session
+// middleware, so refreshing them never re-saves the session (the reason the page refresh was removed).
+workbox.routing.registerRoute(
+  ({ request, url }) => request.method === "GET" &&
+    ((url.origin === self.location.origin && url.pathname.startsWith("/static/")) || CDN.includes(url.origin)),
+  new workbox.strategies.StaleWhileRevalidate({
+    cacheName: RECURSOS,
+    plugins: [new workbox.cacheableResponse.CacheableResponsePlugin({ statuses: [0, 200] })],
+  }),
+);
+
 // Warm both caches on install, so the first offline load works without visiting every URL. cache.add() rejects
 // opaque responses (spike, finding 2), so every file goes through fetch + put. A file that fails does not stop
 // the install: the strategies above fill it in on the next visit with network.
