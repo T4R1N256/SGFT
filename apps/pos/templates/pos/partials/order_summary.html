@@ -2,6 +2,8 @@
 pos/partials/order_summary.html — Ticket en curso (id «order-summary»; Figma 2045:2316)
 Vistas: pos:order_builder, pos:add_item, pos:remove_item, pos:remove_dish, pos:set_payment_method, pos:confirm_sale.
 Importes, cantidades y can_confirm los decide el servidor; la plantilla solo los muestra.
+Mientras una petición va en camino, sus botones quedan deshabilitados por hx-disabled-elt de #sale-area (también
+«Confirmar compra», contra el doble envío): así nunca se confirma con un método de pago o una línea que aún no llega.
 Ticket vacío: mensaje centrado y método de pago y «Confirmar compra» deshabilitados, para que el panel no cambie
 de tamaño (DEC-30).
 En el teléfono el ticket es un acordeón (acordado el 4-oct-2026): plegado muestra el encabezado y la venta (total,
@@ -68,7 +70,7 @@ Fuera de banda: dish_oob (la tarjeta del platillo tocado), close_dialog (tras «
   </div>
 
   {% if order.can_confirm %}
-    {% include "components/button.html" with text="Confirmar compra" icon="circle-check" size="grande" full=True hx_post=confirm_url hx_target="#order-summary" hx_swap="outerHTML" disable_on_request=True only %}
+    {% include "components/button.html" with text="Confirmar compra" icon="circle-check" size="grande" full=True hx_post=confirm_url hx_target="#order-summary" hx_swap="outerHTML" only %}
   {% else %}
     {% include "components/button.html" with text="Confirmar compra" icon="circle-check" size="grande" full=True disabled=True only %}
   {% endif %}

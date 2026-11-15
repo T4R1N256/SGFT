@@ -4,8 +4,13 @@ Vista: pos:order_builder (página o HTMX).
 En el teléfono en horizontal el título lleva el número de ticket en gris y el subtítulo se oculta.
 Sin turno abierto (regla 12) el contenido queda deshabilitado (opacidad 35 %, inert) y encima va el Aviso de
 caja cerrada, como en Figma 01. Qué se pinta lo decide cash_session_open, que manda el servidor.
+hx-disabled-elt (lo heredan los platillos, las líneas y el ticket): mientras una petición del área de venta va en camino,
+los botones del ticket quedan deshabilitados. El pedido vive en la sesión y cada petición la guarda al terminar; sin
+esto, «Confirmar compra» tocado antes de que llegara la respuesta de «Transferencia» leía la sesión vieja y la venta
+quedaba en efectivo. Solo toma los botones habilitados: htmx habilita al terminar todo lo que deshabilitó, y el
+servidor deja algunos deshabilitados a propósito (ticket vacío).
 {% endcomment %}
-<div id="sale-area" class="relative">
+<div id="sale-area" class="relative" hx-disabled-elt="#order-summary button:not([disabled])">
   <div class="sgft-grid-venta{% if not cash_session_open %} pointer-events-none select-none opacity-35{% endif %}"{% if not cash_session_open %} inert aria-hidden="true"{% endif %}>
     <section class="flex min-w-0 flex-col gap-md" aria-labelledby="sale-title">
       <header class="flex flex-wrap items-start justify-between gap-md">
