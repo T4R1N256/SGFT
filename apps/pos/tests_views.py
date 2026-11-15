@@ -310,16 +310,28 @@ class OpenSessionTests(ViewTestCase):
         self.assertIn("Escribe el fondo inicial", response.content.decode())
         self.assertFalse(CashRegisterSession.objects.exists())
 
-    def test_valid_open_records_the_admin_and_updates_the_screen(self):
+    def test_valid_open_records_the_admin_and_reloads_nueva_venta(self):
         response = self.client.post(OPEN, {"opening_amount": "$1,500.00"}, **HTMX)
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual((response.status_code, response["HX-Redirect"]), (204, BUILDER))
         session = CashRegisterSession.objects.get()
         self.assertEqual((session.opened_by, session.opening_amount), (self.admin, Decimal("1500.00")))
-        html = response.content.decode()
-        self.assertIn('id="cash-status" hx-swap-oob="true"', html)
+        html = self.client.get(BUILDER).content.decode()
+        self.assertIn("Caja abierta con un fondo inicial de $1,500.00.", html)
         self.assertRegex(html, r'Caja<span class="sr-only"> abierta</span>')
-        self.assertIn('id="dialog" hx-swap-oob="true"', html)
-        self.assertUniqueIds(response)
+
+    def test_the_reloaded_page_gives_the_device_the_open_session(self):
+        # Without the reload the device kept «sin turno» from the page it had loaded with the till closed, and
+        # without network it asked to open the till again: a second opening that goes to quarantine (rule 13).
+        self.client.post(OPEN, {"opening_amount": "500"}, **HTMX)
+        session = CashRegisterSession.objects.get()
+        response = self.client.get(BUILDER)
+        self.assertEqual(response.context["offline_data"]["turno"],
+                         {"uuid": str(session.uuid), "fecha": session.business_date.isoformat()})
+
+    def test_errors_go_to_the_dialog(self):
+        html = self.client.get(OPEN, **HTMX).content.decode()
+        self.assertIn('hx-target="#dialog"', html)
+        self.assertNotIn("#sale-area", html)
 
     def test_second_session_of_the_day_is_422(self):
         self.client.post(OPEN, {"opening_amount": "500"}, **HTMX)

@@ -19,7 +19,8 @@ class SaleWithNetworkTests(E2ETestCase):
         self.unlock()
         dialog = page.locator("form[aria-labelledby=open-cash-title]")
         dialog.locator("input[name=opening_amount]").fill("500")
-        dialog.locator("button[type=submit]").click()
+        with page.expect_navigation():  # Nueva venta reloads with the till open
+            dialog.locator("button[type=submit]").click()
 
         card = page.get_by_role("button", name=re.compile("^Agregar Burrito de asada"))
         card.click()

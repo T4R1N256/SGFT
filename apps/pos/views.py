@@ -538,7 +538,7 @@ def confirm_sale(request):
 def _open_cash_dialog(error=""):
     today = timezone.localdate()
     return {"shift_label": f"Turno del {today:%d/%m/%Y}", "opening_amount": None, "ask_pin": False,
-            "post_url": _url("pos:open_session"), "hx_target": "#sale-area", "hx_swap": "outerHTML", "error": error}
+            "post_url": _url("pos:open_session"), "hx_target": "#dialog", "hx_swap": "innerHTML", "error": error}
 
 
 def _decimal(value):
@@ -556,8 +556,11 @@ def open_session(request):
                   cerrado, el botón «Abrir caja» recibe primero el diálogo del PIN y, al escribirlo, la página vuelve
                   a Nueva venta con «Abrir caja» ya abierto
     Plantilla   : GET y 422 → pos/partials/open_cash_session.html [fragmento, diálogo en #dialog]
-                  POST válido → pos/partials/sale_area.html [fragmento] + Estado de caja y total fuera de banda
-    HTMX        : el diálogo hace hx-post con hx-target="#sale-area" hx-swap="outerHTML"
+                  POST válido → sin cuerpo: HX-Redirect a pos:order_builder, con «Caja abierta» en un mensaje
+                  (django.contrib.messages). La página completa trae el turno abierto en «datos-sin-red» y el
+                  service worker guarda esa copia: sin recargar, el dispositivo seguía con la caja cerrada y sin red
+                  pedía abrirla de nuevo, apertura que va a cuarentena (regla 13)
+    HTMX        : el diálogo hace hx-post; los errores van a #dialog
     Contexto    : shift_label: str, opening_amount: Decimal|None, ask_pin: False (en línea el PIN ya se pidió;
                   sin red lo pide static/pos/ con el verificador), error: str (si 422)
     Errores     : 422 con el diálogo y el error (fondo inicial inválido, ya hay un turno abierto o ya hubo uno
@@ -574,9 +577,10 @@ def open_session(request):
     except cash.CashSessionError as error:
         return _retarget_dialog(render(request, "pos/partials/open_cash_session.html",
                                        _open_cash_dialog(str(error)), status=422))
-    context, _ = _screen_context(request)
-    context["oob_cash_status"] = True
-    return render(request, "pos/partials/sale_area.html", context)
+    messages.success(request, f"Caja abierta con un fondo inicial de ${amount:,.2f}.")
+    response = HttpResponse(status=204)
+    response["HX-Redirect"] = _url("pos:order_builder")
+    return response
 
 
 def _pending(request):
