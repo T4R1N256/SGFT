@@ -1,7 +1,7 @@
 # Spike offline: resultados en el iPhone (WBS 5.4)
 
-**Responsable:** Alejandro Tarín (con Jared Beltrán). **Dispositivo:** iPhone 17 · app instalada desde Safari en la pantalla de inicio. **Fechas de la prueba:** 14 y 15 de noviembre de 2026 (la prueba 7 pide el día siguiente).
-**Sistema probado:** la versión desplegada en Railway, no la rama del spike. Las pruebas 4, 6, 7 y 12 se repitieron el 15 de noviembre con #96 a #100 ya desplegados.
+**Responsable:** Alejandro Tarín (con Jared Beltrán). **Dispositivo:** iPhone 17 Pro Max con iOS 26 · app instalada desde Safari en la pantalla de inicio. **Fechas de la prueba:** 13, 14 y 15 de noviembre de 2026.
+**Sistema probado:** la versión desplegada en Railway (`https://sgft-production.up.railway.app`), no la rama del spike. La primera ronda fue el 13 y el 14 de noviembre; el 15, con #96 a #100 ya desplegados, se repitió la prueba 4 y se hicieron la 6, la 7 (al día siguiente) y la 12.
 
 El spike (rama `tarin/spike-offline`, que no se fusiona) comprobó en Chromium el diseño de ADR-02: un solo camino de escritura, UUID por operación, cuarentena en lugar de rechazo y dinero en centavos. Lo que quedó pendiente fueron los riesgos propios de iOS. Esta tabla los cierra con el sistema real.
 
