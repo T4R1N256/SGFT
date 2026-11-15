@@ -7,10 +7,12 @@ Parámetros:
   compact  True: 40 px (por omisión 48)
   type     button|submit (por omisión: button)
   hx_post, hx_target, hx_swap, hx_vals  atributos HTMX (opcionales)
+No fija hx-disabled-elt: en Nueva venta lo hereda de #sale-area, que deshabilita los botones del ticket mientras una
+petición va en camino (con «this» propio, quitar una línea y confirmar enseguida podía cobrar la línea quitada).
 Incluir siempre con «only».
 {% endcomment %}
 <button type="{{ type|default:'button' }}" aria-label="{{ label }}"
   class="sgft-icon-btn sgft-icon-btn--{{ variant|default:'neutro' }}{% if compact %} sgft-icon-btn--compacto{% endif %}"
-  {% if hx_post %}hx-post="{{ hx_post }}" hx-disabled-elt="this"{% endif %}{% if hx_target %} hx-target="{{ hx_target }}"{% endif %}{% if hx_swap %} hx-swap="{{ hx_swap }}"{% endif %}{% if hx_vals %} hx-vals='{{ hx_vals }}'{% endif %}>
+  {% if hx_post %}hx-post="{{ hx_post }}"{% endif %}{% if hx_target %} hx-target="{{ hx_target }}"{% endif %}{% if hx_swap %} hx-swap="{{ hx_swap }}"{% endif %}{% if hx_vals %} hx-vals='{{ hx_vals }}'{% endif %}>
   {% if compact %}{% include "components/icons/"|add:icon|add:".html" with size=20 only %}{% else %}{% include "components/icons/"|add:icon|add:".html" with size=24 only %}{% endif %}
 </button>

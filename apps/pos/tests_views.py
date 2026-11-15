@@ -109,6 +109,18 @@ class AccessTests(ViewTestCase):
 
 
 class OrderBuilderTests(ViewTestCase):
+    def test_ticket_buttons_wait_for_the_request_in_flight(self):
+        # The order lives in the session and every request saves it when it ends: «Confirmar compra» tapped before
+        # «Transferencia» answered read the old session and the sale was recorded as cash (CI of main, #101).
+        self.open_cash()
+        self.add(self.asada)
+        html = self.client.get(BUILDER).content.decode()
+        self.assertIn('<div id="sale-area" class="relative" hx-disabled-elt="#order-summary button:not([disabled])">',
+                      html)
+        summary = self.client.post(PAYMENT, {"method": "transferencia"}, **HTMX).content.decode()
+        self.assertIn("Confirmar compra", summary)
+        self.assertNotIn('hx-disabled-elt="this"', summary)  # it would override the group and leave the rest enabled
+
     def test_closed_cash_disables_content_and_offers_open(self):
         response = self.client.get(BUILDER)
         self.assertTemplateUsed(response, "pos/order_builder.html")
