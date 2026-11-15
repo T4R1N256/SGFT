@@ -1,164 +1,237 @@
-# SGFT — Sistema de Gestión de FoodTruck
+# SGFT — Sistema de Gestión de Food Truck
 
-Sistema web de gestión administrativa y operativa desarrollado para el foodtruck **"El Pardo"**.
+Aplicación web progresiva (PWA) para el food truck **«El Pardo»** de Ciudad Juárez: punto de venta que funciona con y sin internet, inventario por recetas, caja y reportes. Proyecto académico de la Universidad Autónoma de Ciudad Juárez (UACJ).
 
-> **Estado del proyecto:**
->   - Levantamiento y análisis de requisitos completado.
->   - En proceso de diseño de arquitectura y planificación del Product Backlog.
+> **Estado (15-nov-2026):** el sistema está desplegado en Railway con PostgreSQL en Neon (`https://sgft-production.up.railway.app`) y el modo sin conexión quedó validado en un iPhone 17 Pro Max con iOS 26 ([resultados del spike](docs/decisiones/spike-offline-resultados.md)). Falta la instalación final en el teléfono del negocio y la primera venta real (WBS 1.4.4).
 
 ---
 
 ## Tabla de contenido
 
-- [Descripción general](#descripción-general)
-- [Contexto del negocio](#contexto-del-negocio)
-- [Problemática](#problemática)
+- [Contexto y problema](#contexto-y-problema)
 - [Objetivos](#objetivos)
-- [Alcance del proyecto](#alcance-del-proyecto)
-- [Módulos del sistema](#módulos-del-sistema)
-- [Roles de usuario](#roles-de-usuario)
-- [Metodología de trabajo](#metodología-de-trabajo)
-- [Fases y entregables](#fases-y-entregables)
-- [Equipo de trabajo](#equipo-de-trabajo)
-- [Estructura del repositorio](#estructura-del-repositorio)
+- [Alcance](#alcance)
+- [Pantallas y módulos](#pantallas-y-módulos)
+- [Roles y acceso](#roles-y-acceso)
+- [Operación sin conexión](#operación-sin-conexión)
 - [Stack tecnológico](#stack-tecnológico)
+- [Estructura del repositorio](#estructura-del-repositorio)
+- [Cómo correrlo en tu computadora](#cómo-correrlo-en-tu-computadora)
+- [Pruebas](#pruebas)
+- [Despliegue](#despliegue)
+- [Flujo de trabajo](#flujo-de-trabajo)
 - [Documentación](#documentación)
+- [Equipo](#equipo)
 - [Referencias](#referencias)
 - [Licencia](#licencia)
 
 ---
 
-## Descripción general
+## Contexto y problema
 
-**SGFT (Sistema de Gestión de FoodTruck)** es una solución tecnológica diseñada para optimizar la administración operativa, el control de inventarios y el punto de venta en negocios gastronómicos de formato móvil. El sistema busca transformar la toma de decisiones del negocio mediante la digitalización de sus procesos clave: registro de ventas, control de insumos, gestión de accesos y generación de reportes financieros.
+**«El Pardo»** es un food truck fundado en 2026 en Ciudad Juárez, Chihuahua. Vende burritos, desayunos, guisados por porción y bebidas, y lo atienden tres colaboradores sobre la Av. Vicente Guerrero, una zona de mucha demanda por el Hospital General Regional No. 2 del IMSS. La competencia directa opera de manera informal: cobra solo en efectivo o transferencia y no tiene punto de venta ni presencia digital.
 
-El proyecto se desarrolla como una plataforma web responsiva, accesible desde cualquier dispositivo con navegador (computadora, tablet o teléfono), con el fin de facilitar su uso dentro de un establecimiento móvil sin requerir infraestructura costosa ni equipos especializados.
+Antes del SGFT todo era manual: pedidos en cuaderno, totales calculados de memoria, conteo visual del inventario y corte de caja a mano. Eso producía:
 
-## Contexto del negocio
-
-**"El Pardo"** es un foodtruck fundado en 2026 en Ciudad Juárez, Chihuahua, especializado en burritos tradicionales, desayunos al gusto y guisados por porción, complementado con bebidas. Opera con una estructura reducida de tres colaboradores (cocina, atención al cliente y cobro/compras) y se ubica en el corredor comercial de la Av. Vicente Guerrero, zona de alta demanda impulsada por el Hospital General Regional No. 2 del IMSS.
-
-El análisis de mercado identificó que la totalidad de la competencia directa en la zona (puestos de burritos) opera de forma informal, con cobro únicamente en efectivo/transferencia y sin sistemas de punto de venta ni presencia digital, dejando una oportunidad de diferenciación para "El Pardo" mediante la tecnificación de su operación.
-
-## Problemática
-
-Actualmente, "El Pardo" gestiona sus operaciones de forma manual (registro de pedidos en cuaderno, conteo visual de inventario, cálculo mental de compras y cierre de caja aritmético), lo que genera:
-
-- Inconsistencias en el rastreo de insumos en tiempo real.
-- Riesgo de desabasto o merma de materia prima.
-- Nula visibilidad sobre márgenes de ganancia y desempeño de productos.
-- Mayor tiempo de atención al cliente y probabilidad de error humano en cobros y pedidos.
+- errores de cobro y en los pedidos;
+- desabasto y mermas de materia prima;
+- ninguna visibilidad del margen de ganancia ni del desempeño de cada platillo;
+- más tiempo de atención con fila.
 
 ## Objetivos
 
-### Objetivo general
+**General:** desarrollar e implementar durante el semestre un sistema web para la gestión del food truck, que integre punto de venta, inventario, usuarios y reportes para agilizar la atención y dar control del negocio.
 
-Desarrollar e implementar un sistema web para la gestión administrativa del foodtruck "El Pardo" durante el semestre, mediante la integración de módulos de punto de venta, inventario, usuarios y reportes, con el fin de optimizar la atención al cliente y el control del negocio.
+**Específicos:**
 
-### Objetivos específicos
+- **Punto de venta:** registrar pedidos, personalizaciones y cobros con el menor número de pasos, también sin internet.
+- **Inventario:** descontar los insumos de cada venta según su receta y alertar cuando un insumo llega a su mínimo.
+- **Usuarios:** restringir las funciones sensibles al Administrador.
+- **Reportes:** automatizar el corte de caja y mostrar ventas, ganancias y productos más vendidos.
 
-- **Punto de Venta:** construir un módulo intuitivo que permita registrar pedidos, cobros y personalizaciones de platillos, reduciendo el tiempo de toma de orden.
-- **Gestión de Inventario:** desarrollar un módulo que descuente automáticamente los insumos en cada venta e identifique niveles críticos de stock para evitar mermas.
-- **Gestión de Usuarios:** implementar control de accesos por roles que restrinja funciones según el perfil del usuario.
-- **Reportes:** implementar un módulo de reportes financieros que registre ingresos y egresos diarios para facilitar el análisis de ventas.
+## Alcance
 
-## Alcance del proyecto
+**Dentro:**
+- punto de venta con catálogo, personalización (quitar o agregar ingredientes), total automático y cobro en efectivo o transferencia (solo se registra el método);
+- ajuste o cancelación de una venta con motivo;
+- inventario de insumos con recetas, compras, mermas, mínimos y alertas;
+- turno de caja con corte automatizado, reportes por periodo y PDF de las ventas del día;
+- cuentas del personal en Django Admin;
+- operación sin conexión con sincronización posterior.
 
-### Dentro del alcance
+**Fuera:** pagos con tarjeta o pasarelas, pedidos a domicilio, CFDI/SAT, nómina y contabilidad, app de tienda (es PWA), varias sucursales, lealtad/CRM, digitalizar el cuaderno histórico, hardware y soporte después del semestre. La consulta de órdenes por cocina está en evaluación y no se implementó.
 
-- Desarrollo de un sistema web responsivo accesible desde navegador para registro de ventas, administración de insumos, usuarios y reportes.
-- Modelado de recetas para el descuento automático de ingredientes en cada venta.
-- Registro de cobros en efectivo o transferencia.
-- Pruebas funcionales de cada módulo implementado y documentación técnica (SRS, diagramas de procesos y manuales).
+## Pantallas y módulos
 
-### Fuera del alcance
-
-- Integración con pasarelas de pago bancarias o procesamiento directo de tarjetas de crédito/débito.
-- Adquisición, donación o configuración de hardware (computadoras, tabletas, impresoras térmicas, infraestructura de red).
-- Mantenimiento técnico, soporte o actualización del software posterior a la finalización del semestre académico.
-
-## Módulos del sistema
-
-| Módulo | Descripción |
-|---|---|
-| **Punto de Venta** | Registro rápido de pedidos a partir de un catálogo de productos con precios, personalización de platillos (agregar/retirar ingredientes), cálculo del total y registro del cobro (efectivo o transferencia). |
-| **Gestión de Inventario** | Descuento automático de insumos según receta en cada venta, definición de niveles mínimos de stock por insumo y alertas visuales al alcanzar niveles críticos. |
-| **Gestión de Usuarios** | Administración de cuentas y roles con permisos diferenciados, restringiendo el acceso a funciones sensibles como la modificación del inventario. |
-| **Reportes** | Registro de ingresos y egresos diarios, automatización del cierre de caja y reportes de productos más vendidos para apoyar la toma de decisiones. |
-
-## Roles de usuario
-
-| Rol | Permisos principales |
-|---|---|
-| **Administrador** | Acceso completo: gestión de inventario, usuarios, reportes y supervisión general del negocio. |
-| **Cajero** | Toma de pedidos, personalización de órdenes y registro de cobros. |
-| **Cocinero** | Consulta de órdenes para la preparación de alimentos. |
-
-## Metodología de trabajo
-
-El proyecto combina prácticas de ingeniería de requisitos con un marco de trabajo ágil:
-
-1. **Levantamiento de requisitos:** entrevista directa con el dueño del negocio para identificar procesos, problemas y necesidades.
-2. **Especificación de requisitos:** documentación clara y sin ambigüedades para evitar retrabajo y desalineación con las necesidades reales del cliente.
-3. **Modelado de procesos:** diagramas de flujo de los procesos actuales del negocio para identificar pasos redundantes y áreas críticas.
-4. **Desarrollo ágil (Scrum):** el desarrollo se organiza en *sprints* de dos semanas, permitiendo entregas incrementales, retroalimentación continua del cliente y ajustes progresivos del Product Backlog.
-
-## Fases y entregables
-
-| # | Fase | Descripción |
+| Pantalla | Módulo | Qué hace |
 |---|---|---|
-| 1 | **Levantamiento y análisis de requisitos** | Entrevista al dueño del negocio, identificación de necesidades, diagramas de proceso preliminares y documentación de requisitos. |
-| 2 | **Diseño de arquitectura y planificación del Backlog** | Definición de la arquitectura del sistema, prototipos de interfaz, criterios de aceptación y priorización de historias de usuario por sprint. |
-| 3 | **Desarrollo modular** | Codificación iterativa (semanal) de interfaz, lógica de negocio y base de datos para cada módulo (POS, Inventario, Usuarios, Reportes). |
-| 4 | **Pruebas, validación y cierre** | Pruebas funcionales, integración del sistema, corrección de errores según retroalimentación del cliente y entrega de documentación técnica. |
+| **Nueva venta** | M-PDV (`apps/pos`) | Catálogo por categorías con búsqueda, ticket con cantidades y modificadores, total calculado por el servidor, cobro en efectivo o transferencia. Abrir la caja es el primer paso del día. Funciona sin red. |
+| **Productos** | `apps/catalog` | Platillos con su precio y su receta, e insumos con su unidad de medida. Con PIN de Administrador. |
+| **Inventario** | M-INV (`apps/inventory`) | Existencias y mínimos de cada insumo, compras y mermas con motivo, y la lista de «Insumos bajos». Con PIN de Administrador. |
+| **Caja** | M-REP (`apps/reports`) | Total del día por método de pago, ganancias (ventas menos el costo de insumos por receta), mermas y cierre de turno con diferencia de efectivo. Con PIN. |
+| **Reportes** | M-REP (`apps/reports`) | Ventas, productos vendidos, insumos usados y mermas por día, semana o mes; exportación del PDF de las ventas del día. Con PIN. |
+| **Django Admin** | M-USR (`apps/accounts`) | Alta, cambio de rol y desactivación de cuentas (nunca se borran); bandeja de operaciones en cuarentena y ventas por revisar. Solo con red. |
 
-### Entregables principales
+**Reglas de negocio principales:**
+- el inventario se descuenta en la misma transacción que registra la venta;
+- una venta confirmada no se modifica: se corrige con un ajuste o una cancelación que deja rastro;
+- toda venta requiere un turno de caja abierto, y solo hay un turno por día;
+- el corte se niega mientras haya ventas sin sincronizar;
+- el dinero nunca se maneja en punto flotante.
 
-**Documentales**
-- Documento de Fases (información de la empresa, carta de apertura, minutas de trabajo y anexos).
-- Diagramas de procesos propuestos.
-- Documento de Especificación de Requisitos de Software (SRS) y Product Backlog.
+La lista completa está en el [SRS](docs/SRS.md).
 
-**De software**
-- Sistema web funcional y responsivo que integra los módulos de Punto de Venta, Gestión de Inventario, Control de Accesos y Reportes diarios.
+## Roles y acceso
 
-## Equipo de trabajo
-
-| Integrante | Rol | Responsabilidad |
+| Rol | Puede | No puede |
 |---|---|---|
-| Diego Adrián Galindo Mora | Product Owner / Analista de requisitos | Representar las necesidades del cliente, priorizar el backlog, realizar entrevistas y documentar requisitos. |
-| Alejandro Tarin Gutiérrez | Scrum Master / Desarrollador | Facilitar los eventos de Scrum, apoyar la organización del equipo, resolver impedimentos y participar en el desarrollo front-end. |
-| Jesús Eduardo Hernández Garrido | Analista de requisitos / Desarrollador | Analizar necesidades, apoyar la documentación de requisitos y participar en el desarrollo back-end. |
-| Jared Gustavo Beltrán Herrada | Desarrollador / Tester | Apoyar el desarrollo back-end, diseñar y ejecutar pruebas funcionales. |
-| Cesar Yahir Enriquez Jasso | Desarrollador / Tester | Apoyar la programación back-end y realizar pruebas sobre los módulos implementados. |
+| **Administrador** (propietario) | Todo: abrir y cerrar caja, Productos, Inventario, Caja, Reportes, cuentas y resolución de cuarentenas | — |
+| **Cajero** | Tomar pedidos, cobrar con o sin red mientras haya un turno abierto y ver las ventas del día | Abrir o cerrar caja; tocar inventario, precios, recetas o usuarios; ver reportes financieros |
 
-**Docente asesor:** Mtro. Abraham López Nájera
+**No hay página de inicio de sesión:**
+- El teléfono se **activa una sola vez** con el PIN de un Administrador y queda con una sesión permanente de la cuenta de cajero.
+- Las pantallas con candado y la apertura y el cierre de caja piden de nuevo el **PIN de Administrador** (6 dígitos, que es la contraseña de su cuenta) y quedan desbloqueadas 30 minutos.
+- Cinco PIN incorrectos bloquean el PIN 15 minutos, también en Django Admin.
+- Django Admin conserva su propio inicio con usuario y contraseña.
 
-## Estructura del repositorio
+## Operación sin conexión
 
-> Estructura sugerida; ajustar conforme avance el desarrollo del sistema.
+En el food truck casi siempre se vende sin red y se sincroniza después.
 
-```
-SGFT/
-├── docs/                  # Documentación del proyecto (SRS, minutas, diagramas)
-├── backend/                # Lógica de negocio, API y base de datos
-├── frontend/                # Interfaz de usuario (web responsiva)
-├── tests/                  # Pruebas funcionales por módulo
-└── README.md
-```
+**Qué funciona sin red:**
+- **Nueva venta**, con la última copia del catálogo. Cada venta se guarda en el teléfono (IndexedDB) con un UUID propio.
+- **Abrir la caja**, con el PIN validado contra un verificador PBKDF2 que el teléfono descarga. Nunca guarda el PIN, y el verificador caduca a los 7 días sin sincronizar.
+- **Productos, Inventario, Caja y Reportes**, solo para consulta, con los datos de la última sincronización.
+
+**Cómo se sincroniza:**
+- Al volver la red, la cola se envía sola a `POST /pos/sync/` y se reintenta cada 10 s mientras haya pendientes. «Sincronizar» en el menú la envía en cualquier momento.
+- El servidor aplica cada operación una sola vez. Lo que no puede aplicar va a **cuarentena**, nunca se rechaza, y el Administrador lo resuelve en Django Admin.
+- Si el catálogo cambió, manda lo cobrado y la venta se marca para revisión.
+
+**Recomendaciones para operar:**
+- sincronizar antes de cada jornada;
+- usar siempre la app instalada en la pantalla de inicio (Safari → Compartir → Agregar a pantalla de inicio): tiene su propia sesión y su propia cola, distintas de las de Safari;
+- abrir la caja una vez por día.
 
 ## Stack tecnológico
 
-> El stack tecnológico definitivo fue acordado por el equipo durante la fase de definición de arquitectura. Completar esta sección con el detalle de lenguajes, frameworks y motor de base de datos seleccionados.
+| Capa | Tecnología |
+|---|---|
+| Servidor | Python 3.12 · Django 5.2 LTS · django-htmx · Gunicorn · WhiteNoise · ReportLab (PDF) |
+| Base de datos | PostgreSQL 16 (Neon en producción; local o SQLite para pruebas rápidas) |
+| Interfaz | Plantillas de Django · HTMX 2 · Alpine.js 3 · Tailwind CSS v4 (CLI autónomo, `app.css` compilado y versionado) |
+| Sin conexión | Manifest + service worker con Workbox 7 · Dexie.js 4 sobre IndexedDB |
+| Pruebas | `django.test` · `node --test` (paridad de precios Python/JavaScript) · Playwright (E2E) · coverage |
+| CI y despliegue | GitHub Actions · Railway |
 
-- **Frontend:** _por documentar_
-- **Backend:** _por documentar_
-- **Base de datos:** _por documentar_
-- **Compatibilidad:** aplicación web responsiva, accesible desde cualquier dispositivo con navegador (incluyendo iOS).
+Todo es gratuito o de código abierto: el cliente no paga nada. No hay npm; Node solo corre en el CI.
+
+## Estructura del repositorio
+
+```
+config/            settings, urls, wsgi (sin lógica de negocio)
+apps/core/         base.html, componentes de la interfaz, mixins de rol y PIN
+apps/accounts/     M-USR: usuario y rol, activación del dispositivo, PIN, Django Admin
+apps/catalog/      platillos, insumos y recetas; pantalla Productos; datos ficticios (fixtures/demo.json)
+apps/inventory/    M-INV: movimientos, compras, mermas y alertas; pantalla Inventario
+apps/pos/          M-PDV: venta, turno de caja, ajustes, sincronización y cuarentena
+apps/reports/      M-REP: Caja, Reportes y PDF (solo lectura, sin modelos)
+static/core/       css/input.css → app.css (Tailwind), tokens.css, components.css, fuentes
+static/pos/        manifest.json, sw.js, db.js, pricing.js, offline.js, pwa.js
+tests_fixtures/    pricing_cases.json (casos de la prueba de paridad)
+tests_e2e/         pruebas de Playwright y parity/ (Node)
+docs/              SRS, calidad, diagramas, decisiones y guías
+.github/           CI y CODEOWNERS
+```
+
+Cada app sigue las capas `urls.py` → `views.py` (solo HTTP) → `services*.py` (reglas y transacciones) → `models.py`. Las plantillas van en `templates/<app>/` y los fragmentos HTMX en `templates/<app>/partials/`.
+
+## Cómo correrlo en tu computadora
+
+La guía paso a paso está en [`docs/guia-entorno-desarrollo.md`](docs/guia-entorno-desarrollo.md). En resumen:
+
+```bash
+python -m venv venv && source venv/bin/activate      # Windows/Git Bash: venv/Scripts/activate
+pip install -r requirements.txt
+cp .env.example .env                                  # pon tu DJANGO_SECRET_KEY y tu DATABASE_URL
+python manage.py migrate
+python manage.py createcachetable
+python manage.py loaddata demo demo_modifiers         # opcional: menú ficticio, solo en una base vacía
+python manage.py createsuperuser                      # el Administrador; su contraseña es su PIN de 6 dígitos
+python manage.py runserver
+```
+
+1. En `http://127.0.0.1:8000/admin/` crea la cuenta de cajero.
+2. Abre `http://127.0.0.1:8000/`: te pedirá activar el dispositivo con el PIN del Administrador.
+
+`.env` nunca se sube al repositorio, que es público. Genera tu propia clave con `python -c "import secrets; print(secrets.token_urlsafe(50))"`.
+
+Si cambias clases de Tailwind o tokens, recompila y sube `app.css` en el mismo commit:
+
+```bash
+tailwindcss -i static/core/css/input.css -o static/core/css/app.css --minify   # --watch mientras desarrollas
+```
+
+## Pruebas
+
+```bash
+python manage.py check && python manage.py test        # servicios y vistas de cada app
+node --test "tests_e2e/parity/*.mjs"                   # paridad de precios y verificador del PIN
+pip install playwright==1.63.0 && python -m playwright install chromium
+SGFT_E2E=1 python manage.py test tests_e2e             # E2E: venta con y sin red, apertura y cierre de caja
+```
+
+El CI corre todo esto en cada pull request sobre PostgreSQL 16. También revisa que no falte ninguna migración y que cada archivo esté en su lugar según el mapa de propiedad, y falla si la cobertura baja de 90 %; hoy es de 97 % ([`docs/calidad/cobertura.md`](docs/calidad/cobertura.md)).
+
+## Despliegue
+
+Railway despliega cada cambio que llega a `main` (`railway.json`):
+- **construcción:** `collectstatic`;
+- **antes de arrancar:** migraciones y tabla de caché;
+- **servidor:** Gunicorn con 2 workers.
+
+La base es PostgreSQL en Neon, con una rama de producción y otra con los datos ficticios para demostraciones.
+
+Las variables de entorno (`DJANGO_SECRET_KEY`, `DATABASE_URL`, `DJANGO_ALLOWED_HOSTS`, `DJANGO_CSRF_TRUSTED_ORIGINS`, `DJANGO_SECURE_SSL_REDIRECT`, `DJANGO_SECURE_HSTS_SECONDS`) viven en el panel de Railway y nunca en el repositorio. Los nombres están en [`.env.example`](.env.example).
+
+## Flujo de trabajo
+
+- **Ramas:** `nombre/tema` (`tarin/rejilla-sin-red`), una por tarea. Nunca se sube nada directo a `main`.
+- **Pull requests:**
+  - el título lleva el paquete del WBS (`WBS-3.4.4: …`) y la descripción liga un issue con `Closes #n`;
+  - se usa la plantilla de PR y se necesita el CI en verde;
+  - se fusionan con *Squash and merge*.
+- **Revisión:** Alejandro Tarín es el único revisor y quien fusiona.
+- **Propiedad:** cada archivo tiene un dueño según el mapa de la skill `sgft-organizacion-entregables`. Se consulta con `python .claude/skills/sgft-organizacion-entregables/scripts/dueno_de_ruta.py <ruta>`.
+- **`static/pos/`** se programa en pareja, con ambos autores en el commit (`Co-authored-by:`).
+- **Modelos y migraciones:** se avisa a Jesús Hernández, dueño del esquema.
+- **Idioma:** la interfaz va en español; el código, los nombres de archivos y los comentarios, en inglés. El módulo de precios y el contrato de sincronización van en español (`calcular_total`, `lineas`, `total_cobrado_centavos`).
+
+El detalle está en [`.claude/CLAUDE.md`](.claude/CLAUDE.md).
 
 ## Documentación
 
-La documentación completa del proyecto (información de la empresa, análisis de mercado, carta de apertura, minutas de trabajo y anexos) se encuentra en la carpeta [`docs/`](./docs).
+| Documento | Contenido |
+|---|---|
+| [`docs/SRS.md`](docs/SRS.md) | Especificación de requisitos; el apéndice B es la matriz de trazabilidad requisito–prueba |
+| [`docs/diagramas/diagrama-er.md`](docs/diagramas/diagrama-er.md) | Diagrama entidad-relación y diccionario de datos |
+| [`docs/calidad/checklist-seguridad.md`](docs/calidad/checklist-seguridad.md) | Verificación de seguridad con base en el OWASP Top 10:2021 |
+| [`docs/calidad/cobertura.md`](docs/calidad/cobertura.md) | Cobertura de pruebas por módulo |
+| [`docs/decisiones/spike-offline-resultados.md`](docs/decisiones/spike-offline-resultados.md) | Validación del modo sin conexión en el iPhone |
+| [`docs/convencion-htmx-alpine.md`](docs/convencion-htmx-alpine.md) | Convención de vistas, HTMX y Alpine |
+| [`docs/guia-entorno-desarrollo.md`](docs/guia-entorno-desarrollo.md) | Acceso al repositorio y ambiente de desarrollo |
+
+## Equipo
+
+| Integrante | GitHub | Rol |
+|---|---|---|
+| Diego Adrián Galindo Mora | `Diego-Galindo98` | Product Owner · back-end: usuarios y su Django Admin, servicios de catálogo e inventario |
+| Alejandro Tarin Gutiérrez | `T4R1N256` | Scrum Master e integrador · front-end: Nueva venta, Productos, base visual y cliente sin conexión; despliegue |
+| Jesús Eduardo Hernández Garrido | `EduardGarrido` | Back-end y base de datos: modelos, migraciones y servicios transaccionales |
+| Jared Gustavo Beltrán Herrada | `JBeltran16` | Back-end: servicios de reportes, sincronización y CI |
+| Cesar Yahir Enriquez Jasso | `CodigaBorealis` | Front-end: activación y PIN, Inventario, Caja y Reportes · pruebas E2E |
+
+**Cliente:** el propietario de «El Pardo». **Docente asesor:** Mtro. Abraham López Nájera.
 
 ## Referencias
 
@@ -167,7 +240,8 @@ La documentación completa del proyecto (información de la empresa, análisis d
 3. Ingeniería de Software de Élite, "03 - Ingeniería de Requerimientos - Recolección de requerimientos," YouTube, 31 mar. 2021. [En línea]. Disponible: https://www.youtube.com/watch?v=73fuqZ78uhg
 4. J. Martins, "Qué es Scrum: marco ágil, sprints, roles y artefactos," Asana, 9 abr. 2026. [En línea]. Disponible: https://asana.com/es/resources/what-is-scrum?exp=mm
 5. Miro, "¿Qué es un diagrama de flujo de proceso? | Guía Completa," miro.com. [En línea]. Disponible: https://miro.com/es/diagrama-de-flujo/que-es-diagrama-flujo-proceso/
+6. OWASP Foundation, "OWASP Top 10:2021," owasp.org, 2021. [En línea]. Disponible: https://owasp.org/Top10/
 
 ## Licencia
 
-Proyecto académico desarrollado para la Universidad Autónoma de Ciudad Juárez (UACJ). Uso educativo — sin licencia comercial definida.
+Proyecto académico desarrollado para la Universidad Autónoma de Ciudad Juárez (UACJ). Uso educativo, sin licencia comercial definida.

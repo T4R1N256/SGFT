@@ -102,6 +102,13 @@
       "nota": "Configuración del despliegue en Railway (DEC-09: el archivo del proveedor va en la raíz). Dueño Tarín, que administra el proyecto en Railway; Jesús colabora porque comparte variables con config/settings.py. collectstatic al construir, migraciones antes de cada despliegue y Gunicorn al arrancar."
     },
     {
+      "patron": "README.md",
+      "dueno": "tarin",
+      "wbs": [],
+      "nota": "Presentación del proyecto: estado, alcance, stack, cómo correrlo, pruebas, despliegue y flujo de trabajo. Lo mantiene el integrador.",
+      "revisor": []
+    },
+    {
       "patron": "CLAUDE.md",
       "dueno": "diego",
       "wbs": [],
