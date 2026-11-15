@@ -18,7 +18,8 @@ class OpeningTests(E2ETestCase):
         self.unlock()
         dialog = page.locator("form[aria-labelledby=open-cash-title]")
         dialog.locator("input[name=opening_amount]").fill("350.50")
-        dialog.locator("button[type=submit]").click()
+        with page.expect_navigation():  # Nueva venta reloads with the till open
+            dialog.locator("button[type=submit]").click()
         self.wait_for(CashRegisterSession.objects.exists, "La caja no se abrió.")
         session = CashRegisterSession.objects.get()
         self.assertEqual((session.opened_by, session.opening_amount, session.status),
@@ -50,3 +51,26 @@ class OpeningTests(E2ETestCase):
         session = CashRegisterSession.objects.get()
         self.assertEqual((session.opened_by, session.opening_amount), (self.admin, Decimal("500.00")))
         self.assertEqual(Sale.objects.get().cash_session, session)  # the sale points to the device's session
+
+    def test_a_till_opened_with_network_stays_open_without_network(self):
+        # T30, on the iPhone: the till was opened with network, and in airplane mode the device asked to open it
+        # again, because the page it had loaded still said «sin turno». A second opening goes to quarantine (rule 13).
+        page = self.page
+        self.activate_device()
+        self.wait_for_service_worker()
+        page.get_by_role("button", name="Abrir caja").first.click()
+        self.unlock()
+        dialog = page.locator("form[aria-labelledby=open-cash-title]")
+        dialog.locator("input[name=opening_amount]").fill("500")
+        with page.expect_navigation():
+            dialog.locator("button[type=submit]").click()
+        page.get_by_text("Caja abierta con un fondo inicial de $500.00.").wait_for()
+
+        self.go_offline()
+        page.locator("#offline-sale").get_by_text("turno guardado en el dispositivo").wait_for()
+        self.sell_offline()
+        self.assertEqual(self.pending(), 1)  # only the sale: no second opening
+
+        self.reconnect()
+        self.wait_for(Sale.objects.exists, "La venta no se sincronizó.")
+        self.assertEqual(Sale.objects.get().cash_session, CashRegisterSession.objects.get())

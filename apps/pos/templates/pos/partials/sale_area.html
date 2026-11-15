@@ -1,18 +1,11 @@
 {% comment %}
 pos/partials/sale_area.html — Área de venta de Nueva Venta (id «sale-area»)
-Vistas: pos:order_builder (página o HTMX) y pos:open_session (POST válido).
+Vista: pos:order_builder (página o HTMX).
 En el teléfono en horizontal el título lleva el número de ticket en gris y el subtítulo se oculta.
 Sin turno abierto (regla 12) el contenido queda deshabilitado (opacidad 35 %, inert) y encima va el Aviso de
 caja cerrada, como en Figma 01. Qué se pinta lo decide cash_session_open, que manda el servidor.
-oob_cash_status: tras abrir la caja, actualiza el Estado de caja y el total de la barra, y cierra el diálogo.
 {% endcomment %}
 <div id="sale-area" class="relative">
-  {% if oob_cash_status %}
-    {% include "components/cash_status.html" with open=cash_session_open oob=True only %}
-    {% include "components/session_total.html" with total=session_total oob=True only %}
-    <div id="dialog" hx-swap-oob="true"></div>
-  {% endif %}
-
   <div class="sgft-grid-venta{% if not cash_session_open %} pointer-events-none select-none opacity-35{% endif %}"{% if not cash_session_open %} inert aria-hidden="true"{% endif %}>
     <section class="flex min-w-0 flex-col gap-md" aria-labelledby="sale-title">
       <header class="flex flex-wrap items-start justify-between gap-md">
