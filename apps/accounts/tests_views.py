@@ -26,6 +26,14 @@ class AccessViewsBase(TestCase):
     def tearDown(self):
         cache.clear()
 
+    def assertLockedDialog(self, response, status_code):
+        """Locked PIN: the dialog says so and cannot send anything (no hx-post, boxes and button disabled)."""
+        self.assertContains(response, "Demasiados intentos. Intenta de nuevo en 15 min.", status_code=status_code)
+        self.assertNotContains(response, "hx-post=", status_code=status_code)
+        self.assertContains(response, '<fieldset class="flex min-w-0 flex-col gap-xs" disabled>',
+                            status_code=status_code)
+        self.assertContains(response, 'sgft-btn--primario sgft-btn--full" disabled>', status_code=status_code)
+
 
 class ActivateDeviceViewTests(AccessViewsBase):
     def test_page_has_no_menu_nor_top_bar(self):
@@ -90,6 +98,15 @@ class ActivateDeviceViewTests(AccessViewsBase):
         self.assertContains(response, "Demasiados intentos. Intenta de nuevo en 15 min.", status_code=422)
         self.assertNotIn("_auth_user_id", self.client.session)
 
+    def test_locked_dialog_cannot_be_sent(self):
+        for _ in range(4):
+            self.assertContains(self.client.post(self.activate_url, pin("000000"), **HTMX), "hx-post=",
+                                status_code=422)  # still open before the fifth failure
+        response = self.client.post(self.activate_url, pin("000000"), **HTMX)  # the fifth failure locks it
+        self.assertLockedDialog(response, 422)
+        self.assertLockedDialog(self.client.get(self.activate_url, **HTMX), 200)
+        self.assertLockedDialog(self.client.get(self.activate_url), 200)  # the page with the dialog already open
+
     def test_without_an_active_cashier(self):
         self.cashier.is_active = False
         self.cashier.save()
@@ -137,6 +154,22 @@ class AdminPinViewTests(AccessViewsBase):
     def test_incomplete_pin(self):
         response = self.client.post(self.pin_url, pin("12"), **HTMX)
         self.assertContains(response, "Escribe los 6 dígitos del PIN.", status_code=422)
+
+    def test_locked_dialog_cannot_be_sent_and_reopens_locked(self):
+        for _ in range(5):
+            response = self.client.post(self.pin_url, pin("000000"), **HTMX)
+        self.assertLockedDialog(response, 422)
+        self.assertLockedDialog(self.client.get(self.pin_url, **HTMX), 200)
+        response = self.client.post(self.pin_url, {**pin(ADMIN_PIN), "next": "/inventory/"}, **HTMX)
+        self.assertLockedDialog(response, 422)  # not even the real PIN gets in while it is locked
+
+    def test_dialog_opens_again_when_the_lock_ends(self):
+        for _ in range(5):
+            self.client.post(self.pin_url, pin("000000"), **HTMX)
+        cache.delete("accounts:pin_locked_until")  # 15 minutes later
+        response = self.client.get(self.pin_url, **HTMX)
+        self.assertContains(response, "hx-post=")
+        self.assertNotContains(response, "Demasiados intentos")
 
     def test_padlocked_screen_opens_only_after_the_real_pin(self):
         inventory = reverse("inventory:ingredient_list")

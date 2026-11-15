@@ -46,6 +46,18 @@ def _dialog_error(request, template, context):
     return response
 
 
+def _with_lock(context):
+    """
+    While the PIN is locked (too many failures) the dialog comes disabled: no hx-post, boxes and button disabled,
+    so no request is sent until the lock ends and the dialog is opened again. The server decides it, not Alpine.
+    """
+    minutes = services.pin_minutes_locked()
+    context["locked"] = bool(minutes)
+    if minutes:
+        context["error"] = str(services.PinLockedError(minutes))
+    return context
+
+
 def _pin_error(pin):
     """Checks the PIN with the service; returns the user or the message for the dialog."""
     try:
@@ -62,11 +74,13 @@ def activate_device(request):
     Roles       : sin sesión. Con sesión, GET redirige a next (o a Nueva venta) y POST responde 409.
     Plantillas  : GET normal → accounts/activate_device.html (página sin menú ni barra superior, con el diálogo
                   abierto) · HTMX → accounts/partials/activate_dialog.html [fragmento, en #dialog]
-    Contexto    : post_url, hx_target, hx_swap, next_url, error; la página además activate_url
+    Contexto    : post_url, hx_target, hx_swap, next_url, error, locked; la página además activate_url
     hx-target   : #dialog (innerHTML)
     Respuestas  : POST con el PIN de un Administrador activo → inicia la sesión del cajero; 204 + HX-Redirect a
                   next (o redirección sin HTMX) · PIN incompleto, incorrecto, bloqueado o sin cajero → 422 con el
                   diálogo y el error (HX-Retarget #dialog)
+    Controles   : con el PIN bloqueado (locked) el diálogo sale sin hx-post y con casillas y botón deshabilitados,
+                  en GET y en el 422; se vuelve a habilitar al reabrirlo cuando termina el bloqueo.
     El límite de intentos (5 fallos, 15 minutos) lo aplica services.activate_device en la caché: borrar la cookie
     no lo reinicia.
     """
@@ -77,14 +91,16 @@ def activate_device(request):
         return redirect(next_url)
 
     activate_url = reverse("accounts:activate_device")
-    context = {"post_url": activate_url, "hx_target": "#dialog", "hx_swap": "innerHTML", "next_url": next_url,
-               "error": ""}
+    context = _with_lock({"post_url": activate_url, "hx_target": "#dialog", "hx_swap": "innerHTML",
+                          "next_url": next_url, "error": ""})
     if request.method == "GET":
         if request.htmx:
             return render(request, "accounts/partials/activate_dialog.html", context)
         reopen_url = activate_url + "?" + urlencode({"next": next_url})  # «Escribir PIN» reopens the dialog
         return render(request, "accounts/activate_device.html", {**context, "activate_url": reopen_url})
 
+    if context["locked"]:
+        return _dialog_error(request, "accounts/partials/activate_dialog.html", context)
     pin = "".join(request.POST.getlist("pin"))
     if not is_pin(pin):
         context["error"] = INCOMPLETE_PIN
@@ -93,6 +109,7 @@ def activate_device(request):
         cashier = services.activate_device(pin)
     except services.InvalidPinError as error:
         context["error"] = str(error)
+        context["locked"] = isinstance(error, services.PinLockedError)  # the fifth failure locks the dialog
     except services.NoCashierAvailableError:
         context["error"] = NO_CASHIER
     else:
@@ -109,19 +126,25 @@ def admin_pin(request):
     URL         : /accounts/pin/?module=<módulo>&next=<url> (accounts:admin_pin)
     Roles       : cualquier sesión activa (el dispositivo ya activado); sin sesión → activar el dispositivo
     Plantilla   : components/pin_dialog.html [fragmento, en #dialog]
-    Contexto    : post_url, hx_target, hx_swap, module_label, next_url, error
+    Contexto    : post_url, hx_target, hx_swap, module_label, next_url, error, locked
     hx-target   : #dialog (innerHTML)
     Respuestas  : GET → 200 con el diálogo · POST con el PIN de un Administrador activo → abre el candado
                   30 minutos a su nombre (unlock_admin) y responde 204 + HX-Redirect a next · PIN incompleto,
                   incorrecto o bloqueado → 422 con el diálogo y el error (HX-Retarget #dialog)
+    Controles   : con el PIN bloqueado (locked) el diálogo sale sin hx-post y con casillas y botón deshabilitados,
+                  en GET y en el 422; se vuelve a habilitar al reabrirlo cuando termina el bloqueo.
     """
     module_label = request.GET.get("module", "")
     next_url = _safe_next(request, reverse("pos:order_builder"))
+    context = _with_lock(pin_dialog_context(module_label, next_url))
     if request.method == "GET":
-        return render(request, "components/pin_dialog.html", pin_dialog_context(module_label, next_url))
+        return render(request, "components/pin_dialog.html", context)
+    if context["locked"]:
+        return _dialog_error(request, "components/pin_dialog.html", context)
     pin = "".join(request.POST.getlist("pin"))
     admin, error = (None, INCOMPLETE_PIN) if not is_pin(pin) else _pin_error(pin)
     if admin is None:
-        return _dialog_error(request, "components/pin_dialog.html", pin_dialog_context(module_label, next_url, error))
+        context["error"] = error
+        return _dialog_error(request, "components/pin_dialog.html", _with_lock(context))
     unlock_admin(request, admin)
     return _done(request, next_url)

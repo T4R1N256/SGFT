@@ -4,10 +4,11 @@ Parámetros:
   legend etiqueta de las casillas (por omisión «PIN de administrador», como en «Abrir caja» de Figma)
   error  mensaje en español si el PIN no es válido (opcional)
   note   texto de apoyo bajo las casillas (opcional)
+  disabled  True: casillas deshabilitadas (PIN bloqueado por intentos fallidos)
 Envía 6 valores «pin». Alpine solo mueve el foco entre casillas; el PIN lo valida el servidor (o static/pos/ sin red,
 Fase 6). Incluir siempre con «only».
 {% endcomment %}
-<fieldset class="flex min-w-0 flex-col gap-xs">
+<fieldset class="flex min-w-0 flex-col gap-xs"{% if disabled %} disabled{% endif %}>
   <legend class="mb-xs sgft-texto-cuerpo-pequeno-medio text-texto-primario">{{ legend|default:"PIN de administrador" }}</legend>
   <div class="flex gap-xs" @input="if ($event.target.value && $event.target.nextElementSibling) $event.target.nextElementSibling.focus()"
        @keydown.backspace="if (!$event.target.value && $event.target.previousElementSibling) $event.target.previousElementSibling.focus()">
